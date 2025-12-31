@@ -1,0 +1,164 @@
+.sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1e1e2f 0%, #15151f 100%);
+  padding: 20px 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  transition: width 0.3s ease;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.collapsed {
+  width: 70px;
+}
+
+.sidebar-header {
+  padding: 10px 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  font-size: 28px;
+}
+
+.sidebar-header h2 {
+  color: #a855f7;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.sidebar-header p {
+  color: #888;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.collapse-btn {
+  position: absolute;
+  right: 10px;
+  top: 15px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(168, 85, 247, 0.3);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.collapse-btn:hover {
+  background: rgba(168, 85, 247, 0.5);
+  color: white;
+}
+
+.sidebar.collapsed .collapse-btn {
+  right: 50%;
+  transform: translateX(50%);
+}
+
+.sidebar.collapsed .logo-container {
+  justify-content: center;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 0 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  color: #888;
+  text-decoration: none;
+  border-radius: 10px;
+  margin-bottom: 5px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 12px;
+}
+
+.nav-item:hover {
+  background: rgba(168, 85, 247, 0.1);
+  color: #fff;
+}
+
+.nav-item.active {
+  background: rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+}
+
+.nav-item.locked {
+  opacity: 0.5;
+}
+
+.nav-item.locked:hover {
+  background: rgba(168, 85, 247, 0.05);
+  color: #888;
+}
+
+.nav-icon {
+  font-size: 20px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.lock-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
+  text-align: center;
+}
+
+.role-indicator {
+  display: inline-block;
+  background: rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .role-indicator {
+  padding: 6px 10px;
+}
+
+.sidebar.collapsed .sidebar-header p {
+  display: none;
+}

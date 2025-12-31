@@ -1,0 +1,71 @@
+.upgrade-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 40px;
+  background: linear-gradient(180deg, rgba(168, 85, 247, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 24px;
+  max-width: 500px;
+  margin: 60px auto;
+}
+
+.upgrade-icon {
+  font-size: 72px;
+  margin-bottom: 25px;
+  filter: grayscale(30%);
+}
+
+.upgrade-prompt h2 {
+  color: #fff;
+  font-size: 32px;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.upgrade-description {
+  color: #888;
+  font-size: 18px;
+  margin-bottom: 25px;
+  line-height: 1.6;
+  max-width: 350px;
+}
+
+.upgrade-badge {
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #a855f7;
+  padding: 10px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+.upgrade-badge strong {
+  color: #c084fc;
+}
+
+.upgrade-button {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: white;
+  border: none;
+  padding: 18px 50px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upgrade-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 35px rgba(168, 85, 247, 0.4);
+}
+
+.upgrade-note {
+  color: #666;
+  font-size: 14px;
+  margin-top: 20px;
+}
