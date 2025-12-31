@@ -1,10 +1,9 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-const API_URL = API_BASE_URL;
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
 });
 
 // Add token to requests
@@ -31,11 +30,10 @@ api.interceptors.response.use(
 
 // Auth endpoints
 export const authApi = {
-  login: (data) => api.post('/auth/admin/login', data),
-  requestOtp: (data) => api.post('/auth/admin/request-otp', data),
-  verifyOtp: (data) => api.post('/auth/admin/verify-otp', data),
-  requestPasswordReset: (data) => api.post('/auth/request-password-reset', data),
-  resetPassword: (data) => api.post('/auth/reset-password', data),
+  login: (email, password) => api.post('/admin/auth/login', { email, password }),
+  signup: (data) => api.post('/admin/auth/signup', data),
+  forgotPassword: (email) => api.post('/admin/auth/forgot-password', { email }),
+  resetPassword: (data) => api.post('/admin/auth/reset-password', data),
 };
 
 // Users endpoints
@@ -88,7 +86,7 @@ export const auditApi = {
 // Billing endpoints
 export const billingApi = {
   getStatus: () => api.get('/billing/status'),
-  createCheckoutSession: (planId, billingCycle, workerCount) => 
+  createCheckoutSession: (planId, billingCycle, workerCount) =>
     api.post('/billing/create-checkout-session', { planId, billingCycle, workerCount }),
   createPortalSession: () => api.post('/billing/create-portal-session'),
 };
