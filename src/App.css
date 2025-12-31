@@ -189,3 +189,12 @@ body {
     gap: 10px;
   }
 }
+.trial-banner {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: 16px;
+}

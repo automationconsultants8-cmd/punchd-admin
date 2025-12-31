@@ -10,7 +10,9 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import SchedulingPage from './pages/SchedulingPage';
 import AuditPage from './pages/AuditPage';
 import BillingPage from './pages/BillingPage';
+import SubscriptionWall from './components/SubscriptionWall';
 import { FeatureProvider } from './context/FeatureContext';
+import { authApi } from './services/api';
 import './App.css';
 
 const PERMISSIONS = {
@@ -54,6 +56,8 @@ function App() {
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [subscription, setSubscription] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -65,6 +69,26 @@ function App() {
     setLoading(false);
   }, []);
 
+  // Check subscription status when user logs in
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!user) return;
+      
+      setSubscriptionLoading(true);
+      try {
+        const response = await authApi.getSubscriptionStatus();
+        setSubscription(response.data);
+      } catch (err) {
+        console.error('Failed to check subscription:', err);
+        // If we can't check, assume active to not block users
+        setSubscription({ isActive: true });
+      }
+      setSubscriptionLoading(false);
+    };
+
+    checkSubscription();
+  }, [user]);
+
   const handleLogin = (userData) => {
     setUser(userData);
   };
@@ -73,6 +97,7 @@ function App() {
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     setUser(null);
+    setSubscription(null);
   };
 
   const copyInviteCode = () => {
@@ -111,6 +136,19 @@ function App() {
         <Route path="/*" element={
           !user ? (
             <LoginPage onLogin={handleLogin} />
+          ) : subscriptionLoading ? (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: '100vh',
+              background: '#1a1a2e',
+              color: '#fff'
+            }}>
+              <h2>Checking subscription...</h2>
+            </div>
+          ) : subscription && !subscription.isActive ? (
+            <SubscriptionWall daysLeft={subscription.daysLeft} />
           ) : (
             <FeatureProvider>
               <div className="dashboard-layout">
@@ -124,6 +162,13 @@ function App() {
                   <div className="dashboard-header">
                     <h1>Punch'd Admin</h1>
                     <div className="header-right">
+                      {/* Trial banner */}
+                      {subscription?.status === 'trial' && subscription?.daysLeft > 0 && (
+                        <div className="trial-banner">
+                          ⏰ {subscription.daysLeft} days left in trial
+                        </div>
+                      )}
+                      
                       {user?.inviteCode && (user.role === 'OWNER' || user.role === 'ADMIN') && (
                         <div className="invite-code-container">
                           <button 

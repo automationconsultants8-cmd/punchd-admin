@@ -1,0 +1,152 @@
+.subscription-wall {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 20px;
+}
+
+.subscription-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 48px;
+  max-width: 900px;
+  width: 100%;
+  text-align: center;
+}
+
+.subscription-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.subscription-card h1 {
+  font-size: 32px;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.subscription-card > p {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 32px;
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.plan {
+  border: 2px solid #eee;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: left;
+  position: relative;
+}
+
+.plan.popular {
+  border-color: #a855f7;
+  transform: scale(1.05);
+}
+
+.plan .badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.plan h3 {
+  font-size: 20px;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+}
+
+.plan .price {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+}
+
+.plan .price span {
+  font-size: 14px;
+  font-weight: 400;
+  color: #666;
+}
+
+.plan ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+}
+
+.plan ul li {
+  padding: 8px 0;
+  color: #444;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.plan ul li:last-child {
+  border-bottom: none;
+}
+
+.plan button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.plan button {
+  background: #1a1a2e;
+  color: white;
+}
+
+.plan.popular button {
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+}
+
+.plan button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.plan button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.contact {
+  color: #888;
+  font-size: 14px;
+}
+
+.contact a {
+  color: #a855f7;
+}
+
+@media (max-width: 768px) {
+  .plans {
+    grid-template-columns: 1fr;
+  }
+  
+  .plan.popular {
+    transform: none;
+  }
+}
