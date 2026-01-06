@@ -1,147 +1,272 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useFeatures } from '../context/FeatureContext';
+import { NavLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { shiftRequestsApi, timeOffApi, messagesApi } from '../services/api';
 import './Sidebar.css';
 
-const PERMISSIONS = {
-  WORKER: {
-    canManageWorkers: false,
-    canManageJobs: false,
-    canViewAnalytics: false,
-    canManageSchedules: false,
-    canViewAuditLogs: false,
-    canManageBilling: false,
-  },
-  MANAGER: {
-    canManageWorkers: false,
-    canManageJobs: false,
-    canViewAnalytics: true,
-    canManageSchedules: true,
-    canViewAuditLogs: false,
-    canManageBilling: false,
-  },
-  ADMIN: {
-    canManageWorkers: true,
-    canManageJobs: true,
-    canViewAnalytics: true,
-    canManageSchedules: true,
-    canViewAuditLogs: true,
-    canManageBilling: false,
-  },
-  OWNER: {
-    canManageWorkers: true,
-    canManageJobs: true,
-    canViewAnalytics: true,
-    canManageSchedules: true,
-    canViewAuditLogs: true,
-    canManageBilling: true,
-  },
+// SVG Icon Components
+const Icons = {
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  users: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  mapPin: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+      <circle cx="12" cy="10" r="3"/>
+    </svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  arrowLeftRight: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 3L4 7l4 4"/>
+      <path d="M4 7h16"/>
+      <path d="M16 21l4-4-4-4"/>
+      <path d="M20 17H4"/>
+    </svg>
+  ),
+  calendarOff: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4.18 4.18A2 2 0 0 0 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 1.82-1.18"/>
+      <path d="M21 15.5V6a2 2 0 0 0-2-2H9.5"/>
+      <path d="M16 2v4"/>
+      <path d="M3 10h7"/>
+      <path d="M21 10h-5.5"/>
+      <line x1="2" y1="2" x2="22" y2="22"/>
+    </svg>
+  ),
+  messageSquare: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  ),
+  barChart: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="20" x2="12" y2="10"/>
+      <line x1="18" y1="20" x2="18" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="16"/>
+    </svg>
+  ),
+  shield: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <polyline points="9 12 11 14 15 10"/>
+    </svg>
+  ),
+  scrollText: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/>
+      <path d="M19 17V5a2 2 0 0 0-2-2H4"/>
+      <path d="M15 8h-5"/>
+      <path d="M15 12h-5"/>
+    </svg>
+  ),
+  fileText: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+  ),
+  creditCard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+      <line x1="1" y1="10" x2="23" y2="10"/>
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  chevronLeft: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  ),
+  chevronRight: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  ),
 };
 
-function Sidebar({ userRole, collapsed, onToggle }) {
-  const location = useLocation();
-  const { hasFeature } = useFeatures();
-  
-  const isActive = (path) => location.pathname === path;
-  
-  const hasPermission = (permission) => {
-    return PERMISSIONS[userRole]?.[permission] ?? false;
+function Sidebar({ collapsed, onToggle, userRole }) {
+  const [requestCounts, setRequestCounts] = useState({
+    shiftRequests: 0,
+    timeOff: 0,
+    messages: 0,
+  });
+
+  // Fetch pending counts on mount
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [shiftStats, timeOffStats, msgCount] = await Promise.all([
+          shiftRequestsApi.getStats().catch(() => ({ data: { pending: 0 } })),
+          timeOffApi.getStats().catch(() => ({ data: { pending: 0 } })),
+          messagesApi.getUnreadCount().catch(() => ({ data: 0 })),
+        ]);
+        
+        setRequestCounts({
+          shiftRequests: shiftStats.data?.pending || 0,
+          timeOff: timeOffStats.data?.pending || 0,
+          messages: typeof msgCount.data === 'number' ? msgCount.data : 0,
+        });
+      } catch (err) {
+        console.error('Failed to fetch request counts:', err);
+      }
+    };
+
+    fetchCounts();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const mainNavItems = [
+    { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
+    { path: '/time', icon: 'clock', label: 'Time Tracking' },
+    { path: '/workers', icon: 'users', label: 'Workers', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/job-sites', icon: 'mapPin', label: 'Job Sites', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+  ];
+
+  const requestsNavItems = [
+    { path: '/requests/shifts', icon: 'arrowLeftRight', label: 'Shift Requests', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'shiftRequests' },
+    { path: '/requests/time-off', icon: 'calendarOff', label: 'Time Off', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'timeOff' },
+    { path: '/requests/messages', icon: 'messageSquare', label: 'Messages', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'messages' },
+  ];
+
+  const reportsNavItems = [
+    { path: '/analytics', icon: 'barChart', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/compliance', icon: 'shield', label: 'Break Compliance', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/audit', icon: 'scrollText', label: 'Audit Log', roles: ['ADMIN', 'OWNER'] },
+    { path: '/certified-payroll', icon: 'fileText', label: 'Certified Payroll', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+  ];
+
+  const settingsNavItems = [
+    { path: '/billing', icon: 'creditCard', label: 'Billing', roles: ['OWNER'] },
+    { path: '/settings', icon: 'settings', label: 'Settings', roles: ['ADMIN', 'OWNER'] },
+  ];
+
+  const filterByRole = (items) => {
+    return items.filter(item => !item.roles || item.roles.includes(userRole));
   };
 
-  const NavItem = ({ to, icon, label, feature, permission }) => {
-    const isLocked = feature && !hasFeature(feature);
-    const hasAccess = !permission || hasPermission(permission);
+  const NavItem = ({ item }) => {
+    const badge = item.badgeKey ? requestCounts[item.badgeKey] : 0;
     
-    if (!hasAccess) return null;
-
     return (
-      <Link 
-        to={to} 
-        className={`nav-item ${isActive(to) ? 'active' : ''} ${isLocked ? 'locked' : ''}`}
-        title={isLocked ? `${label} - Requires Upgrade` : label}
+      <NavLink 
+        to={item.path} 
+        className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
       >
-        <span className="nav-icon">{icon}</span>
-        {!collapsed && (
-          <>
-            <span className="nav-label">{label}</span>
-            {isLocked && <span className="lock-icon">🔒</span>}
-          </>
-        )}
-      </Link>
+        <span className="sidebar-link-icon">{Icons[item.icon]}</span>
+        <span className="sidebar-link-text">{item.label}</span>
+        {badge > 0 && <span className="sidebar-badge">{badge}</span>}
+      </NavLink>
     );
   };
 
   return (
-    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      {/* Logo */}
       <div className="sidebar-header">
-        <div className="logo-container">
-          <span className="logo-icon">⏱️</span>
-          {!collapsed && <h2>Punch'd</h2>}
-        </div>
-        {!collapsed && <p>Admin Panel</p>}
-        <button 
-          className="collapse-btn"
-          onClick={onToggle}
-          title={collapsed ? 'Expand' : 'Collapse'}
-        >
-          {collapsed ? '→' : '←'}
-        </button>
+        <a href="/" className="sidebar-logo">
+          <div className="sidebar-logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 10"/>
+            </svg>
+          </div>
+          {!collapsed && (
+            <div className="sidebar-logo-text">
+              <span className="sidebar-logo-name">Punch'd</span>
+              <span className="sidebar-logo-byline">by Kyronos</span>
+            </div>
+          )}
+        </a>
       </div>
-      
+
+      {/* Navigation */}
       <nav className="sidebar-nav">
-        <NavItem to="/timesheets" icon="📋" label="Timesheets" />
-        
-        <NavItem 
-          to="/scheduling" 
-          icon="📅" 
-          label="Scheduling" 
-          feature="SHIFT_SCHEDULING"
-          permission="canManageSchedules"
-        />
-        
-        <NavItem 
-          to="/workers" 
-          icon="👷" 
-          label="Workers" 
-          permission="canManageWorkers"
-        />
-        
-        <NavItem 
-          to="/job-sites" 
-          icon="🏗️" 
-          label="Job Sites" 
-          permission="canManageJobs"
-        />
-        
-        <NavItem 
-          to="/analytics" 
-          icon="💰" 
-          label="Cost Analytics" 
-          feature="COST_ANALYTICS"
-          permission="canViewAnalytics"
-        />
-        
-        <NavItem 
-          to="/audit" 
-          icon="🔍" 
-          label="Audit Log" 
-          feature="AUDIT_LOGS"
-          permission="canViewAuditLogs"
-        />
-        
-        <NavItem 
-          to="/billing" 
-          icon="💳" 
-          label="Billing" 
-          permission="canManageBilling"
-        />
+        {/* Main */}
+        <div className="sidebar-section">
+          {!collapsed && <div className="sidebar-section-title">Main</div>}
+          {filterByRole(mainNavItems).map(item => (
+            <NavItem key={item.path} item={item} />
+          ))}
+        </div>
+
+        {/* Requests - Phase 1 */}
+        {filterByRole(requestsNavItems).length > 0 && (
+          <div className="sidebar-section">
+            {!collapsed && <div className="sidebar-section-title">Requests</div>}
+            {filterByRole(requestsNavItems).map(item => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </div>
+        )}
+
+        {/* Reports */}
+        {filterByRole(reportsNavItems).length > 0 && (
+          <div className="sidebar-section">
+            {!collapsed && <div className="sidebar-section-title">Reports</div>}
+            {filterByRole(reportsNavItems).map(item => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </div>
+        )}
+
+        {/* Settings */}
+        {filterByRole(settingsNavItems).length > 0 && (
+          <div className="sidebar-section">
+            {!collapsed && <div className="sidebar-section-title">Settings</div>}
+            {filterByRole(settingsNavItems).map(item => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </div>
+        )}
       </nav>
 
+      {/* Footer */}
       <div className="sidebar-footer">
-        <span className="role-indicator" title={userRole}>
-          {collapsed ? userRole.charAt(0) : userRole}
-        </span>
+        <button className="sidebar-toggle" onClick={onToggle}>
+          <span className="sidebar-toggle-icon">
+            {collapsed ? Icons.chevronRight : Icons.chevronLeft}
+          </span>
+          {!collapsed && <span className="sidebar-toggle-text">Collapse</span>}
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }
 

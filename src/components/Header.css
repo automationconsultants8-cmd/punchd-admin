@@ -1,0 +1,8 @@
+/* Header styles are now in design-system.css */
+/* This file kept for any additional header-specific overrides */
+
+.dropdown-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}

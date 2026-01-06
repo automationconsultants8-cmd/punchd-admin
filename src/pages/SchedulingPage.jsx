@@ -1,456 +1,337 @@
 import { useState, useEffect } from 'react';
-import { useFeatures } from '../context/FeatureContext';
-import UpgradePrompt from '../components/UpgradePrompt';
 import { shiftsApi, usersApi, jobsApi } from '../services/api';
+import './SchedulingPage.css';
+
+// SVG Icons
+const Icons = {
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  clipboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+    </svg>
+  ),
+  users: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  building: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 22V4c0-.27.1-.52.3-.71.2-.2.44-.29.7-.29h10c.27 0 .52.1.71.29.2.2.29.45.29.71v18"/>
+      <path d="M6 12H4c-.27 0-.52.1-.71.29-.2.2-.29.45-.29.71v9"/>
+      <path d="M18 9h2c.27 0 .52.1.71.29.2.2.29.45.29.71v12"/>
+      <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+    </svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  plus: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  ),
+  x: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  ),
+  check: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
+  trash: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </svg>
+  ),
+  chevronLeft: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+  ),
+  chevronRight: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  ),
+  user: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  fileText: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  ),
+};
 
 function SchedulingPage() {
-  const { hasFeature, loading: featuresLoading } = useFeatures();
   const [shifts, setShifts] = useState([]);
   const [workers, setWorkers] = useState([]);
-  const [jobs, setJobs] = useState([]);
+  const [jobSites, setJobSites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [currentWeek, setCurrentWeek] = useState(getWeekStart(new Date()));
   const [formData, setFormData] = useState({
     jobId: '',
     userId: '',
-    shiftDate: new Date().toISOString().split('T')[0],
+    date: '',
     startTime: '08:00',
     endTime: '17:00',
-    notes: '',
+    notes: ''
   });
 
+  function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+  }
+
   useEffect(() => {
-    if (hasFeature('SHIFT_SCHEDULING')) {
-      loadData();
-    }
-  }, [hasFeature]);
+    loadData();
+  }, []);
 
   const loadData = async () => {
     try {
-      setLoading(true);
       const [shiftsRes, workersRes, jobsRes] = await Promise.all([
         shiftsApi.getAll(),
         usersApi.getAll(),
-        jobsApi.getAll(),
+        jobsApi.getAll()
       ]);
-      
       setShifts(shiftsRes.data || []);
-      setWorkers(workersRes.data || []);
-      setJobs(jobsRes.data || []);
-    } catch (err) {
-      console.error('Failed to load data:', err);
+      setWorkers((workersRes.data || []).filter(w => w.status === 'active' || w.isActive));
+      setJobSites((jobsRes.data || []).filter(j => j.status === 'active'));
+    } catch (error) {
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateShift = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await shiftsApi.create({
-        jobId: formData.jobId,
-        userId: formData.userId,
-        shiftDate: formData.shiftDate,
-        startTime: new Date(`${formData.shiftDate}T${formData.startTime}`),
-        endTime: new Date(`${formData.shiftDate}T${formData.endTime}`),
-        notes: formData.notes,
-      });
+      await shiftsApi.create({ ...formData, status: 'scheduled' });
       setShowModal(false);
-      setFormData({
-        jobId: '',
-        userId: '',
-        shiftDate: new Date().toISOString().split('T')[0],
-        startTime: '08:00',
-        endTime: '17:00',
-        notes: '',
-      });
+      setFormData({ jobId: '', userId: '', date: '', startTime: '08:00', endTime: '17:00', notes: '' });
       loadData();
-    } catch (err) {
-      console.error('Failed to create shift:', err);
-      alert('Failed to create shift');
+    } catch (error) {
+      console.error('Error creating shift:', error);
     }
   };
 
-  const handleDeleteShift = async (id, e) => {
-    e.stopPropagation();
-    if (!confirm('Delete this shift?')) return;
-    try {
-      await shiftsApi.delete(id);
-      loadData();
-    } catch (err) {
-      console.error('Failed to delete shift:', err);
+  const handleDelete = async (id) => {
+    if (window.confirm('Delete this shift?')) {
+      try {
+        await shiftsApi.delete(id);
+        loadData();
+      } catch (error) {
+        console.error('Error deleting shift:', error);
+      }
     }
   };
 
-  const getWeekDates = () => {
-    const dates = [];
-    const start = new Date(currentWeek);
-    start.setDate(start.getDate() - start.getDay());
-    
+  const getWeekDays = () => {
+    const days = [];
     for (let i = 0; i < 7; i++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      dates.push(date);
+      const day = new Date(currentWeek);
+      day.setDate(currentWeek.getDate() + i);
+      days.push(day);
     }
-    return dates;
+    return days;
   };
 
   const navigateWeek = (direction) => {
-    const newDate = new Date(currentWeek);
-    newDate.setDate(newDate.getDate() + (direction * 7));
-    setCurrentWeek(newDate);
+    const newWeek = new Date(currentWeek);
+    newWeek.setDate(currentWeek.getDate() + (direction * 7));
+    setCurrentWeek(newWeek);
   };
 
-  const getShiftsForDate = (date) => {
-    return shifts.filter(s => {
-      const shiftDate = new Date(s.shiftDate);
-      return shiftDate.toDateString() === date.toDateString();
-    });
+  const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const isToday = (date) => date.toDateString() === new Date().toDateString();
+  const getShiftsForDay = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return shifts.filter(s => s.date === dateStr);
   };
 
-  const openModalForDate = (date) => {
-    setFormData({ ...formData, shiftDate: date.toISOString().split('T')[0] });
-    setShowModal(true);
+  const weekDays = getWeekDays();
+  const stats = {
+    totalShifts: shifts.length,
+    workers: workers.length,
+    jobSites: jobSites.length,
+    upcoming: shifts.filter(s => new Date(s.date) >= new Date()).length
   };
 
-  if (featuresLoading) {
-    return <div style={{ padding: '60px', textAlign: 'center', color: '#888' }}>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="scheduling-page">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading schedule...</p>
+        </div>
+      </div>
+    );
   }
-
-  if (!hasFeature('SHIFT_SCHEDULING')) {
-    return <UpgradePrompt feature="SHIFT_SCHEDULING" requiredPlan="Professional" />;
-  }
-
-  const weekDates = getWeekDates();
-
-  const selectStyle = {
-    width: '100%',
-    padding: '14px',
-    background: '#2a2a3d',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '12px',
-    color: '#fff',
-    fontSize: '16px',
-    cursor: 'pointer',
-  };
-
-  const optionStyle = {
-    background: '#2a2a3d',
-    color: '#fff',
-    padding: '10px',
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '14px',
-    background: '#2a2a3d',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '12px',
-    color: '#fff',
-    fontSize: '16px',
-    boxSizing: 'border-box',
-  };
 
   return (
-    <div style={{ padding: '30px' }}>
+    <div className="scheduling-page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', background: 'linear-gradient(135deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '5px' }}>
-            📅 Shift Scheduling
-          </h1>
-          <p style={{ color: '#888' }}>Click on any day to create a shift</p>
+      <div className="page-header">
+        <div className="page-header-content">
+          <div className="page-title-row">
+            <div className="page-icon">{Icons.calendar}</div>
+            <h1>Shift Scheduling</h1>
+          </div>
+          <p>Click on any day to create a shift</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            background: 'linear-gradient(135deg, #a855f7, #ec4899)',
-            color: 'white',
-            border: 'none',
-            padding: '14px 28px',
-            borderRadius: '12px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: 'pointer',
-          }}
-        >
-          ➕ Create Shift
+        <button className="btn-primary" onClick={() => setShowModal(true)}>
+          {Icons.plus}<span>Create Shift</span>
         </button>
       </div>
 
-      {/* Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderLeft: '4px solid #3b82f6', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '32px' }}>📋</span>
-          <div>
-            <p style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: 0 }}>{shifts.length}</p>
-            <p style={{ color: '#888', margin: 0, fontSize: '13px' }}>Total Shifts</p>
+      {/* Stats Grid */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon gold">{Icons.clipboard}</div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.totalShifts}</div>
+            <div className="stat-label">Total Shifts</div>
           </div>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderLeft: '4px solid #a855f7', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '32px' }}>👷</span>
-          <div>
-            <p style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: 0 }}>{workers.length}</p>
-            <p style={{ color: '#888', margin: 0, fontSize: '13px' }}>Workers</p>
+        <div className="stat-card">
+          <div className="stat-icon blue">{Icons.users}</div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.workers}</div>
+            <div className="stat-label">Workers</div>
           </div>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderLeft: '4px solid #22c55e', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '32px' }}>🏗️</span>
-          <div>
-            <p style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: 0 }}>{jobs.length}</p>
-            <p style={{ color: '#888', margin: 0, fontSize: '13px' }}>Job Sites</p>
+        <div className="stat-card">
+          <div className="stat-icon green">{Icons.building}</div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.jobSites}</div>
+            <div className="stat-label">Job Sites</div>
           </div>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)', borderLeft: '4px solid #f59e0b', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '32px' }}>⏰</span>
-          <div>
-            <p style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: 0 }}>{shifts.filter(s => s.status === 'SCHEDULED').length}</p>
-            <p style={{ color: '#888', margin: 0, fontSize: '13px' }}>Upcoming</p>
+        <div className="stat-card">
+          <div className="stat-icon purple">{Icons.clock}</div>
+          <div className="stat-content">
+            <div className="stat-value">{stats.upcoming}</div>
+            <div className="stat-label">Upcoming</div>
           </div>
         </div>
       </div>
 
       {/* Week Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <button
-          onClick={() => navigateWeek(-1)}
-          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
-        >
-          ← Previous Week
-        </button>
-        <h3 style={{ color: '#fff', fontSize: '20px' }}>
-          {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-        </h3>
-        <button
-          onClick={() => navigateWeek(1)}
-          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '12px 24px', borderRadius: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
-        >
-          Next Week →
-        </button>
+      <div className="week-navigation">
+        <button className="nav-btn" onClick={() => navigateWeek(-1)}>{Icons.chevronLeft}</button>
+        <h2>{formatDate(weekDays[0])} - {formatDate(weekDays[6])}</h2>
+        <button className="nav-btn" onClick={() => navigateWeek(1)}>{Icons.chevronRight}</button>
       </div>
 
-      {/* Calendar Grid */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#888' }}>Loading shifts...</div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
-          {weekDates.map((date, idx) => {
-            const dayShifts = getShiftsForDate(date);
-            const isToday = date.toDateString() === new Date().toDateString();
-            
-            return (
-              <div
-                key={idx}
-                onClick={() => openModalForDate(date)}
-                style={{
-                  background: isToday ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255,255,255,0.02)',
-                  border: isToday ? '2px solid #a855f7' : '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '16px',
-                  padding: '15px',
-                  minHeight: '180px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#a855f7';
-                  e.currentTarget.style.transform = 'translateY(-3px)';
-                  e.currentTarget.style.boxShadow = '0 10px 30px rgba(168, 85, 247, 0.2)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = isToday ? '#a855f7' : 'rgba(255,255,255,0.1)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <div style={{ textAlign: 'center', marginBottom: '12px', paddingBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  <p style={{ color: '#888', fontSize: '12px', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                  </p>
-                  <p style={{ color: isToday ? '#a855f7' : '#fff', fontSize: '28px', fontWeight: '700', margin: '5px 0 0 0' }}>
-                    {date.getDate()}
-                  </p>
-                </div>
-                
+      {/* Week Grid */}
+      <div className="week-grid">
+        {weekDays.map((day, index) => {
+          const dayShifts = getShiftsForDay(day);
+          const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+          return (
+            <div key={index} className={`day-column ${isToday(day) ? 'today' : ''}`}
+              onClick={() => { setFormData(prev => ({ ...prev, date: day.toISOString().split('T')[0] })); setShowModal(true); }}>
+              <div className="day-header">
+                <span className="day-name">{dayNames[day.getDay()]}</span>
+                <span className="day-number">{day.getDate()}</span>
+              </div>
+              <div className="day-content">
                 {dayShifts.length === 0 ? (
-                  <div style={{ textAlign: 'center', marginTop: '25px' }}>
-                    <p style={{ color: '#555', fontSize: '13px', margin: 0 }}>No shifts</p>
-                    <p style={{ color: '#a855f7', fontSize: '24px', margin: '10px 0 0 0', opacity: 0.4 }}>+</p>
+                  <div className="no-shifts">
+                    <span>No shifts</span>
+                    <button className="add-shift-btn">{Icons.plus}</button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="shifts-list">
                     {dayShifts.map(shift => (
-                      <div
-                        key={shift.id}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.1))',
-                          borderRadius: '8px',
-                          padding: '10px',
-                          fontSize: '11px',
-                          position: 'relative',
-                        }}
-                      >
-                        <button
-                          onClick={(e) => handleDeleteShift(shift.id, e)}
-                          style={{
-                            position: 'absolute',
-                            top: '5px',
-                            right: '5px',
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            opacity: 0.6,
-                          }}
-                        >
-                          ✕
+                      <div key={shift.id} className="shift-item" onClick={(e) => e.stopPropagation()}>
+                        <div className="shift-time">{shift.startTime} - {shift.endTime}</div>
+                        <div className="shift-worker">{shift.user?.name || 'Unassigned'}</div>
+                        <div className="shift-job">{shift.job?.name || 'No site'}</div>
+                        <button className="shift-delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }}>
+                          {Icons.trash}
                         </button>
-                        <p style={{ color: '#a855f7', fontWeight: '600', margin: 0 }}>{shift.user?.name || 'Unassigned'}</p>
-                        <p style={{ color: '#ccc', margin: '3px 0 0 0', fontSize: '10px' }}>{shift.job?.name}</p>
-                        <p style={{ color: '#888', margin: '3px 0 0 0', fontSize: '10px' }}>
-                          🕐 {new Date(shift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(shift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            style={{
-              background: 'linear-gradient(180deg, #252538 0%, #1e1e2f 100%)',
-              borderRadius: '24px',
-              padding: '35px',
-              width: '100%',
-              maxWidth: '480px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-              <h2 style={{ color: '#fff', fontSize: '24px', margin: 0 }}>📅 Create New Shift</h2>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#888', width: '36px', height: '36px', borderRadius: '10px', cursor: 'pointer', fontSize: '18px' }}
-              >
-                ✕
-              </button>
             </div>
-            
-            <form onSubmit={handleCreateShift}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: '#ccc', marginBottom: '8px', fontSize: '14px' }}>🏗️ Job Site</label>
-                <select
-                  value={formData.jobId}
-                  onChange={e => setFormData({ ...formData, jobId: e.target.value })}
-                  required
-                  style={selectStyle}
-                >
-                  <option value="" style={optionStyle}>Select a job site</option>
-                  {jobs.map(job => (
-                    <option key={job.id} value={job.id} style={optionStyle}>{job.name}</option>
-                  ))}
-                </select>
-              </div>
+          );
+        })}
+      </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: '#ccc', marginBottom: '8px', fontSize: '14px' }}>👷 Worker</label>
-                <select
-                  value={formData.userId}
-                  onChange={e => setFormData({ ...formData, userId: e.target.value })}
-                  required
-                  style={selectStyle}
-                >
-                  <option value="" style={optionStyle}>Select a worker</option>
-                  {workers.map(worker => (
-                    <option key={worker.id} value={worker.id} style={optionStyle}>{worker.name}</option>
-                  ))}
-                </select>
+      {/* Create Shift Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span className="modal-icon">{Icons.calendar}</span>
+                <h2>Create New Shift</h2>
               </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: '#ccc', marginBottom: '8px', fontSize: '14px' }}>📆 Date</label>
-                <input
-                  type="date"
-                  value={formData.shiftDate}
-                  onChange={e => setFormData({ ...formData, shiftDate: e.target.value })}
-                  required
-                  style={inputStyle}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', color: '#ccc', marginBottom: '8px', fontSize: '14px' }}>🕐 Start Time</label>
-                  <input
-                    type="time"
-                    value={formData.startTime}
-                    onChange={e => setFormData({ ...formData, startTime: e.target.value })}
-                    required
-                    style={inputStyle}
-                  />
+              <button className="modal-close" onClick={() => setShowModal(false)}>{Icons.x}</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label><span className="label-icon">{Icons.building}</span>Job Site</label>
+                  <select value={formData.jobId} onChange={(e) => setFormData(prev => ({ ...prev, jobId: e.target.value }))} required>
+                    <option value="">Select a job site</option>
+                    {jobSites.map(job => <option key={job.id} value={job.id}>{job.name}</option>)}
+                  </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', color: '#ccc', marginBottom: '8px', fontSize: '14px' }}>🕐 End Time</label>
-                  <input
-                    type="time"
-                    value={formData.endTime}
-                    onChange={e => setFormData({ ...formData, endTime: e.target.value })}
-                    required
-                    style={inputStyle}
-                  />
+                <div className="form-group">
+                  <label><span className="label-icon">{Icons.user}</span>Worker</label>
+                  <select value={formData.userId} onChange={(e) => setFormData(prev => ({ ...prev, userId: e.target.value }))} required>
+                    <option value="">Select a worker</option>
+                    {workers.map(worker => <option key={worker.id} value={worker.id}>{worker.name}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label><span className="label-icon">{Icons.calendar}</span>Date</label>
+                  <input type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} required />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label><span className="label-icon">{Icons.clock}</span>Start Time</label>
+                    <input type="time" value={formData.startTime} onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))} required />
+                  </div>
+                  <div className="form-group">
+                    <label><span className="label-icon">{Icons.clock}</span>End Time</label>
+                    <input type="time" value={formData.endTime} onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label><span className="label-icon">{Icons.fileText}</span>Notes (optional)</label>
+                  <textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Any special instructions..." rows={3} />
                 </div>
               </div>
-
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{ display: 'block', color: '#ccc', marginBottom: '8px', fontSize: '14px' }}>📝 Notes (optional)</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Any special instructions..."
-                  rows={3}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{ flex: 1, padding: '16px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '12px', color: '#ccc', cursor: 'pointer', fontSize: '16px', fontWeight: '500' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  style={{ flex: 1, padding: '16px', background: 'linear-gradient(135deg, #a855f7, #ec4899)', border: 'none', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontSize: '16px', fontWeight: '600' }}
-                >
-                  ✅ Create Shift
-                </button>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary">{Icons.check}<span>Create Shift</span></button>
               </div>
             </form>
           </div>

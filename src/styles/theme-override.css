@@ -1,0 +1,2151 @@
+/* ==========================================
+   GLOBAL THEME OVERRIDE - White/Gold
+   Import this AFTER design-system.css
+   ========================================== */
+
+/* Force all text to be dark on light backgrounds */
+body {
+  background: #FAF9F6 !important;
+  color: #1A1A1A !important;
+}
+
+/* Override any purple/pink gradients to gold */
+.btn-primary,
+button[type="submit"] {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  border: none !important;
+  color: white !important;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover {
+  box-shadow: 0 6px 20px rgba(201, 162, 39, 0.4) !important;
+}
+
+/* Global card styling */
+.card,
+.settings-card,
+.worker-card,
+.job-card,
+.shift-card,
+.stat-card,
+.summary-card,
+.approval-card,
+.payroll-card,
+.plan-card,
+.add-on-card,
+.insight-card,
+.roi-card,
+.violation-card {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.card:hover,
+.worker-card:hover,
+.job-card:hover,
+.shift-card:hover,
+.approval-card:hover,
+.payroll-card:hover {
+  border-color: #C9A227 !important;
+  box-shadow: 0 8px 24px rgba(201, 162, 39, 0.12) !important;
+}
+
+/* All page backgrounds */
+.analytics-page,
+.workers-page,
+.job-sites-page,
+.time-tracking-page,
+.scheduling-page,
+.compliance-page,
+.audit-page,
+.certified-payroll-page,
+.billing-page,
+.settings-page,
+.timesheets-page,
+.dashboard-page,
+.requests-page,
+.messages-page {
+  background: #FAF9F6 !important;
+}
+
+/* Page titles */
+.page-title,
+.page-header h1,
+.header-title h1,
+.card-title,
+.card-header h2,
+.section-header h2,
+.modal-header h2 {
+  color: #1A1A1A !important;
+  background: none !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
+
+/* Subtitles */
+.page-subtitle,
+.page-header p,
+.header-title p,
+.card-subtitle,
+.card-header p {
+  color: #5C5C5C !important;
+}
+
+/* Form labels */
+.form-group label,
+.form-label,
+.filter-group label {
+  color: #8B7021 !important;
+}
+
+/* Form inputs */
+.form-group input,
+.form-group select,
+.form-group textarea,
+.form-input,
+.form-select,
+.form-textarea,
+.filter-group input,
+.filter-group select {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: #C9A227 !important;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+}
+
+.form-group input::placeholder,
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #8A8A8A !important;
+}
+
+/* Tables */
+.table th,
+.audit-table th,
+.preview-table th,
+thead th {
+  background: #F5F4F0 !important;
+  color: #5C5C5C !important;
+  border-bottom: 2px solid #D4D0C8 !important;
+}
+
+.table td,
+.audit-table td,
+.preview-table td,
+tbody td {
+  color: #1A1A1A !important;
+  border-bottom: 1px solid #E8E6E1 !important;
+}
+
+.table tr:hover,
+.audit-table tr:hover,
+tbody tr:hover {
+  background: #F5F4F0 !important;
+}
+
+/* Tabs */
+.tabs {
+  background: #F5F4F0 !important;
+  border: none !important;
+}
+
+.tab {
+  color: #5C5C5C !important;
+  background: transparent !important;
+}
+
+.tab:hover {
+  color: #1A1A1A !important;
+}
+
+.tab.active {
+  background: #FFFFFF !important;
+  color: #8B7021 !important;
+  border-bottom-color: #C9A227 !important;
+}
+
+/* Badges */
+.badge,
+.status-badge,
+.role-badge,
+.tab-badge {
+  font-weight: 600 !important;
+}
+
+.badge-success,
+.status-badge.active,
+.status-badge.completed {
+  background: rgba(61, 139, 95, 0.12) !important;
+  color: #2D7A4A !important;
+  border: 1px solid rgba(61, 139, 95, 0.3) !important;
+}
+
+.badge-warning,
+.status-badge.pending {
+  background: rgba(201, 162, 39, 0.12) !important;
+  color: #8B7021 !important;
+  border: 1px solid rgba(201, 162, 39, 0.3) !important;
+}
+
+.badge-danger,
+.badge-error,
+.status-badge.inactive,
+.status-badge.rejected {
+  background: rgba(181, 75, 75, 0.12) !important;
+  color: #B54B4B !important;
+  border: 1px solid rgba(181, 75, 75, 0.3) !important;
+}
+
+/* Stat cards */
+.stat-card .stat-value,
+.stat-value,
+.summary-card .value {
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+  background: none !important;
+}
+
+.stat-card .stat-label,
+.stat-label,
+.stat-content h3 {
+  color: #5C5C5C !important;
+}
+
+/* Stat icons - gradient backgrounds */
+.stat-icon,
+.stat-icon-bg,
+.stat-card-icon {
+  border-radius: 12px !important;
+}
+
+.stat-icon-bg,
+.stat-card.blue .stat-icon-bg {
+  background: linear-gradient(135deg, #4B7BB5, #6B9BD5) !important;
+  color: white !important;
+}
+
+.stat-card.green .stat-icon-bg {
+  background: linear-gradient(135deg, #3D8B5F, #5AAF7D) !important;
+  color: white !important;
+}
+
+.stat-card.purple .stat-icon-bg {
+  background: linear-gradient(135deg, #6B5B7A, #8B7B9A) !important;
+  color: white !important;
+}
+
+.stat-card.orange .stat-icon-bg {
+  background: linear-gradient(135deg, #C9872A, #E8A84A) !important;
+  color: white !important;
+}
+
+/* Section backgrounds */
+.breakdown-section,
+.insights-section,
+.filters-section,
+.pending-section {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+/* Progress bars */
+.progress-fill,
+.job-bar-fill {
+  background: linear-gradient(135deg, #C9A227, #E8D48A) !important;
+}
+
+.progress-bar,
+.job-bar {
+  background: #E8E6E1 !important;
+}
+
+/* Avatars */
+.avatar,
+.worker-avatar,
+.header-profile-avatar {
+  background: linear-gradient(135deg, #C9A227, #E8D48A) !important;
+  color: white !important;
+}
+
+/* Empty states */
+.empty-state,
+.no-entries {
+  background: #FFFFFF !important;
+  border: 2px dashed #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.empty-state h3,
+.empty-title {
+  color: #1A1A1A !important;
+}
+
+.empty-state p,
+.empty-text {
+  color: #8A8A8A !important;
+}
+
+.empty-icon {
+  background: #F5F0E6 !important;
+  border: 2px solid #E8D48A !important;
+}
+
+/* Loading states */
+.spinner,
+.loading-spinner {
+  border-color: #E8E6E1 !important;
+  border-top-color: #C9A227 !important;
+}
+
+.loading,
+.loading-state p,
+.loading-container p {
+  color: #5C5C5C !important;
+}
+
+/* Modals */
+.modal {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.modal-header {
+  background: #FAFAF8 !important;
+  border-bottom: 2px solid #E8E6E1 !important;
+}
+
+.modal-header h2,
+.modal-header h3 {
+  color: #1A1A1A !important;
+}
+
+.modal-footer {
+  background: #FAFAF8 !important;
+  border-top: 2px solid #E8E6E1 !important;
+}
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Buttons */
+.btn-secondary {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.btn-secondary:hover {
+  background: #F5F4F0 !important;
+  border-color: #C9A227 !important;
+  color: #1A1A1A !important;
+}
+
+.btn-edit,
+.btn-rate {
+  background: rgba(75, 123, 181, 0.12) !important;
+  color: #3D6A99 !important;
+  border: 1px solid rgba(75, 123, 181, 0.3) !important;
+}
+
+.btn-edit:hover,
+.btn-rate:hover {
+  background: rgba(75, 123, 181, 0.2) !important;
+}
+
+.btn-danger {
+  background: rgba(181, 75, 75, 0.12) !important;
+  color: #B54B4B !important;
+  border: 1px solid rgba(181, 75, 75, 0.3) !important;
+}
+
+.btn-danger:hover {
+  background: #B54B4B !important;
+  color: white !important;
+}
+
+.btn-approve,
+.btn-success {
+  background: rgba(61, 139, 95, 0.12) !important;
+  color: #2D7A4A !important;
+  border: 1px solid rgba(61, 139, 95, 0.3) !important;
+}
+
+.btn-approve:hover,
+.btn-success:hover {
+  background: #3D8B5F !important;
+  color: white !important;
+}
+
+/* Pagination */
+.pagination button {
+  background: rgba(201, 162, 39, 0.12) !important;
+  border: 2px solid rgba(201, 162, 39, 0.3) !important;
+  color: #8B7021 !important;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: rgba(201, 162, 39, 0.2) !important;
+}
+
+.pagination span {
+  color: #5C5C5C !important;
+}
+
+/* Cost/money values */
+.cost,
+.cost-cell,
+.rate-value,
+.cost-total,
+.gross-cell {
+  color: #2D7A4A !important;
+}
+
+/* Links */
+a {
+  color: #8B7021 !important;
+}
+
+a:hover {
+  color: #C9A227 !important;
+}
+
+/* Dropdown menus */
+.dropdown-menu {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.dropdown-item {
+  color: #5C5C5C !important;
+}
+
+.dropdown-item:hover {
+  background: #F5F4F0 !important;
+  color: #1A1A1A !important;
+}
+
+.dropdown-divider {
+  background: #E8E6E1 !important;
+}
+
+/* Notification items */
+.notification-item {
+  border-bottom-color: #E8E6E1 !important;
+}
+
+.notification-item:hover {
+  background: #F5F4F0 !important;
+}
+
+.notification-content p {
+  color: #1A1A1A !important;
+}
+
+.notification-time {
+  color: #8A8A8A !important;
+}
+
+/* Workers page specific */
+.worker-info h3,
+.worker-name {
+  color: #1A1A1A !important;
+}
+
+.worker-info p,
+.worker-job {
+  color: #5C5C5C !important;
+}
+
+/* Job sites page specific */
+.job-info h3 {
+  color: #1A1A1A !important;
+}
+
+.job-info p {
+  color: #5C5C5C !important;
+}
+
+.job-details .label {
+  color: #8A8A8A !important;
+}
+
+.job-details .value {
+  color: #1A1A1A !important;
+  background: rgba(201, 162, 39, 0.08) !important;
+}
+
+.job-icon {
+  background: linear-gradient(135deg, #C9A227, #E8D48A) !important;
+  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.3) !important;
+}
+
+/* Scheduling page specific */
+.shift-job {
+  color: #8B7021 !important;
+}
+
+.detail-row {
+  color: #5C5C5C !important;
+}
+
+.detail-icon {
+  color: #8A8A8A !important;
+}
+
+/* Analytics page specific */
+.insight-card h4 {
+  color: #5C5C5C !important;
+}
+
+.insight-card p {
+  color: #1A1A1A !important;
+}
+
+/* Billing page specific */
+.billing-header h1,
+.billing-header p {
+  color: #1A1A1A !important;
+}
+
+.plan-header h3 {
+  color: #8B7021 !important;
+}
+
+.plan-price .amount {
+  color: #1A1A1A !important;
+}
+
+.plan-price .currency,
+.plan-price .period {
+  color: #5C5C5C !important;
+}
+
+.plan-features li.included {
+  color: #5C5C5C !important;
+}
+
+.plan-features li.included .icon {
+  color: #2D7A4A !important;
+}
+
+/* Settings page specific */
+.settings-card h2 {
+  color: #1A1A1A !important;
+}
+
+/* Time tracking specific */
+.approval-name {
+  color: #1A1A1A !important;
+}
+
+.approval-job {
+  color: #5C5C5C !important;
+}
+
+.approval-details span {
+  color: #8A8A8A !important;
+}
+
+.approval-details strong {
+  color: #1A1A1A !important;
+}
+
+/* Certified payroll specific */
+.preview-header h3 {
+  color: #1A1A1A !important;
+}
+
+.preview-subtitle {
+  color: #5C5C5C !important;
+}
+
+.preview-stat .stat-value {
+  color: #1A1A1A !important;
+}
+
+.preview-stat .stat-label {
+  color: #8A8A8A !important;
+}
+
+.worker-cell .worker-name {
+  color: #1A1A1A !important;
+}
+
+.worker-cell .worker-address {
+  color: #8A8A8A !important;
+}
+
+.classification-cell {
+  color: #8B7021 !important;
+}
+
+/* Compliance specific */
+.violation-type {
+  color: #1A1A1A !important;
+}
+
+.violation-worker {
+  color: #5C5C5C !important;
+}
+
+.violation-description {
+  background: #F5F4F0 !important;
+  color: #5C5C5C !important;
+}
+
+/* Audit page specific */
+.user-cell {
+  color: #1A1A1A !important;
+}
+
+.details-cell {
+  color: #5C5C5C !important;
+}
+
+.time-cell {
+  color: #8A8A8A !important;
+}
+
+/* Quick actions */
+.action-item,
+.quick-action {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.action-item:hover,
+.quick-action:hover {
+  border-color: #C9A227 !important;
+  background: #FFFDF5 !important;
+}
+
+.action-item span:last-child,
+.quick-action span {
+  color: #5C5C5C !important;
+}
+
+/* Section titles with icons */
+.section-header h2,
+.breakdown-section h3,
+.insights-section h2 {
+  color: #1A1A1A !important;
+}
+
+/* Warning/info banners */
+.warning-banner {
+  background: rgba(201, 135, 42, 0.1) !important;
+  border: 2px solid rgba(201, 135, 42, 0.3) !important;
+}
+
+.warning-banner strong {
+  color: #996B1F !important;
+}
+
+.warning-banner p {
+  color: #5C5C5C !important;
+}
+
+/* Error messages */
+.error-message,
+.error {
+  background: rgba(181, 75, 75, 0.1) !important;
+  border: 2px solid rgba(181, 75, 75, 0.3) !important;
+  color: #B54B4B !important;
+}
+
+/* Success messages */
+.message.success,
+.alert-success,
+.success {
+  background: rgba(61, 139, 95, 0.1) !important;
+  border: 2px solid rgba(61, 139, 95, 0.3) !important;
+  color: #2D7A4A !important;
+}
+
+/* Filter selects */
+.audit-filters select,
+.filter-select {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+/* ROI Calculator (Billing) */
+.roi-calculator {
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.08), rgba(201, 162, 39, 0.02)) !important;
+  border: 2px solid rgba(201, 162, 39, 0.2) !important;
+}
+
+.roi-calculator h2 {
+  color: #1A1A1A !important;
+}
+
+.roi-card h4 {
+  color: #1A1A1A !important;
+}
+
+.roi-card > p {
+  color: #5C5C5C !important;
+}
+
+/* Trust section */
+.trust-section h2 {
+  color: #1A1A1A !important;
+}
+
+.trust-number {
+  color: #8B7021 !important;
+}
+
+.trust-label {
+  color: #5C5C5C !important;
+}
+
+/* FAQ section */
+.billing-faq {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.billing-faq h2 {
+  color: #1A1A1A !important;
+}
+
+.faq-item h4 {
+  color: #1A1A1A !important;
+}
+
+.faq-item p {
+  color: #5C5C5C !important;
+}
+
+/* CTA section */
+.cta-section {
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.15), rgba(201, 162, 39, 0.05)) !important;
+  border: 2px solid rgba(201, 162, 39, 0.3) !important;
+}
+
+.cta-section h2 {
+  color: #1A1A1A !important;
+}
+
+.cta-section > p {
+  color: #5C5C5C !important;
+}
+
+.cta-button {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+}
+
+.cta-note {
+  color: #5C5C5C !important;
+}
+
+.cta-note a {
+  color: #8B7021 !important;
+}
+
+/* Date inputs */
+.date-input {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.date-input input {
+  color: #1A1A1A !important;
+}
+
+.date-separator {
+  color: #8A8A8A !important;
+}
+
+/* Breakdown items */
+.breakdown-item {
+  background: #F5F4F0 !important;
+}
+
+.breakdown-label {
+  color: #5C5C5C !important;
+}
+
+.breakdown-count {
+  color: #1A1A1A !important;
+}
+
+/* View details in modals */
+.view-label,
+.detail-label {
+  color: #8A8A8A !important;
+}
+
+.view-value,
+.detail-value {
+  color: #1A1A1A !important;
+}
+
+/* Table rows */
+.table-row {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.table-row:hover {
+  border-color: #C9A227 !important;
+}
+
+.cell-label {
+  color: #8A8A8A !important;
+}
+
+.cell-value {
+  color: #1A1A1A !important;
+}
+
+.cell-value.worker-name {
+  color: #8B7021 !important;
+  -webkit-text-fill-color: #8B7021 !important;
+  background: none !important;
+}
+
+/* Mobile menu toggle */
+.sidebar-toggle {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.sidebar-toggle:hover {
+  background: #F5F4F0 !important;
+  border-color: #C9A227 !important;
+}
+
+/* Total count */
+.total-count {
+  color: #5C5C5C !important;
+}
+
+/* Export buttons */
+.btn-export {
+  background: linear-gradient(135deg, #3D8B5F, #5AAF7D) !important;
+}
+
+.btn-pdf {
+  background: linear-gradient(135deg, #B54B4B, #C96B6B) !important;
+}
+/* ==========================================
+   ADDITIONAL FIXES - Pages still showing purple
+   ========================================== */
+
+/* Audit Log Page */
+.audit-page h1,
+.audit-page .page-title {
+  color: #8B7021 !important;
+  -webkit-text-fill-color: #8B7021 !important;
+}
+
+.audit-page .stat-card {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-left: 4px solid #C9A227 !important;
+}
+
+.audit-page .stat-value {
+  color: #1A1A1A !important;
+}
+
+.audit-page .stat-label {
+  color: #5C5C5C !important;
+}
+
+/* Different colored left borders for audit stats */
+.audit-page .stat-card:nth-child(1) { border-left-color: #C9A227 !important; }
+.audit-page .stat-card:nth-child(2) { border-left-color: #3D8B5F !important; }
+.audit-page .stat-card:nth-child(3) { border-left-color: #4B7BB5 !important; }
+.audit-page .stat-card:nth-child(4) { border-left-color: #B54B4B !important; }
+
+.audit-table-container {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.action-badge {
+  border-radius: 6px !important;
+}
+
+/* Scheduling Page */
+.scheduling-page h1,
+.scheduling-page .page-title,
+.scheduling-page .header-title h1 {
+  color: #8B7021 !important;
+  -webkit-text-fill-color: #8B7021 !important;
+  background: none !important;
+}
+
+.scheduling-page .stat-card {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-left: 4px solid #C9A227 !important;
+}
+
+.scheduling-page .stat-card.blue { border-left-color: #4B7BB5 !important; }
+.scheduling-page .stat-card.purple { border-left-color: #6B5B7A !important; }
+.scheduling-page .stat-card.green { border-left-color: #3D8B5F !important; }
+.scheduling-page .stat-card.orange { border-left-color: #C9872A !important; }
+
+.scheduling-page .stat-value {
+  color: #1A1A1A !important;
+}
+
+.scheduling-page .stat-label {
+  color: #5C5C5C !important;
+}
+
+/* Calendar day cells */
+.calendar-day,
+.day-cell,
+.schedule-day {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.calendar-day:hover,
+.day-cell:hover,
+.schedule-day:hover {
+  border-color: #C9A227 !important;
+  background: #FFFDF5 !important;
+}
+
+.calendar-day.today,
+.day-cell.today,
+.schedule-day.today,
+.calendar-day.selected,
+.day-cell.selected {
+  background: rgba(201, 162, 39, 0.1) !important;
+  border-color: #C9A227 !important;
+}
+
+.day-header,
+.weekday-header {
+  color: #5C5C5C !important;
+}
+
+.day-number {
+  color: #1A1A1A !important;
+}
+
+.no-shifts {
+  color: #8A8A8A !important;
+}
+
+/* Profile Page */
+.profile-page h1,
+[style*="My Profile"] {
+  color: #8B7021 !important;
+}
+
+/* Profile page inline styles fix */
+div[style*="background: rgba(255,255,255,0.02)"] {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+div[style*="background: linear-gradient(135deg, #6366f1"] {
+  background: linear-gradient(135deg, #C9A227, #E8D48A) !important;
+}
+
+div[style*="background: rgba(255,255,255,0.03)"] {
+  background: #F5F4F0 !important;
+}
+
+div[style*="color: #888"] {
+  color: #5C5C5C !important;
+}
+
+div[style*="color: #fff"] {
+  color: #1A1A1A !important;
+}
+
+/* Login/Signup/Reset Password Pages */
+.login-container {
+  background: linear-gradient(135deg, #FAF9F6 0%, #F5F0E6 50%, #FFFDF5 100%) !important;
+}
+
+.login-card,
+.signup-card {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  box-shadow: 0 8px 32px rgba(201, 162, 39, 0.1) !important;
+}
+
+.login-header h2 {
+  color: #1A1A1A !important;
+}
+
+.login-header p {
+  color: #5C5C5C !important;
+}
+
+.login-card .form-group label,
+.signup-card .form-group label {
+  color: #8B7021 !important;
+}
+
+.login-card .form-group input,
+.signup-card .form-group input {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.login-card .form-group input:focus,
+.signup-card .form-group input:focus {
+  border-color: #C9A227 !important;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+  background: #FFFFFF !important;
+}
+
+.login-card .form-group input::placeholder,
+.signup-card .form-group input::placeholder {
+  color: #8A8A8A !important;
+}
+
+.login-card button[type="submit"],
+.signup-card button[type="submit"] {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+}
+
+.login-card button[type="submit"]:hover,
+.signup-card button[type="submit"]:hover {
+  box-shadow: 0 6px 20px rgba(201, 162, 39, 0.4) !important;
+}
+
+.login-footer p {
+  color: #5C5C5C !important;
+}
+
+.link-button {
+  color: #8B7021 !important;
+}
+
+.link-button:hover {
+  color: #C9A227 !important;
+}
+
+.password-toggle {
+  color: #8A8A8A !important;
+}
+
+/* Reset password success */
+.reset-success h3 {
+  color: #2D7A4A !important;
+}
+
+.reset-success p {
+  color: #5C5C5C !important;
+}
+
+/* ==========================================
+   FIX MISSING TEXT - Force dark text everywhere
+   ========================================== */
+
+/* Any element with white text that should be dark */
+h1, h2, h3, h4, h5, h6 {
+  color: #1A1A1A !important;
+}
+
+/* Except in sidebar which should stay dark themed */
+.sidebar h1,
+.sidebar h2,
+.sidebar h3,
+.sidebar h4,
+.sidebar h5,
+.sidebar h6,
+.sidebar-logo-name {
+  color: #FFFFFF !important;
+}
+
+/* Page titles with gradient text - override */
+h1[style*="background: linear-gradient"],
+h1[style*="-webkit-text-fill-color"],
+.page-title[style*="background"],
+[style*="-webkit-background-clip: text"] {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #8B7021 !important;
+  color: #8B7021 !important;
+}
+
+/* Fix any remaining inline styles */
+[style*="color: #fff"]:not(.sidebar *):not(.avatar):not(.btn-primary):not(button[type="submit"]) {
+  color: #1A1A1A !important;
+}
+
+[style*="color: white"]:not(.sidebar *):not(.avatar):not(.btn-primary):not(button[type="submit"]) {
+  color: #1A1A1A !important;
+}
+
+/* Profile page specific - has lots of inline styles */
+.profile-page,
+div[style*="padding: '30px'"],
+div[style*="maxWidth: '600px'"] {
+  background: #FAF9F6 !important;
+}
+
+/* Fix emoji icons in titles */
+.header-icon,
+.page-header span[style*="font-size: 40px"],
+.header-title span {
+  filter: none !important;
+}
+
+/* Stats row on scheduling page */
+.stats-row .stat-card {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.stats-row .stat-icon {
+  border-radius: 12px !important;
+}
+
+.stats-row .stat-value {
+  color: #1A1A1A !important;
+}
+
+.stats-row .stat-label {
+  color: #5C5C5C !important;
+}
+
+/* Week calendar grid */
+.week-grid,
+.calendar-grid,
+.schedule-grid {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 12px !important;
+}
+
+.week-day,
+.calendar-cell {
+  border-color: #E8E6E1 !important;
+}
+
+/* Purple highlight on current day - change to gold */
+[style*="background: rgba(168, 85, 247"],
+[style*="background: #a855f7"],
+[style*="border-color: #a855f7"],
+.today-highlight {
+  background: rgba(201, 162, 39, 0.1) !important;
+  border-color: #C9A227 !important;
+}
+
+/* Any remaining purple borders */
+[style*="border: 1px solid rgba(168, 85, 247"],
+[style*="border-color: rgba(168, 85, 247"] {
+  border-color: #C9A227 !important;
+}
+
+/* Any remaining purple backgrounds */
+[style*="background: rgba(168, 85, 247"],
+[style*="background: linear-gradient(135deg, #a855f7"] {
+  background: linear-gradient(135deg, #C9A227, #E8D48A) !important;
+}
+
+/* Scheduling page calendar specifically */
+.scheduling-page .calendar,
+.scheduling-page .week-view {
+  background: #FFFFFF !important;
+}
+
+.scheduling-page .day-column {
+  border-color: #E8E6E1 !important;
+}
+
+.scheduling-page .day-column.today {
+  background: rgba(201, 162, 39, 0.08) !important;
+  border-color: #C9A227 !important;
+}
+
+.scheduling-page .day-column .day-name {
+  color: #5C5C5C !important;
+}
+
+.scheduling-page .day-column .day-date {
+  color: #1A1A1A !important;
+}
+
+.scheduling-page .no-shifts {
+  color: #8A8A8A !important;
+}
+
+.scheduling-page .add-shift-btn {
+  color: #C9A227 !important;
+}
+
+/* Create Shift button */
+.scheduling-page .btn-primary {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+}
+/* ==========================================
+   REMAINING FIXES - Scheduling, Audit, Job Sites, Billing
+   ========================================== */
+
+/* Scheduling Page Title */
+.scheduling-page .header-title h1,
+.scheduling-page .page-title,
+.scheduling-page h1 {
+  color: #8B7021 !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #8B7021 !important;
+}
+
+/* Scheduling Modal - Force light theme */
+.scheduling-page .modal,
+.scheduling-page .modal-overlay .modal {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.scheduling-page .modal-header {
+  background: #FAFAF8 !important;
+  border-bottom: 2px solid #E8E6E1 !important;
+}
+
+.scheduling-page .modal-header h2 {
+  color: #1A1A1A !important;
+}
+
+.scheduling-page .modal .form-group label {
+  color: #8B7021 !important;
+}
+
+.scheduling-page .modal .form-group input,
+.scheduling-page .modal .form-group select,
+.scheduling-page .modal .form-group textarea {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.scheduling-page .modal .form-group input:focus,
+.scheduling-page .modal .form-group select:focus,
+.scheduling-page .modal .form-group textarea:focus {
+  border-color: #C9A227 !important;
+}
+
+.scheduling-page .modal .btn-secondary {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.scheduling-page .modal .btn-primary {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  color: white !important;
+}
+
+.scheduling-page .modal-close {
+  background: #F5F4F0 !important;
+  color: #5C5C5C !important;
+  border: none !important;
+}
+
+.scheduling-page .modal-close:hover {
+  background: #E8E6E1 !important;
+  color: #1A1A1A !important;
+}
+
+/* Audit Log Title */
+.audit-page h1,
+.audit-page .page-title {
+  color: #8B7021 !important;
+  background: none !important;
+  -webkit-text-fill-color: #8B7021 !important;
+}
+
+.audit-page .page-subtitle,
+.audit-page p {
+  color: #5C5C5C !important;
+}
+
+/* Audit Log filter dropdown */
+.audit-page select,
+.audit-filters select {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+/* Job Sites Page - Add button bar */
+.job-sites-page .btn-primary,
+.job-sites-page .page-header .btn-primary,
+.page-header .btn-primary {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  border: none !important;
+}
+
+/* Full-width add button if it exists */
+.job-sites-page .add-job-btn,
+.add-button-bar,
+[class*="add-job"],
+[class*="add-site"] {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+}
+
+/* Job Sites page title */
+.job-sites-page h1,
+.job-sites-page .page-title,
+.job-sites-page .page-header h1 {
+  color: #1A1A1A !important;
+  background: none !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
+
+/* Billing Page - Plan headers */
+.billing-page .plan-header h3,
+.plan-card .plan-header h3 {
+  color: #8B7021 !important;
+}
+
+/* All plan titles should be gold */
+.plan-card:nth-child(1) .plan-header h3,
+.plan-card:nth-child(2) .plan-header h3,
+.plan-card:nth-child(3) .plan-header h3 {
+  color: #8B7021 !important;
+}
+
+/* Current plan badge */
+.current-badge,
+[class*="current-plan"],
+.plan-badge {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  color: white !important;
+}
+
+/* Popular badge */
+.popular-badge {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  color: white !important;
+}
+
+/* Billing toggle - active state */
+.billing-toggle button.active {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4) !important;
+}
+
+.billing-toggle button {
+  color: #5C5C5C !important;
+}
+
+/* Save badge in billing */
+.save-badge {
+  background: #3D8B5F !important;
+  color: white !important;
+}
+
+/* Plan buttons - different states */
+.plan-button {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  color: white !important;
+}
+
+.plan-button.current {
+  background: rgba(61, 139, 95, 0.15) !important;
+  color: #2D7A4A !important;
+  border: 2px solid #3D8B5F !important;
+}
+
+/* Worker slider */
+.worker-slider {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.worker-slider label {
+  color: #5C5C5C !important;
+}
+
+.worker-slider label strong {
+  color: #8B7021 !important;
+}
+
+.worker-slider input[type="range"]::-webkit-slider-thumb {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  box-shadow: 0 2px 10px rgba(201, 162, 39, 0.5) !important;
+}
+
+/* Slider labels */
+.slider-labels {
+  color: #8A8A8A !important;
+}
+
+/* Plan features */
+.plan-features li.included {
+  color: #5C5C5C !important;
+}
+
+.plan-features li.included .icon {
+  color: #3D8B5F !important;
+}
+
+.plan-features li.not-included {
+  color: #BEBEBE !important;
+}
+
+/* ==========================================
+   MODAL DARK THEME FIX - Global
+   ========================================== */
+
+/* Force ALL modals to light theme */
+.modal-overlay .modal,
+.modal {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+.modal-header {
+  background: #FAFAF8 !important;
+  border-bottom: 2px solid #E8E6E1 !important;
+}
+
+.modal-header h2,
+.modal-header h3 {
+  color: #1A1A1A !important;
+  background: none !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
+
+.modal-body {
+  background: #FFFFFF !important;
+}
+
+.modal-body p {
+  color: #5C5C5C !important;
+}
+
+.modal-footer {
+  background: #FAFAF8 !important;
+  border-top: 2px solid #E8E6E1 !important;
+}
+
+.modal .form-group label {
+  color: #8B7021 !important;
+}
+
+.modal .form-group input,
+.modal .form-group select,
+.modal .form-group textarea {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+.modal .form-group input::placeholder,
+.modal .form-group textarea::placeholder {
+  color: #8A8A8A !important;
+}
+
+.modal .form-group input:focus,
+.modal .form-group select:focus,
+.modal .form-group textarea:focus {
+  border-color: #C9A227 !important;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+}
+
+.modal .form-group select option {
+  background: #FFFFFF !important;
+  color: #1A1A1A !important;
+}
+
+.modal .btn-secondary,
+.modal .modal-close {
+  background: #F5F4F0 !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.modal .btn-secondary:hover,
+.modal .modal-close:hover {
+  background: #E8E6E1 !important;
+  color: #1A1A1A !important;
+}
+
+.modal .btn-primary {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  border: none !important;
+  color: white !important;
+}
+
+.modal .btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(201, 162, 39, 0.4) !important;
+}
+
+/* Close button X */
+.modal .close-btn,
+.modal-close,
+.modal button[class*="close"] {
+  background: #F5F4F0 !important;
+  color: #5C5C5C !important;
+  border: none !important;
+}
+
+.modal .close-btn:hover,
+.modal-close:hover {
+  background: #E8E6E1 !important;
+  color: #1A1A1A !important;
+}
+
+/* Form row in modals */
+.modal .form-row {
+  gap: 16px !important;
+}
+
+/* Time inputs in shift modal */
+.modal input[type="time"],
+.modal input[type="date"] {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+/* Modal actions */
+.modal .modal-actions {
+  border-top: 2px solid #E8E6E1 !important;
+  padding-top: 20px !important;
+}
+
+/* ==========================================
+   FIX PURPLE ANYWHERE IT APPEARS
+   ========================================== */
+
+/* Replace any purple (#a855f7, #8b5cf6, #6366f1) with gold */
+[style*="#a855f7"],
+[style*="#8b5cf6"],
+[style*="#6366f1"],
+[style*="rgb(168, 85, 247)"],
+[style*="rgb(139, 92, 246)"],
+[style*="rgb(99, 102, 241)"] {
+  color: #8B7021 !important;
+}
+
+/* Purple gradients */
+[style*="linear-gradient"][style*="#a855f7"],
+[style*="linear-gradient"][style*="#ec4899"] {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+}
+
+/* Any element using CSS variable --brand-primary that might be purple */
+[style*="var(--brand-primary)"] {
+  color: #C9A227 !important;
+}
+/* ==========================================
+   CRITICAL FIXES - Stats, Modals, Borders
+   ========================================== */
+
+/* REMOVE colored left border slivers from ALL stat cards */
+.stat-card,
+.stat-card.blue,
+.stat-card.green,
+.stat-card.purple,
+.stat-card.orange,
+.stats-row .stat-card,
+.scheduling-page .stat-card,
+.audit-page .stat-card {
+  border-left: 2px solid #D4D0C8 !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+.stat-card:hover {
+  border: 2px solid #C9A227 !important;
+}
+
+/* FORCE dark text on ALL stat values */
+.stat-card .stat-value,
+.stat-value,
+.stats-row .stat-value,
+.scheduling-page .stat-value,
+.audit-page .stat-value,
+.summary-card .value {
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+  background: none !important;
+  font-size: 36px !important;
+  font-weight: 700 !important;
+}
+
+/* FORCE dark text on ALL stat labels */
+.stat-card .stat-label,
+.stat-label,
+.stats-row .stat-label,
+.scheduling-page .stat-label,
+.audit-page .stat-label {
+  color: #5C5C5C !important;
+  -webkit-text-fill-color: #5C5C5C !important;
+  font-weight: 600 !important;
+}
+
+/* Bold all text more */
+body {
+  font-weight: 500 !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700 !important;
+}
+
+p, span, label, td, th {
+  font-weight: 500 !important;
+}
+
+/* ==========================================
+   MODAL FIX - FORCE LIGHT THEME EVERYWHERE
+   ========================================== */
+
+/* Target the modal more specifically */
+div[class*="modal"],
+div[class*="Modal"],
+.modal-overlay > div,
+.modal-overlay .modal,
+[role="dialog"],
+[aria-modal="true"] {
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+}
+
+/* Modal with inline styles override */
+div[style*="background: linear-gradient(180deg, #252538"],
+div[style*="background: #1a1a2e"],
+div[style*="background: #1e1e2f"],
+div[style*="background: rgba(20, 10, 30"],
+div[style*="background-color: #1a1a2e"] {
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+}
+
+/* Modal header */
+.modal-header,
+div[class*="modal"] > div:first-child,
+[role="dialog"] > div:first-child {
+  background: #FAFAF8 !important;
+  background-color: #FAFAF8 !important;
+  border-bottom: 2px solid #E8E6E1 !important;
+}
+
+/* Modal header text */
+.modal-header h2,
+.modal-header h3,
+div[class*="modal"] h2,
+div[class*="modal"] h3,
+[role="dialog"] h2 {
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+  background: none !important;
+}
+
+/* All form elements in modals */
+.modal input,
+.modal select,
+.modal textarea,
+div[class*="modal"] input,
+div[class*="modal"] select,
+div[class*="modal"] textarea,
+[role="dialog"] input,
+[role="dialog"] select {
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
+
+.modal input:focus,
+.modal select:focus,
+.modal textarea:focus,
+div[class*="modal"] input:focus,
+div[class*="modal"] select:focus {
+  border-color: #C9A227 !important;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+  outline: none !important;
+}
+
+.modal input::placeholder,
+.modal textarea::placeholder,
+div[class*="modal"] input::placeholder {
+  color: #8A8A8A !important;
+  -webkit-text-fill-color: #8A8A8A !important;
+}
+
+/* Modal labels */
+.modal label,
+.modal .form-group label,
+div[class*="modal"] label,
+[role="dialog"] label {
+  color: #8B7021 !important;
+  -webkit-text-fill-color: #8B7021 !important;
+  font-weight: 600 !important;
+}
+
+/* Modal body text */
+.modal p,
+.modal span,
+div[class*="modal"] p,
+div[class*="modal"] span {
+  color: #5C5C5C !important;
+}
+
+/* Modal select options */
+.modal select option,
+div[class*="modal"] select option {
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  color: #1A1A1A !important;
+}
+
+/* Modal buttons */
+.modal .btn-secondary,
+.modal button[class*="secondary"],
+.modal button[class*="cancel"],
+div[class*="modal"] .btn-secondary {
+  background: #F5F4F0 !important;
+  background-color: #F5F4F0 !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+  -webkit-text-fill-color: #5C5C5C !important;
+}
+
+.modal .btn-primary,
+.modal button[type="submit"],
+div[class*="modal"] .btn-primary,
+div[class*="modal"] button[type="submit"] {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  border: none !important;
+  color: white !important;
+  -webkit-text-fill-color: white !important;
+}
+
+/* Modal close button */
+.modal .modal-close,
+.modal .close-btn,
+.modal button[class*="close"],
+div[class*="modal"] button[class*="close"] {
+  background: #F5F4F0 !important;
+  background-color: #F5F4F0 !important;
+  border: none !important;
+  color: #5C5C5C !important;
+}
+
+.modal .modal-close:hover,
+.modal .close-btn:hover {
+  background: #E8E6E1 !important;
+  background-color: #E8E6E1 !important;
+  color: #1A1A1A !important;
+}
+
+/* Modal footer */
+.modal-footer,
+.modal-actions,
+div[class*="modal"] > div:last-child {
+  background: #FAFAF8 !important;
+  background-color: #FAFAF8 !important;
+  border-top: 2px solid #E8E6E1 !important;
+}
+
+/* ==========================================
+   REMOVE ALL EMOJI STYLING
+   ========================================== */
+
+/* Hide emoji icons if they exist as text */
+.header-icon,
+.stat-icon-emoji,
+.page-icon,
+.card-icon-emoji {
+  display: none !important;
+}
+/* ==========================================
+   BILLING PAGE - Subscription Bar Fix
+   ========================================== */
+
+/* Current plan bar */
+.billing-page .current-plan-bar,
+.current-plan-bar,
+.subscription-bar,
+[class*="subscription-bar"],
+[class*="current-plan"] {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  border: 2px solid #B8922A !important;
+  border-radius: 12px !important;
+  padding: 16px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.current-plan-bar span,
+.subscription-bar span,
+[class*="current-plan"] span {
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+/* Manage Subscription button */
+.current-plan-bar button,
+.subscription-bar button,
+[class*="current-plan"] button,
+.manage-subscription-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.current-plan-bar button:hover,
+.subscription-bar button:hover,
+[class*="current-plan"] button:hover,
+.manage-subscription-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Settings icon in button */
+.current-plan-bar button svg,
+.manage-subscription-btn svg {
+  color: white !important;
+  opacity: 0.9 !important;
+}
+
+/* ==========================================
+   COST ANALYTICS PAGE - Complete Fix
+   ========================================== */
+
+.analytics-page {
+  padding: 32px !important;
+  min-height: 100vh !important;
+}
+
+/* Page Header */
+.analytics-page .page-header h1,
+.analytics-page h1 {
+  color: #1A1A1A !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+}
+
+.analytics-page .page-header p {
+  color: #5C5C5C !important;
+}
+
+/* Export Report button */
+.analytics-page .btn-primary,
+.analytics-page .export-btn {
+  background: linear-gradient(135deg, #B54B4B, #D56B6B) !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 20px !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+}
+
+/* Date filter tabs */
+.analytics-page .date-filters button,
+.analytics-page .filter-tabs button {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+}
+
+.analytics-page .date-filters button.active,
+.analytics-page .filter-tabs button.active {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  border-color: #C9A227 !important;
+  color: white !important;
+}
+
+/* Stats Cards */
+.analytics-page .stat-card,
+.analytics-page .summary-card,
+.analytics-page .metric-card {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+}
+
+.analytics-page .stat-card:hover,
+.analytics-page .summary-card:hover {
+  border-color: #C9A227 !important;
+  box-shadow: 0 8px 24px rgba(201, 162, 39, 0.1) !important;
+}
+
+.analytics-page .stat-value,
+.analytics-page .metric-value {
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  color: #1A1A1A !important;
+}
+
+/* Money values in green */
+.analytics-page .stat-value.money,
+.analytics-page [class*="cost"],
+.analytics-page [class*="dollar"] {
+  color: #2D7A4A !important;
+}
+
+.analytics-page .stat-label,
+.analytics-page .metric-label {
+  color: #5C5C5C !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.analytics-page .stat-sublabel {
+  color: #8A8A8A !important;
+  font-size: 13px !important;
+}
+
+/* Stat icons */
+.analytics-page .stat-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Overtime Breakdown Section */
+.analytics-page .breakdown-section,
+.analytics-page .overtime-breakdown,
+[class*="overtime-breakdown"] {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+}
+
+.analytics-page .breakdown-section h3,
+.analytics-page .section-title {
+  color: #1A1A1A !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+/* Breakdown cards */
+.analytics-page .breakdown-card,
+.analytics-page .time-card {
+  background: #F8F7F4 !important;
+  border: 2px solid #E8E6E1 !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  text-align: center !important;
+}
+
+.analytics-page .breakdown-card:hover {
+  border-color: #C9A227 !important;
+}
+
+.analytics-page .breakdown-card .value,
+.analytics-page .time-card .hours {
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  color: #1A1A1A !important;
+}
+
+.analytics-page .breakdown-card .cost,
+.analytics-page .time-card .cost {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #2D7A4A !important;
+}
+
+.analytics-page .breakdown-card .label {
+  color: #5C5C5C !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+}
+
+.analytics-page .breakdown-card .sublabel {
+  color: #8A8A8A !important;
+  font-size: 11px !important;
+}
+
+/* Cost by Job Site / Worker sections */
+.analytics-page .cost-section,
+.analytics-page [class*="cost-by"] {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+}
+
+.analytics-page .cost-section h3 {
+  color: #1A1A1A !important;
+  font-weight: 700 !important;
+}
+
+.analytics-page .cost-row,
+.analytics-page .cost-item {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid #E8E6E1 !important;
+}
+
+.analytics-page .cost-row:last-child {
+  border-bottom: none !important;
+}
+
+.analytics-page .cost-name {
+  color: #1A1A1A !important;
+  font-weight: 600 !important;
+}
+
+.analytics-page .cost-details {
+  color: #5C5C5C !important;
+  font-size: 13px !important;
+}
+
+.analytics-page .cost-amount {
+  color: #2D7A4A !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+}
+
+.analytics-page .cost-percentage {
+  color: #8A8A8A !important;
+  font-size: 12px !important;
+}
+
+/* Quick Insights Section - CRITICAL FIX */
+.analytics-page .insights-section,
+.analytics-page .quick-insights,
+[class*="quick-insights"],
+[class*="insights-grid"] {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+}
+
+.analytics-page .insights-section h3,
+.analytics-page .quick-insights h3 {
+  color: #1A1A1A !important;
+  font-weight: 700 !important;
+}
+
+.analytics-page .insight-card,
+.analytics-page [class*="insight-item"] {
+  background: #F8F7F4 !important;
+  border: 2px solid #E8E6E1 !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+}
+
+.analytics-page .insight-card:hover {
+  border-color: #C9A227 !important;
+}
+
+/* FIX INVISIBLE TEXT in insights */
+.analytics-page .insight-card .value,
+.analytics-page .insight-card .insight-value,
+.analytics-page .insight-card h4,
+.analytics-page [class*="insight"] .value,
+.analytics-page [class*="insight"] span {
+  color: #1A1A1A !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+  font-weight: 700 !important;
+}
+
+.analytics-page .insight-card .label,
+.analytics-page .insight-card .insight-label,
+.analytics-page .insight-card p,
+.analytics-page [class*="insight"] .label {
+  color: #5C5C5C !important;
+  -webkit-text-fill-color: #5C5C5C !important;
+  font-weight: 500 !important;
+}
+
+/* Worker/Job color indicators */
+.analytics-page .color-dot,
+.analytics-page .indicator-dot {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 4px !important;
+  background: linear-gradient(135deg, #4B7BB5, #6B9BD5) !important;
+}
+
+/* Progress bars */
+.analytics-page .progress-bar {
+  background: #E8E6E1 !important;
+  border-radius: 4px !important;
+  height: 8px !important;
+  overflow: hidden !important;
+}
+
+.analytics-page .progress-fill {
+  background: linear-gradient(135deg, #C9A227, #D4AF37) !important;
+  height: 100% !important;
+  border-radius: 4px !important;
+}
+
+/* Remove any purple/pink gradients from analytics */
+.analytics-page [style*="linear-gradient"][style*="#a855f7"],
+.analytics-page [style*="linear-gradient"][style*="#ec4899"],
+.analytics-page [style*="background: rgba(168"],
+.analytics-page [style*="background: rgba(236"] {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
+
+/* Fix any remaining gradient text */
+.analytics-page [style*="-webkit-background-clip: text"],
+.analytics-page [style*="background-clip: text"] {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+  color: #1A1A1A !important;
+}
+/* Fix dark background on pages */
+body,
+html,
+#root,
+.app-layout,
+.app-main,
+.app-content {
+  background: #FCFCFA !important;
+}

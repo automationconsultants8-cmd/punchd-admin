@@ -1,168 +1,174 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import './LoginPage.css';
 
-function SignupPage({ onSignup, onSwitchToLogin }) {
+const Icons = {
+  eye: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
+  ),
+  eyeOff: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  ),
+  mail: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+    </svg>
+  ),
+  lock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  ),
+  user: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
+  building: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18"/>
+      <path d="M6 12H4a1 1 0 0 0-1 1v9"/><path d="M18 9h2a1 1 0 0 1 1 1v12"/>
+      <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+    </svg>
+  ),
+};
+
+const PunchdLogo = () => (
+  <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="logo-svg">
+    <circle cx="40" cy="40" r="36" stroke="#C9A227" strokeWidth="4" fill="#FFFFFF"/>
+    <circle cx="40" cy="40" r="30" stroke="#E8D48A" strokeWidth="2" fill="none"/>
+    <line x1="40" y1="10" x2="40" y2="16" stroke="#C9A227" strokeWidth="3" strokeLinecap="round"/>
+    <line x1="40" y1="64" x2="40" y2="70" stroke="#C9A227" strokeWidth="3" strokeLinecap="round"/>
+    <line x1="10" y1="40" x2="16" y2="40" stroke="#C9A227" strokeWidth="3" strokeLinecap="round"/>
+    <line x1="64" y1="40" x2="70" y2="40" stroke="#C9A227" strokeWidth="3" strokeLinecap="round"/>
+    <line x1="40" y1="40" x2="40" y2="24" stroke="#1A1A1A" strokeWidth="3" strokeLinecap="round"/>
+    <line x1="40" y1="40" x2="54" y2="40" stroke="#1A1A1A" strokeWidth="2.5" strokeLinecap="round"/>
+    <circle cx="40" cy="40" r="4" fill="#C9A227"/>
+  </svg>
+);
+
+function SignupPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    companyName: '',
-    ownerName: '',
+    name: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    phone: '',
+    companyName: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSignup = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const response = await authApi.signup({
-        companyName: formData.companyName,
-        ownerName: formData.ownerName,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-      });
-      
-      const token = response.data.accessToken;
-      const user = response.data.user;
-
-      localStorage.setItem('adminToken', token);
-      localStorage.setItem('adminUser', JSON.stringify(user));
-      
-      onSignup(user);
-      
+      await authApi.signup(formData);
+      navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+      console.error('Signup error:', err);
+      setError(err.response?.data?.message || 'Error creating account. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card signup-card">
-        <div className="login-header">
-          <h1>⏱️</h1>
-          <h2>Punch'd</h2>
-          <p>Create Your Company Account</p>
-        </div>
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-card">
+          <div className="login-logo"><PunchdLogo /></div>
 
-        <form onSubmit={handleSignup}>
-          <div className="form-group">
-            <label>Company Name</label>
-            <input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleChange}
-              placeholder="ACME Construction"
-              required
-            />
+          <div className="login-header">
+            <h1>Punch'd</h1>
+            <p>Create Company Account</p>
           </div>
 
-          <div className="form-group">
-            <label>Your Name</label>
-            <input
-              type="text"
-              name="ownerName"
-              value={formData.ownerName}
-              onChange={handleChange}
-              placeholder="John Smith"
-              required
-            />
-          </div>
+          {error && <div className="error-message">{error}</div>}
 
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="john@acme.com"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="5551234567"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <div className="password-input-container">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>YOUR NAME</label>
+              <div className="input-wrapper">
+                <span className="input-icon">{Icons.user}</span>
+                <input 
+                  type="text" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
+                  placeholder="John Smith" 
+                  required 
+                />
+              </div>
             </div>
+
+            <div className="form-group">
+              <label>COMPANY NAME</label>
+              <div className="input-wrapper">
+                <span className="input-icon">{Icons.building}</span>
+                <input 
+                  type="text" 
+                  value={formData.companyName} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))} 
+                  placeholder="Acme Construction" 
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>EMAIL</label>
+              <div className="input-wrapper">
+                <span className="input-icon">{Icons.mail}</span>
+                <input 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
+                  placeholder="john@company.com" 
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>PASSWORD</label>
+              <div className="input-wrapper">
+                <span className="input-icon">{Icons.lock}</span>
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  value={formData.password} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} 
+                  placeholder="••••••••" 
+                  required 
+                  minLength={8} 
+                />
+                <button 
+                  type="button" 
+                  className="password-toggle" 
+                  onClick={() => setShowPassword(!showPassword)} 
+                  tabIndex={-1}
+                >
+                  {showPassword ? Icons.eyeOff : Icons.eye}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="btn-submit" disabled={loading}>
+              {loading ? <span className="loading-spinner"></span> : 'Create Account'}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <p>Already have an account?</p>
+            <Link to="/login" className="signup-link">Sign In</Link>
           </div>
-
-          <div className="form-group">
-            <label>Confirm Password</label>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          {error && <div className="error">{error}</div>}
-
-          <button type="submit" disabled={loading}>
-            {loading ? 'Creating Account...' : 'Create Company Account'}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <p>Already have an account?</p>
-          <button type="button" className="link-button" onClick={onSwitchToLogin}>
-            Sign In
-          </button>
         </div>
       </div>
     </div>

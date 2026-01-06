@@ -1,558 +1,341 @@
 import { useState, useEffect } from 'react';
-import { useFeatures } from '../context/FeatureContext';
-import UpgradePrompt from '../components/UpgradePrompt';
-import { timeEntriesApi, jobsApi } from '../services/api';
+import { timeEntriesApi } from '../services/api';
+import './AnalyticsPage.css';
+
+// SVG Icons
+const Icons = {
+  dollarSign: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23"/>
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+    </svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  trendingUp: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+      <polyline points="17 6 23 6 23 12"/>
+    </svg>
+  ),
+  zap: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  ),
+  building: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 22V4c0-.27.1-.52.3-.71.2-.2.44-.29.7-.29h10c.27 0 .52.1.71.29.2.2.29.45.29.71v18"/>
+      <path d="M6 12H4c-.27 0-.52.1-.71.29-.2.2-.29.45-.29.71v9"/>
+      <path d="M18 9h2c.27 0 .52.1.71.29.2.2.29.45.29.71v12"/>
+      <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+    </svg>
+  ),
+  users: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  barChart: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="20" x2="12" y2="10"/>
+      <line x1="18" y1="20" x2="18" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="16"/>
+    </svg>
+  ),
+  download: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  ),
+  target: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <circle cx="12" cy="12" r="6"/>
+      <circle cx="12" cy="12" r="2"/>
+    </svg>
+  ),
+};
 
 function AnalyticsPage() {
-  const { hasFeature, loading: featuresLoading } = useFeatures();
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [timeEntries, setTimeEntries] = useState([]);
-  const [jobs, setJobs] = useState([]);
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
-  });
+  const [dateRange, setDateRange] = useState('7');
 
   useEffect(() => {
-    if (hasFeature('COST_ANALYTICS')) {
-      loadData();
-    }
-  }, [dateRange, hasFeature]);
+    loadData();
+  }, [dateRange]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [entriesRes, jobsRes] = await Promise.all([
-        timeEntriesApi.getAll(dateRange),
-        jobsApi.getAll(),
-      ]);
-      setTimeEntries(entriesRes.data);
-      setJobs(jobsRes.data);
-    } catch (err) {
-      console.error('Failed to load analytics data:', err);
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - parseInt(dateRange));
+      
+      const response = await timeEntriesApi.getOvertimeSummary({
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      });
+      setData(response.data);
+    } catch (error) {
+      console.error('Error loading analytics:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const setQuickRange = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    setDateRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
-    });
-  };
-
-  // Calculate analytics data
-  const totalHours = timeEntries.reduce((sum, entry) => {
-    if (entry.clockOut) {
-      const hours = (new Date(entry.clockOut) - new Date(entry.clockIn)) / (1000 * 60 * 60);
-      return sum + hours;
-    }
-    return sum;
-  }, 0);
-
-  const avgHourlyRate = 35;
-  const totalCost = totalHours * avgHourlyRate;
-  const activeJobs = jobs.filter(j => j.status === 'ACTIVE').length;
-
-  const jobStats = jobs.map(job => {
-    const jobEntries = timeEntries.filter(e => e.jobId === job.id);
-    const hours = jobEntries.reduce((sum, entry) => {
-      if (entry.clockOut) {
-        return sum + (new Date(entry.clockOut) - new Date(entry.clockIn)) / (1000 * 60 * 60);
-      }
-      return sum;
-    }, 0);
-    return { ...job, hours, cost: hours * avgHourlyRate, entries: jobEntries.length };
-  }).sort((a, b) => b.hours - a.hours);
-
-  // Generate CSV and download
-  const generateCSVFallback = () => {
-    const headers = ['Job Site', 'Hours', 'Labor Cost', 'Entries', '% of Total'];
-    const rows = jobStats.map(job => [
-      job.name,
-      job.hours.toFixed(1),
-      `$${job.cost.toFixed(2)}`,
-      job.entries,
-      `${totalHours > 0 ? (job.hours / totalHours * 100).toFixed(1) : 0}%`
-    ]);
-    
-    const csvContent = [
-      `Cost Analytics Report: ${dateRange.startDate} to ${dateRange.endDate}`,
-      '',
-      `Total Hours,${totalHours.toFixed(1)}`,
-      `Total Cost,$${totalCost.toFixed(2)}`,
-      `Active Jobs,${activeJobs}`,
-      `Time Entries,${timeEntries.length}`,
-      '',
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `cost-analytics-${dateRange.startDate}-to-${dateRange.endDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleExportExcel = async () => {
+  const handleExport = async () => {
     try {
-      const response = await timeEntriesApi.exportExcel(dateRange);
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - parseInt(dateRange));
+      
+      const response = await timeEntriesApi.exportPdf({
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      });
+      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `cost-analytics-${dateRange.startDate}-to-${dateRange.endDate}.xlsx`);
+      link.setAttribute('download', `cost-analytics-${dateRange}days.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Excel export failed, falling back to CSV:', err);
-      generateCSVFallback();
+    } catch (error) {
+      console.error('Error exporting:', error);
     }
   };
 
-  const handleEmailReport = () => {
-    const email = prompt('Enter email address to send report:');
-    if (!email) return;
-    
-    const reportLines = [
-      'COST ANALYTICS REPORT',
-      '=====================',
-      '',
-      `Period: ${dateRange.startDate} to ${dateRange.endDate}`,
-      '',
-      'SUMMARY',
-      '-------',
-      `Total Hours: ${totalHours.toFixed(1)}`,
-      `Total Cost: $${totalCost.toFixed(2)}`,
-      `Active Jobs: ${activeJobs}`,
-      `Time Entries: ${timeEntries.length}`,
-      '',
-      'BREAKDOWN BY JOB SITE',
-      '---------------------',
-      ...jobStats.map(job => `${job.name}: ${job.hours.toFixed(1)} hrs - $${job.cost.toFixed(2)}`),
-      '',
-      'Generated by ApexChronos'
-    ];
-    
-    const subject = encodeURIComponent(`Cost Analytics Report - ${dateRange.startDate} to ${dateRange.endDate}`);
-    const body = encodeURIComponent(reportLines.join('\n'));
-    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
+  const formatCurrency = (amount) => `$${(amount || 0).toFixed(2)}`;
+  const formatHours = (hours) => `${(hours || 0).toFixed(1)}h`;
+
+  // Default values
+  const stats = {
+    totalHours: data?.totalHours || 0,
+    totalCost: data?.totalLaborCost || 0,
+    overtimeHours: (data?.overtimeHours || 0) + (data?.doubleTimeHours || 0),
+    overtimeCost: data?.overtimeCost || 0,
+    regularHours: data?.regularHours || 0,
+    regularCost: data?.regularCost || 0,
+    doubleTimeHours: data?.doubleTimeHours || 0,
+    doubleTimeCost: data?.doubleTimeCost || 0,
+    avgDailyCost: data?.totalLaborCost ? data.totalLaborCost / parseInt(dateRange) : 0,
+    otPercentage: data?.totalHours ? ((data.overtimeHours || 0) / data.totalHours * 100) : 0,
+    avgHoursPerWorker: data?.avgHoursPerWorker || 0,
   };
 
-  if (featuresLoading) {
-    return <div style={{ padding: '60px', textAlign: 'center', color: '#888' }}>Loading...</div>;
-  }
-
-  if (!hasFeature('COST_ANALYTICS')) {
-    return <UpgradePrompt feature="COST_ANALYTICS" requiredPlan="Professional" />;
+  if (loading) {
+    return (
+      <div className="analytics-page">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading analytics...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: '30px' }}>
+    <div className="analytics-page">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px', flexWrap: 'wrap', gap: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', background: 'linear-gradient(135deg, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '5px' }}>
-            💰 Cost Analytics
-          </h1>
-          <p style={{ color: '#888' }}>Track labor costs by job site in real-time</p>
+      <div className="page-header">
+        <div className="page-header-content">
+          <div className="page-title-row">
+            <div className="page-icon">{Icons.dollarSign}</div>
+            <h1>Cost Analytics</h1>
+          </div>
+          <p>Track labor costs and overtime in real-time</p>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Export Buttons */}
-          <button
-            onClick={handleExportExcel}
-            style={{ 
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)', 
-              border: 'none', 
-              color: '#fff', 
-              padding: '10px 20px', 
-              borderRadius: '10px', 
-              cursor: 'pointer', 
-              fontWeight: '600', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(34, 197, 94, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            📊 Export Excel
+        <div className="header-actions">
+          <button className="btn-export" onClick={handleExport}>
+            {Icons.download}
+            <span>Export Report</span>
           </button>
-          <button
-            onClick={handleEmailReport}
-            style={{ 
-              background: 'linear-gradient(135deg, #3b82f6, #2563eb)', 
-              border: 'none', 
-              color: '#fff', 
-              padding: '10px 20px', 
-              borderRadius: '10px', 
-              cursor: 'pointer', 
-              fontWeight: '600', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            📧 Email Report
-          </button>
-          
-          {/* Quick Date Filters */}
-          <button 
-            onClick={() => setQuickRange(7)} 
-            style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              border: 'none', 
-              color: '#ccc', 
-              padding: '10px 16px', 
-              borderRadius: '8px', 
-              cursor: 'pointer',
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-          >
-            7 Days
-          </button>
-          <button 
-            onClick={() => setQuickRange(30)} 
-            style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              border: 'none', 
-              color: '#ccc', 
-              padding: '10px 16px', 
-              borderRadius: '8px', 
-              cursor: 'pointer',
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-          >
-            30 Days
-          </button>
-          <button 
-            onClick={() => setQuickRange(90)} 
-            style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              border: 'none', 
-              color: '#ccc', 
-              padding: '10px 16px', 
-              borderRadius: '8px', 
-              cursor: 'pointer',
-              transition: 'background 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-          >
-            90 Days
-          </button>
-          
-          {/* Date Range Picker */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px', 
-            background: 'rgba(255,255,255,0.05)', 
-            padding: '8px 12px', 
-            borderRadius: '8px', 
-            border: '1px solid rgba(255,255,255,0.1)' 
-          }}>
-            <span>📅</span>
-            <input 
-              type="date" 
-              value={dateRange.startDate} 
-              onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })} 
-              style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }} 
-            />
-            <span style={{ color: '#888' }}>to</span>
-            <input 
-              type="date" 
-              value={dateRange.endDate} 
-              onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })} 
-              style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }} 
-            />
+          <div className="date-filters">
+            {['7', '30', '90'].map(days => (
+              <button
+                key={days}
+                className={dateRange === days ? 'active' : ''}
+                onClick={() => setDateRange(days)}
+              >
+                {days} Days
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '80px' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid rgba(168, 85, 247, 0.2)',
-            borderTopColor: '#a855f7',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          <p style={{ color: '#888' }}>Loading analytics...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {/* Main Stats */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon blue">{Icons.clock}</div>
+          <div className="stat-content">
+            <div className="stat-label">Total Hours</div>
+            <div className="stat-value">{formatHours(stats.totalHours)}</div>
+            <div className="stat-sublabel">hours worked</div>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* Stats Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-            <div style={{ 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid rgba(255,255,255,0.1)', 
-              borderRadius: '16px', 
-              padding: '25px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '20px',
-              transition: 'transform 0.2s, border-color 0.2s'
-            }}>
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                borderRadius: '16px', 
-                background: 'rgba(59, 130, 246, 0.15)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                fontSize: '28px' 
-              }}>⏱️</div>
-              <div>
-                <p style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase', margin: 0 }}>Total Hours</p>
-                <p style={{ fontSize: '32px', fontWeight: '700', color: '#3b82f6', margin: '5px 0' }}>{totalHours.toFixed(1)}</p>
-                <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>hours worked</p>
-              </div>
-            </div>
-            
-            <div style={{ 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid rgba(255,255,255,0.1)', 
-              borderRadius: '16px', 
-              padding: '25px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '20px' 
-            }}>
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                borderRadius: '16px', 
-                background: 'rgba(34, 197, 94, 0.15)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                fontSize: '28px' 
-              }}>💵</div>
-              <div>
-                <p style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase', margin: 0 }}>Total Cost</p>
-                <p style={{ fontSize: '32px', fontWeight: '700', color: '#22c55e', margin: '5px 0' }}>${totalCost.toFixed(2)}</p>
-                <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>at ${avgHourlyRate}/hr</p>
-              </div>
-            </div>
-            
-            <div style={{ 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid rgba(255,255,255,0.1)', 
-              borderRadius: '16px', 
-              padding: '25px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '20px' 
-            }}>
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                borderRadius: '16px', 
-                background: 'rgba(168, 85, 247, 0.15)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                fontSize: '28px' 
-              }}>🏗️</div>
-              <div>
-                <p style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase', margin: 0 }}>Active Jobs</p>
-                <p style={{ fontSize: '32px', fontWeight: '700', color: '#a855f7', margin: '5px 0' }}>{activeJobs}</p>
-                <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>job sites</p>
-              </div>
-            </div>
-            
-            <div style={{ 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid rgba(255,255,255,0.1)', 
-              borderRadius: '16px', 
-              padding: '25px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '20px' 
-            }}>
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                borderRadius: '16px', 
-                background: 'rgba(245, 158, 11, 0.15)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                fontSize: '28px' 
-              }}>📋</div>
-              <div>
-                <p style={{ color: '#888', fontSize: '12px', textTransform: 'uppercase', margin: 0 }}>Time Entries</p>
-                <p style={{ fontSize: '32px', fontWeight: '700', color: '#f59e0b', margin: '5px 0' }}>{timeEntries.length}</p>
-                <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>clock ins</p>
-              </div>
-            </div>
+        <div className="stat-card">
+          <div className="stat-icon green">{Icons.dollarSign}</div>
+          <div className="stat-content">
+            <div className="stat-label">Total Labor Cost</div>
+            <div className="stat-value money">{formatCurrency(stats.totalCost)}</div>
+            <div className="stat-sublabel">with overtime</div>
           </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon gold">{Icons.zap}</div>
+          <div className="stat-content">
+            <div className="stat-label">Overtime Hours</div>
+            <div className="stat-value">{formatHours(stats.overtimeHours)}</div>
+            <div className="stat-sublabel">OT + DT hours</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon red">{Icons.trendingUp}</div>
+          <div className="stat-content">
+            <div className="stat-label">Overtime Cost</div>
+            <div className="stat-value money">{formatCurrency(stats.overtimeCost)}</div>
+            <div className="stat-sublabel">premium pay</div>
+          </div>
+        </div>
+      </div>
 
-          {/* Cost Breakdown Table */}
-          <div style={{ 
-            background: 'rgba(255,255,255,0.02)', 
-            border: '1px solid rgba(255,255,255,0.1)', 
-            borderRadius: '16px', 
-            padding: '25px', 
-            marginBottom: '30px' 
-          }}>
-            <h2 style={{ color: '#fff', fontSize: '20px', marginBottom: '20px' }}>📊 Cost by Job Site</h2>
-            
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', color: '#888', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Job Site</th>
-                    <th style={{ textAlign: 'left', color: '#888', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Hours</th>
-                    <th style={{ textAlign: 'left', color: '#888', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Labor Cost</th>
-                    <th style={{ textAlign: 'left', color: '#888', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>Entries</th>
-                    <th style={{ textAlign: 'left', color: '#888', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>% of Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {jobStats.map(job => (
-                    <tr key={job.id} style={{ transition: 'background 0.2s' }}>
-                      <td style={{ padding: '18px 15px', color: '#fff', fontWeight: '500', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        🏢 {job.name}
-                      </td>
-                      <td style={{ padding: '18px 15px', color: '#ccc', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        {job.hours.toFixed(1)} hrs
-                      </td>
-                      <td style={{ padding: '18px 15px', color: '#22c55e', fontWeight: '600', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        ${job.cost.toFixed(2)}
-                      </td>
-                      <td style={{ padding: '18px 15px', color: '#ccc', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        {job.entries}
-                      </td>
-                      <td style={{ padding: '18px 15px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '100px', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ 
-                              width: `${totalHours > 0 ? (job.hours / totalHours * 100) : 0}%`, 
-                              height: '100%', 
-                              background: 'linear-gradient(135deg, #a855f7, #ec4899)', 
-                              borderRadius: '4px',
-                              transition: 'width 0.5s ease'
-                            }}></div>
-                          </div>
-                          <span style={{ color: '#888', fontSize: '13px', minWidth: '45px' }}>
-                            {totalHours > 0 ? (job.hours / totalHours * 100).toFixed(1) : 0}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {jobStats.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
-                        <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>📭</span>
-                        No data for selected period
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+      {/* Overtime Breakdown */}
+      <div className="breakdown-section">
+        <h3>
+          <span className="section-icon">{Icons.zap}</span>
+          Overtime Breakdown
+        </h3>
+        <div className="breakdown-grid">
+          <div className="breakdown-card">
+            <div className="breakdown-label">Regular Time</div>
+            <div className="breakdown-value">{formatHours(stats.regularHours)}</div>
+            <div className="breakdown-cost">{formatCurrency(stats.regularCost)}</div>
+            <div className="breakdown-note">1.0x rate</div>
           </div>
+          <div className="breakdown-card">
+            <div className="breakdown-label">Overtime (1.5x)</div>
+            <div className="breakdown-value orange">{formatHours(data?.overtimeHours || 0)}</div>
+            <div className="breakdown-cost">{formatCurrency((data?.overtimeHours || 0) * (data?.avgHourlyRate || 0) * 1.5)}</div>
+            <div className="breakdown-note">Over 8 hrs/day or 40 hrs/week</div>
+          </div>
+          <div className="breakdown-card">
+            <div className="breakdown-label">Double Time (2x)</div>
+            <div className="breakdown-value red">{formatHours(stats.doubleTimeHours)}</div>
+            <div className="breakdown-cost">{formatCurrency(stats.doubleTimeCost)}</div>
+            <div className="breakdown-note">Over 12 hrs/day</div>
+          </div>
+        </div>
+      </div>
 
-          {/* Quick Insights */}
-          <div style={{ 
-            background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(236, 72, 153, 0.05))', 
-            border: '1px solid rgba(168, 85, 247, 0.2)', 
-            borderRadius: '16px', 
-            padding: '25px' 
-          }}>
-            <h2 style={{ color: '#fff', fontSize: '20px', marginBottom: '20px' }}>💡 Quick Insights</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-              <div style={{ 
-                background: 'rgba(255,255,255,0.05)', 
-                borderRadius: '12px', 
-                padding: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '15px' 
-              }}>
-                <span style={{ fontSize: '28px' }}>📈</span>
-                <div>
-                  <p style={{ color: '#888', fontSize: '13px', margin: 0 }}>Avg Daily Cost</p>
-                  <p style={{ color: '#fff', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                    ${(totalCost / 30).toFixed(2)}/day
-                  </p>
+      {/* Cost by Section */}
+      <div className="cost-sections">
+        <div className="cost-section">
+          <h3>
+            <span className="section-icon">{Icons.building}</span>
+            Cost by Job Site
+          </h3>
+          {data?.byJobSite?.length > 0 ? (
+            <div className="cost-list">
+              {data.byJobSite.slice(0, 5).map((job, i) => (
+                <div key={i} className="cost-row">
+                  <div className="cost-info">
+                    <span className="cost-name">{job.name}</span>
+                    <span className="cost-details">{formatHours(job.hours)} • {job.entries || 0} entries</span>
+                  </div>
+                  <div className="cost-right">
+                    <span className="cost-amount">{formatCurrency(job.cost)}</span>
+                    <span className="cost-percentage">{((job.cost / stats.totalCost) * 100 || 0).toFixed(1)}%</span>
+                  </div>
                 </div>
-              </div>
-              <div style={{ 
-                background: 'rgba(255,255,255,0.05)', 
-                borderRadius: '12px', 
-                padding: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '15px' 
-              }}>
-                <span style={{ fontSize: '28px' }}>👷</span>
-                <div>
-                  <p style={{ color: '#888', fontSize: '13px', margin: 0 }}>Avg Hours/Entry</p>
-                  <p style={{ color: '#fff', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                    {timeEntries.length > 0 ? (totalHours / timeEntries.length).toFixed(1) : 0} hrs
-                  </p>
+              ))}
+            </div>
+          ) : (
+            <p className="no-data">No job site data available</p>
+          )}
+        </div>
+
+        <div className="cost-section">
+          <h3>
+            <span className="section-icon">{Icons.users}</span>
+            Cost by Worker
+          </h3>
+          {data?.byWorker?.length > 0 ? (
+            <div className="cost-list">
+              {data.byWorker.slice(0, 5).map((worker, i) => (
+                <div key={i} className="cost-row">
+                  <div className="cost-info">
+                    <div className="worker-indicator" style={{ background: ['#4B7BB5', '#3D8B5F', '#C9A227', '#B54B4B', '#6B5B7A'][i % 5] }}></div>
+                    <span className="cost-name">{worker.name}</span>
+                    <span className="cost-details">{formatHours(worker.hours)} • +{formatHours(worker.overtimeHours || 0)} OT</span>
+                  </div>
+                  <div className="cost-right">
+                    <span className="cost-amount">{formatCurrency(worker.cost)}</span>
+                    <span className="cost-percentage">{((worker.cost / stats.totalCost) * 100 || 0).toFixed(1)}%</span>
+                  </div>
                 </div>
-              </div>
-              <div style={{ 
-                background: 'rgba(255,255,255,0.05)', 
-                borderRadius: '12px', 
-                padding: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '15px' 
-              }}>
-                <span style={{ fontSize: '28px' }}>🎯</span>
-                <div>
-                  <p style={{ color: '#888', fontSize: '13px', margin: 0 }}>Top Job Site</p>
-                  <p style={{ color: '#fff', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                    {jobStats[0]?.name || 'N/A'}
-                  </p>
-                </div>
-              </div>
+              ))}
+            </div>
+          ) : (
+            <p className="no-data">No worker data available</p>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Insights */}
+      <div className="insights-section">
+        <h3>
+          <span className="section-icon">{Icons.zap}</span>
+          Quick Insights
+        </h3>
+        <div className="insights-grid">
+          <div className="insight-card">
+            <div className="insight-icon blue">{Icons.calendar}</div>
+            <div className="insight-content">
+              <span className="insight-label">Avg Daily Cost</span>
+              <span className="insight-value">{formatCurrency(stats.avgDailyCost)}/day</span>
             </div>
           </div>
-        </>
-      )}
+          <div className="insight-card">
+            <div className="insight-icon gold">{Icons.zap}</div>
+            <div className="insight-content">
+              <span className="insight-label">OT % of Total</span>
+              <span className="insight-value">{stats.otPercentage.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div className="insight-card">
+            <div className="insight-icon green">{Icons.users}</div>
+            <div className="insight-content">
+              <span className="insight-label">Avg Hours/Worker</span>
+              <span className="insight-value">{formatHours(stats.avgHoursPerWorker)}</span>
+            </div>
+          </div>
+          <div className="insight-card">
+            <div className="insight-icon red">{Icons.target}</div>
+            <div className="insight-content">
+              <span className="insight-label">Top Job Site</span>
+              <span className="insight-value">{data?.byJobSite?.[0]?.name || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
