@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { shiftRequestsApi, timeOffApi } from '../services/api';
 import './ShiftRequestsPage.css';
+import { withFeatureGate } from '../components/FeatureGate';
 
 function ShiftRequestsPage() {
   const location = useLocation();
@@ -560,4 +561,4 @@ function ShiftRequestsPage() {
   );
 }
 
-export default ShiftRequestsPage;
+export default withFeatureGate(ShiftRequestsPage, 'SHIFT_REQUESTS');

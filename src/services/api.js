@@ -30,6 +30,7 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 // Auth endpoints
 export const authApi = {
   login: (email, password) => api.post('/admin/auth/login', { email, password }),
@@ -46,8 +47,6 @@ export const usersApi = {
   create: (data) => api.post('/users', data),
   update: (id, data) => api.patch(`/users/${id}`, data),
   deactivate: (id) => api.patch(`/users/${id}`, { isActive: false }),
-  
-  // Pay rate endpoints
   getJobRates: (id) => api.get(`/users/${id}/rates`),
   setJobRate: (id, data) => api.post(`/users/${id}/rates`, data),
   removeJobRate: (userId, jobId) => api.delete(`/users/${userId}/rates/${jobId}`),
@@ -69,23 +68,15 @@ export const timeEntriesApi = {
   clockIn: (data) => api.post('/time-entries/clock-in', data),
   clockOut: (data) => api.post('/time-entries/clock-out', data),
   exportQuickBooks: (params) => api.get('/time-entries/export/quickbooks', { params, responseType: 'blob' }),
-  
-  // Exports
   exportExcel: (params) => api.get('/time-entries/export/excel', { params, responseType: 'blob' }),
   exportPdf: (params) => api.get('/time-entries/export/pdf', { params, responseType: 'blob' }),
-  
-  // Approval workflow
   getPending: () => api.get('/time-entries/pending'),
   getApprovalStats: () => api.get('/time-entries/approval-stats'),
   approve: (id) => api.patch(`/time-entries/${id}/approve`),
   reject: (id, reason) => api.patch(`/time-entries/${id}/reject`, { rejectionReason: reason }),
   bulkApprove: (entryIds) => api.post('/time-entries/bulk-approve', { entryIds }),
   bulkReject: (entryIds, reason) => api.post('/time-entries/bulk-reject', { entryIds, rejectionReason: reason }),
-  
-  // Manual entry
   createManual: (data) => api.post('/time-entries/manual', data),
-  
-  // Overtime & Labor cost
   getOvertimeSummary: (params) => api.get('/time-entries/overtime-summary', { params }),
 };
 
@@ -100,102 +91,49 @@ export const shiftsApi = {
   getToday: () => api.get('/shifts/today'),
 };
 
-// =============================================
-// PHASE 1: SHIFT REQUESTS
-// =============================================
+// Shift Requests
 export const shiftRequestsApi = {
-  // Get all shift requests (with optional filters)
   getAll: (params) => api.get('/shift-requests', { params }),
-  
-  // Get only pending requests
   getPending: () => api.get('/shift-requests/pending'),
-  
-  // Get request statistics
   getStats: () => api.get('/shift-requests/stats'),
-  
-  // Get single request by ID
   getById: (id) => api.get(`/shift-requests/${id}`),
-  
-  // Create a new shift request (worker action)
   create: (data) => api.post('/shift-requests', data),
-  
-  // Approve a shift request
   approve: (id, reviewerNotes) => api.patch(`/shift-requests/${id}/approve`, { reviewerNotes }),
-  
-  // Decline a shift request
   decline: (id, reviewerNotes) => api.patch(`/shift-requests/${id}/decline`, { reviewerNotes }),
-  
-  // Cancel own request (worker action)
   cancel: (id) => api.patch(`/shift-requests/${id}/cancel`),
 };
 
-// =============================================
-// PHASE 1: TIME OFF REQUESTS
-// =============================================
+// Time Off Requests
 export const timeOffApi = {
-  // Get all time off requests (with optional filters)
   getAll: (params) => api.get('/time-off', { params }),
-  
-  // Get only pending requests
   getPending: () => api.get('/time-off/pending'),
-  
-  // Get request statistics
   getStats: () => api.get('/time-off/stats'),
-  
-  // Get single request by ID
   getById: (id) => api.get(`/time-off/${id}`),
-  
-  // Create a new time off request (worker action)
   create: (data) => api.post('/time-off', data),
-  
-  // Approve a time off request
   approve: (id, reviewerNotes) => api.patch(`/time-off/${id}/approve`, { reviewerNotes }),
-  
-  // Decline a time off request
   decline: (id, reviewerNotes) => api.patch(`/time-off/${id}/decline`, { reviewerNotes }),
-  
-  // Cancel own request (worker action)
   cancel: (id) => api.patch(`/time-off/${id}/cancel`),
 };
 
-// =============================================
-// PHASE 1: MESSAGES
-// =============================================
+// Messages
 export const messagesApi = {
-  // Get inbox messages
   getInbox: () => api.get('/messages/inbox'),
-  
-  // Get sent messages
   getSent: () => api.get('/messages/sent'),
-  
-  // Get unread messages
   getUnread: () => api.get('/messages/unread'),
-  
-  // Get unread count
   getUnreadCount: () => api.get('/messages/unread-count'),
-  
-  // Get messages sent to admins (admin inbox)
   getAdminMessages: () => api.get('/messages/admin'),
-  
-  // Get single message by ID
   getById: (id) => api.get(`/messages/${id}`),
-  
-  // Send a message
   send: (data) => api.post('/messages', data),
-  
-  // Mark message as read
   markAsRead: (id) => api.patch(`/messages/${id}/read`),
-  
-  // Mark all messages as read
   markAllAsRead: () => api.patch('/messages/read-all'),
 };
 
-// Audit endpoints
+// Audit
 export const auditApi = {
   getLogs: (params) => api.get('/audit', { params }),
 };
 
-// Billing endpoints
+// Billing
 export const billingApi = {
   getStatus: () => api.get('/billing/status'),
   createCheckoutSession: (planId, billingCycle, workerCount) =>
@@ -203,27 +141,30 @@ export const billingApi = {
   createPortalSession: () => api.post('/billing/create-portal-session'),
 };
 
-// Features endpoints
+// Features
 export const featuresApi = {
   getFeatures: () => api.get('/features'),
 };
 
-// Company endpoints
+// Company
 export const companyApi = {
   get: () => api.get('/company'),
   update: (data) => api.patch('/company', data),
 };
 
-// Certified Payroll endpoints
+// Certified Payroll
 export const certifiedPayrollApi = {
   getJobs: () => api.get('/certified-payroll/jobs'),
-  generate: (jobId, weekEnding) => api.post('/certified-payroll/generate', { jobId, weekEnding }),
+  getPrevailingWageJobs: () => api.get('/certified-payroll/jobs'),
+  getPayrolls: () => api.get('/certified-payroll'),
+  previewPayroll: (jobId, weekEnding) => api.post('/certified-payroll/preview', { jobId, weekEnding }),
+  generatePayroll: (jobId, weekEnding) => api.post('/certified-payroll/generate', { jobId, weekEnding }),
   getHistory: (jobId) => api.get(`/certified-payroll/history/${jobId}`),
-  downloadPdf: (id) => api.get(`/certified-payroll/${id}/pdf`, { responseType: 'blob' }),
-  submit: (id) => api.patch(`/certified-payroll/${id}/submit`),
+  downloadPDF: (id) => api.get(`/certified-payroll/${id}/pdf`, { responseType: 'blob' }),
+  submitPayroll: (id) => api.patch(`/certified-payroll/${id}/submit`),
 };
 
-// Break Compliance endpoints
+// Break Compliance
 export const breakComplianceApi = {
   getViolations: (params) => api.get('/break-compliance/violations', { params }),
   getSettings: () => api.get('/break-compliance/settings'),

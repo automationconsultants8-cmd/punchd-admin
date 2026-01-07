@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { certifiedPayrollApi } from '../services/api';
+import { withFeatureGate } from '../components/FeatureGate';
 import './CertifiedPayrollPage.css';
 
 function CertifiedPayrollPage() {
@@ -8,10 +9,8 @@ function CertifiedPayrollPage() {
   const [payrolls, setPayrolls] = useState([]);
   const [selectedJob, setSelectedJob] = useState('');
   const [weekEndingDate, setWeekEndingDate] = useState('');
-  const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -20,7 +19,6 @@ function CertifiedPayrollPage() {
     const dayOfWeek = today.getDay();
     const lastSaturday = new Date(today);
     if (dayOfWeek === 6) {
-      // Today is Saturday
       lastSaturday.setDate(today.getDate());
     } else {
       lastSaturday.setDate(today.getDate() - dayOfWeek - 1);
@@ -32,7 +30,7 @@ function CertifiedPayrollPage() {
     setLoading(true);
     try {
       const [jobsRes, payrollsRes] = await Promise.all([
-        certifiedPayrollApi.getPrevailingWageJobs().catch(() => ({ data: [] })),
+        certifiedPayrollApi.getJobs().catch(() => ({ data: [] })),
         certifiedPayrollApi.getPayrolls().catch(() => ({ data: [] })),
       ]);
       setJobs(jobsRes.data || []);
@@ -41,23 +39,6 @@ function CertifiedPayrollPage() {
       console.error('Failed to load data:', err);
     }
     setLoading(false);
-  };
-
-  const handlePreview = async () => {
-    if (!selectedJob || !weekEndingDate) {
-      alert('Please select a job and week ending date');
-      return;
-    }
-
-    setPreviewLoading(true);
-    try {
-      const res = await certifiedPayrollApi.previewPayroll(selectedJob, weekEndingDate);
-      setPreviewData(res.data);
-    } catch (err) {
-      console.error('Failed to preview:', err);
-      alert('Failed to load preview data');
-    }
-    setPreviewLoading(false);
   };
 
   const handleGenerate = async () => {
@@ -70,7 +51,6 @@ function CertifiedPayrollPage() {
     try {
       await certifiedPayrollApi.generatePayroll(selectedJob, weekEndingDate);
       alert('Certified payroll generated successfully!');
-      setPreviewData(null);
       setActiveTab('history');
       loadData();
     } catch (err) {
@@ -118,11 +98,6 @@ function CertifiedPayrollPage() {
       day: 'numeric', 
       year: 'numeric' 
     });
-  };
-
-  const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) return '$0.00';
-    return `$${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getStatusBadge = (status) => {
@@ -192,7 +167,7 @@ function CertifiedPayrollPage() {
                     <label className="form-label">Prevailing Wage Job *</label>
                     <select 
                       value={selectedJob} 
-                      onChange={(e) => { setSelectedJob(e.target.value); setPreviewData(null); }}
+                      onChange={(e) => setSelectedJob(e.target.value)}
                       className="form-select"
                     >
                       <option value="">Select a job...</option>
@@ -208,154 +183,21 @@ function CertifiedPayrollPage() {
                     <input 
                       type="date" 
                       value={weekEndingDate}
-                      onChange={(e) => { setWeekEndingDate(e.target.value); setPreviewData(null); }}
+                      onChange={(e) => setWeekEndingDate(e.target.value)}
                       className="form-input"
                     />
                   </div>
                   <div className="form-group form-actions-inline">
                     <button 
-                      className="btn btn-secondary"
-                      onClick={handlePreview}
-                      disabled={!selectedJob || !weekEndingDate || previewLoading}
+                      className="btn btn-primary"
+                      onClick={handleGenerate}
+                      disabled={!selectedJob || !weekEndingDate || generating}
                     >
-                      {previewLoading ? 'Loading...' : 'Preview Data'}
+                      {generating ? 'Generating...' : 'Generate WH-347'}
                     </button>
                   </div>
                 </div>
               </div>
-
-              {/* Preview Section */}
-              {previewData && (
-                <div className="preview-section">
-                  <div className="card preview-card">
-                    <div className="preview-header">
-                      <div>
-                        <h3>WH-347 Preview</h3>
-                        <p className="preview-subtitle">
-                          {previewData.job?.name} • Week Ending: {formatDate(previewData.weekEnding)}
-                        </p>
-                      </div>
-                      <div className="preview-stats">
-                        <div className="preview-stat">
-                          <span className="stat-value">{previewData.workers?.length || 0}</span>
-                          <span className="stat-label">Workers</span>
-                        </div>
-                        <div className="preview-stat">
-                          <span className="stat-value">{previewData.entryCount || 0}</span>
-                          <span className="stat-label">Entries</span>
-                        </div>
-                        <div className="preview-stat">
-                          <span className="stat-value money">{formatCurrency(previewData.totalGrossPay)}</span>
-                          <span className="stat-label">Total Gross</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {previewData.workers?.length === 0 ? (
-                      <div className="empty-state">
-                        <span className="empty-icon">📭</span>
-                        <p className="empty-title">No Time Entries Found</p>
-                        <p className="empty-text">
-                          There are no approved time entries for this job during the selected week.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="table-container">
-                          <table className="preview-table">
-                            <thead>
-                              <tr>
-                                <th>Worker</th>
-                                <th>Classification</th>
-                                <th>SSN</th>
-                                <th className="day-col">S</th>
-                                <th className="day-col">M</th>
-                                <th className="day-col">T</th>
-                                <th className="day-col">W</th>
-                                <th className="day-col">T</th>
-                                <th className="day-col">F</th>
-                                <th className="day-col">S</th>
-                                <th className="num-col">Total</th>
-                                <th className="num-col">Rate</th>
-                                <th className="num-col">Gross</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {previewData.workers?.map((worker, idx) => (
-                                <tr key={idx}>
-                                  <td>
-                                    <div className="worker-cell">
-                                      <span className="worker-name">{worker.name}</span>
-                                      <span className="worker-address">{worker.address}</span>
-                                    </div>
-                                  </td>
-                                  <td className="classification-cell">{worker.tradeClassification}</td>
-                                  <td className="ssn-cell">XXX-XX-{worker.lastFourSSN}</td>
-                                  <td className={`day-col ${worker.dailyHours?.Sun > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Sun > 0 ? worker.dailyHours.Sun.toFixed(1) : '–'}
-                                  </td>
-                                  <td className={`day-col ${worker.dailyHours?.Mon > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Mon > 0 ? worker.dailyHours.Mon.toFixed(1) : '–'}
-                                  </td>
-                                  <td className={`day-col ${worker.dailyHours?.Tue > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Tue > 0 ? worker.dailyHours.Tue.toFixed(1) : '–'}
-                                  </td>
-                                  <td className={`day-col ${worker.dailyHours?.Wed > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Wed > 0 ? worker.dailyHours.Wed.toFixed(1) : '–'}
-                                  </td>
-                                  <td className={`day-col ${worker.dailyHours?.Thu > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Thu > 0 ? worker.dailyHours.Thu.toFixed(1) : '–'}
-                                  </td>
-                                  <td className={`day-col ${worker.dailyHours?.Fri > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Fri > 0 ? worker.dailyHours.Fri.toFixed(1) : '–'}
-                                  </td>
-                                  <td className={`day-col ${worker.dailyHours?.Sat > 0 ? 'has-hours' : ''}`}>
-                                    {worker.dailyHours?.Sat > 0 ? worker.dailyHours.Sat.toFixed(1) : '–'}
-                                  </td>
-                                  <td className="num-col total-hours">{worker.totalHours?.toFixed(1)}</td>
-                                  <td className="num-col rate-cell">{formatCurrency(worker.hourlyRate)}</td>
-                                  <td className="num-col gross-cell">{formatCurrency(worker.grossPay)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr>
-                                <td colSpan="12" className="totals-label">Total Gross Pay</td>
-                                <td className="total-gross">{formatCurrency(previewData.totalGrossPay)}</td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-
-                        {/* Missing Info Warnings */}
-                        {previewData.workers?.some(w => 
-                          w.lastFourSSN === 'XXXX' || 
-                          !w.address || 
-                          w.address === 'Address not provided'
-                        ) && (
-                          <div className="warning-banner">
-                            <span>⚠️</span>
-                            <div>
-                              <strong>Missing Worker Information</strong>
-                              <p>Some workers are missing address or SSN information required for WH-347. Update their profiles in Workers before submitting to the government.</p>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="preview-actions">
-                          <button 
-                            className="btn btn-primary btn-lg"
-                            onClick={handleGenerate}
-                            disabled={generating}
-                          >
-                            {generating ? 'Generating...' : 'Generate WH-347 Report'}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -430,4 +272,4 @@ function CertifiedPayrollPage() {
   );
 }
 
-export default CertifiedPayrollPage;
+export default withFeatureGate(CertifiedPayrollPage, 'CERTIFIED_PAYROLL');

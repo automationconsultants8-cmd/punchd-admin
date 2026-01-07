@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { shiftsApi, usersApi, jobsApi } from '../services/api';
 import './SchedulingPage.css';
+import { withFeatureGate } from '../components/FeatureGate';
 
 // SVG Icons
 const Icons = {
@@ -341,4 +342,4 @@ function SchedulingPage() {
   );
 }
 
-export default SchedulingPage;
+export default withFeatureGate(SchedulingPage, 'SCHEDULING');

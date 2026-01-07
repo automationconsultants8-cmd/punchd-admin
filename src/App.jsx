@@ -1,7 +1,14 @@
+// ============================================
+// FILE: src/App.jsx (ADMIN DASHBOARD)
+// ACTION: REPLACE ENTIRE FILE
+// ============================================
+
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import TrialWarningBanner from './components/TrialWarningBanner';
+import TrialExpiredPaywall from './components/TrialExpiredPaywall';
 import DashboardPage from './pages/DashboardPage';
 import TimeTrackingPage from './pages/TimeTrackingPage';
 import WorkersPage from './pages/WorkersPage';
@@ -14,7 +21,6 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import SubscriptionWall from './components/SubscriptionWall';
 import { authApi } from './services/api';
 import './styles/design-system.css';
 import './styles/theme-override.css';
@@ -24,6 +30,7 @@ import CompliancePage from './pages/CompliancePage';
 import CertifiedPayrollPage from './pages/CertifiedPayrollPage';
 import ShiftRequestsPage from './pages/ShiftRequestsPage';
 import MessagesPage from './pages/MessagesPage';
+import { FeaturesProvider } from './hooks/useFeatures';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -40,11 +47,12 @@ const pageTitles = {
   '/requests/messages': 'Messages',
 };
 
-function AppContent({ user, onLogout }) {
+function AppContent({ user, onLogout, subscription }) {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   const pageTitle = pageTitles[location.pathname] || 'Dashboard';
+  const showWarningBanner = subscription?.isWarningPeriod && !subscription?.trialExpired;
 
   return (
     <div className="app-layout">
@@ -54,12 +62,16 @@ function AppContent({ user, onLogout }) {
         userRole={user.role}
       />
       
-      <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${showWarningBanner ? 'has-warning-banner' : ''}`}>
         <Header 
           user={user}
           pageTitle={pageTitle}
           onLogout={onLogout}
         />
+        
+        {showWarningBanner && (
+          <TrialWarningBanner daysRemaining={subscription.daysRemaining} />
+        )}
         
         <div className="app-content">
           <Routes>
@@ -117,12 +129,7 @@ function App() {
     const checkSubscription = async () => {
       if (!user) return;
       
-      const cachedSubscription = sessionStorage.getItem('subscription');
-      if (cachedSubscription) {
-        setSubscription(JSON.parse(cachedSubscription));
-        return;
-      }
-      
+      // Always check fresh - don't cache expired state
       setSubscriptionLoading(true);
       try {
         const response = await authApi.getSubscriptionStatus();
@@ -138,6 +145,10 @@ function App() {
     };
 
     checkSubscription();
+    
+    // Recheck every 5 minutes in case trial expires while using app
+    const interval = setInterval(checkSubscription, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleLogin = (userData) => {
@@ -177,12 +188,56 @@ function App() {
           <div className="spinner"></div>
           <p>Checking subscription...</p>
         </div>
-      ) : subscription && !subscription.isActive ? (
-        <SubscriptionWall daysLeft={subscription.daysLeft} />
+      ) : subscription?.trialExpired ? (
+        // Trial expired - admin can only access billing page
+        <Routes>
+          <Route path="/billing" element={
+            <FeaturesProvider>
+              <BillingOnlyView user={user} onLogout={handleLogout} />
+            </FeaturesProvider>
+          } />
+          <Route path="*" element={
+            <TrialExpiredPaywall onLogout={handleLogout} />
+          } />
+        </Routes>
       ) : (
-        <AppContent user={user} onLogout={handleLogout} />
+        // Normal access (trial active or paid)
+        <FeaturesProvider>
+          <AppContent user={user} onLogout={handleLogout} subscription={subscription} />
+        </FeaturesProvider>
       )}
     </BrowserRouter>
+  );
+}
+
+// Billing-only view for expired trials
+function BillingOnlyView({ user, onLogout }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  return (
+    <div className="app-layout">
+      <Sidebar 
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        userRole={user.role}
+      />
+      
+      <main className={`app-main ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <Header 
+          user={user}
+          pageTitle="Billing"
+          onLogout={onLogout}
+        />
+        
+        <div className="trial-expired-banner">
+          <span>⚠️ Your trial has expired. Please upgrade to continue using Punch'd.</span>
+        </div>
+        
+        <div className="app-content">
+          <BillingPage />
+        </div>
+      </main>
+    </div>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auditApi } from '../services/api';
+import { withFeatureGate } from '../components/FeatureGate';
 import './AuditPage.css';
 
 // SVG Icons
@@ -225,4 +226,4 @@ function AuditPage() {
   );
 }
 
-export default AuditPage;
+export default withFeatureGate(AuditPage, 'AUDIT_LOGS');

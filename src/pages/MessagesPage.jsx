@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { messagesApi, usersApi } from '../services/api';
 import './MessagesPage.css';
+import { withFeatureGate } from '../components/FeatureGate';
 
 function MessagesPage() {
   const [activeTab, setActiveTab] = useState('inbox');
@@ -407,4 +408,4 @@ function MessagesPage() {
   );
 }
 
-export default MessagesPage;
+export default withFeatureGate(MessagesPage, 'MESSAGES');

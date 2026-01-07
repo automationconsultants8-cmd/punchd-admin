@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { breakComplianceApi, usersApi } from '../services/api';
 import './CompliancePage.css';
+import { withFeatureGate } from '../components/FeatureGate';
 
 function CompliancePage() {
   const [stats, setStats] = useState(null);
@@ -447,4 +448,4 @@ function CompliancePage() {
   );
 }
 
-export default CompliancePage;
+export default withFeatureGate(CompliancePage, 'BREAK_COMPLIANCE');

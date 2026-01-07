@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import './Header.css';
 
-// SVG Icons
 const Icons = {
   search: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -112,7 +111,6 @@ function Header({ user, pageTitle, onLogout }) {
       </div>
 
       <div className="header-right">
-        {/* Search */}
         <div className="header-search">
           <span className="header-search-icon">{Icons.search}</span>
           <input 
@@ -122,14 +120,15 @@ function Header({ user, pageTitle, onLogout }) {
         </div>
 
         <div className="header-actions">
-          {/* Notifications */}
           <div className="dropdown" ref={notifRef}>
             <button 
-              className="header-icon-btn"
+              className="header-icon-btn notification-btn"
               onClick={() => setShowNotifications(!showNotifications)}
             >
               {Icons.bell}
-              {notifications.length > 0 && <span className="badge"></span>}
+              {notifications.length > 0 && (
+                <span className="notification-badge">{notifications.length}</span>
+              )}
             </button>
 
             {showNotifications && (
@@ -160,13 +159,11 @@ function Header({ user, pageTitle, onLogout }) {
             )}
           </div>
 
-          {/* Help */}
           <button className="header-icon-btn">
             {Icons.help}
           </button>
         </div>
 
-        {/* Profile */}
         <div className="dropdown" ref={profileRef}>
           <button 
             className="header-profile"
