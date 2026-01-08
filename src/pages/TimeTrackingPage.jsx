@@ -63,14 +63,28 @@ function TimeTrackingPage() {
     setLoading(false);
   };
 
+  // Format date in user's local timezone
   const formatDate = (dateString) => {
     if (!dateString) return '--';
-    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
   };
 
+  // Format time in user's local timezone
   const formatTime = (dateString) => {
     if (!dateString) return '--';
-    return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
   };
 
   const formatDuration = (minutes) => {
@@ -198,39 +212,39 @@ function TimeTrackingPage() {
   };
 
   const handleExport = async (format) => {
-  setExportLoading(format);
-  try {
-    let response;
-    let filename;
-    let mimeType;
+    setExportLoading(format);
+    try {
+      let response;
+      let filename;
+      let mimeType;
 
-    if (format === 'excel') {
-      response = await timeEntriesApi.exportExcel({ startDate: dateRange.start, endDate: dateRange.end });
-      filename = `timesheet-${dateRange.start}-${dateRange.end}.xlsx`;
-      mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    } else if (format === 'pdf') {
-      response = await timeEntriesApi.exportPdf({ startDate: dateRange.start, endDate: dateRange.end });
-      filename = `timesheet-${dateRange.start}-${dateRange.end}.pdf`;
-      mimeType = 'application/pdf';
-    } else if (format === 'quickbooks') {
-      response = await timeEntriesApi.exportQuickBooks({ startDate: dateRange.start, endDate: dateRange.end, format: 'csv' });
-      filename = `quickbooks-timesheet-${dateRange.start}-${dateRange.end}.csv`;
-      mimeType = 'text/csv';
+      if (format === 'excel') {
+        response = await timeEntriesApi.exportExcel({ startDate: dateRange.start, endDate: dateRange.end });
+        filename = `timesheet-${dateRange.start}-${dateRange.end}.xlsx`;
+        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      } else if (format === 'pdf') {
+        response = await timeEntriesApi.exportPdf({ startDate: dateRange.start, endDate: dateRange.end });
+        filename = `timesheet-${dateRange.start}-${dateRange.end}.pdf`;
+        mimeType = 'application/pdf';
+      } else if (format === 'quickbooks') {
+        response = await timeEntriesApi.exportQuickBooks({ startDate: dateRange.start, endDate: dateRange.end, format: 'csv' });
+        filename = `quickbooks-timesheet-${dateRange.start}-${dateRange.end}.csv`;
+        mimeType = 'text/csv';
+      }
+
+      const blob = new Blob([response.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed. Please try again.');
     }
-
-    const blob = new Blob([response.data], { type: mimeType });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Export failed:', err);
-    alert('Export failed. Please try again.');
-  }
-  setExportLoading(null);
-};
+    setExportLoading(null);
+  };
 
   const getApprovalBadge = (status) => {
     switch (status) {
@@ -259,29 +273,29 @@ function TimeTrackingPage() {
           <p className="page-subtitle">View, approve, and manage time entries</p>
         </div>
         <div className="page-actions">
-  <button className="btn btn-secondary" onClick={() => setActiveTab('manual')}>+ Manual Entry</button>
-  <button 
-    className="btn btn-secondary" 
-    onClick={() => handleExport('excel')}
-    disabled={exportLoading === 'excel'}
-  >
-    {exportLoading === 'excel' ? '...' : '📊'} Excel
-  </button>
-  <button 
-    className="btn btn-secondary" 
-    onClick={() => handleExport('quickbooks')}
-    disabled={exportLoading === 'quickbooks'}
-  >
-    {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
-  </button>
-  <button 
-    className="btn btn-primary" 
-    onClick={() => handleExport('pdf')}
-    disabled={exportLoading === 'pdf'}
-  >
-    {exportLoading === 'pdf' ? '...' : '📄'} PDF
-  </button>
-</div>
+          <button className="btn btn-secondary" onClick={() => setActiveTab('manual')}>+ Manual Entry</button>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => handleExport('excel')}
+            disabled={exportLoading === 'excel'}
+          >
+            {exportLoading === 'excel' ? '...' : '📊'} Excel
+          </button>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => handleExport('quickbooks')}
+            disabled={exportLoading === 'quickbooks'}
+          >
+            {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => handleExport('pdf')}
+            disabled={exportLoading === 'pdf'}
+          >
+            {exportLoading === 'pdf' ? '...' : '📄'} PDF
+          </button>
+        </div>
       </div>
 
       {/* Approval Stats Cards */}
