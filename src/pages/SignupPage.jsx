@@ -37,6 +37,11 @@ const Icons = {
       <path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
     </svg>
   ),
+  phone: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+  ),
 };
 
 const PunchdLogo = () => (
@@ -56,10 +61,11 @@ const PunchdLogo = () => (
 function SignupPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: '',
+    ownerName: '',
     email: '',
     password: '',
-    companyName: ''
+    companyName: '',
+    phone: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,8 +77,11 @@ function SignupPage() {
     setLoading(true);
 
     try {
-      await authApi.signup(formData);
-      navigate('/login');
+      const response = await authApi.signup(formData);
+      // Auto-login after signup
+      localStorage.setItem('adminToken', response.data.accessToken);
+      localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+      navigate('/');
     } catch (err) {
       console.error('Signup error:', err);
       setError(err.response?.data?.message || 'Error creating account. Please try again.');
@@ -101,8 +110,8 @@ function SignupPage() {
                 <span className="input-icon">{Icons.user}</span>
                 <input 
                   type="text" 
-                  value={formData.name} 
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
+                  value={formData.ownerName} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))} 
                   placeholder="John Smith" 
                   required 
                 />
@@ -138,6 +147,20 @@ function SignupPage() {
             </div>
 
             <div className="form-group">
+              <label>PHONE</label>
+              <div className="input-wrapper">
+                <span className="input-icon">{Icons.phone}</span>
+                <input 
+                  type="tel" 
+                  value={formData.phone} 
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} 
+                  placeholder="(555) 123-4567" 
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
               <label>PASSWORD</label>
               <div className="input-wrapper">
                 <span className="input-icon">{Icons.lock}</span>
@@ -147,7 +170,7 @@ function SignupPage() {
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} 
                   placeholder="••••••••" 
                   required 
-                  minLength={8} 
+                  minLength={6} 
                 />
                 <button 
                   type="button" 
