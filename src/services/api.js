@@ -41,17 +41,19 @@ export const authApi = {
 };
 
 // Users endpoints
+// Users endpoints
 export const usersApi = {
   getAll: () => api.get('/users'),
   getById: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.patch(`/users/${id}`, data),
   deactivate: (id) => api.patch(`/users/${id}`, { isActive: false }),
+  approve: (id) => api.patch(`/users/${id}/approve`),
+  decline: (id) => api.patch(`/users/${id}/decline`),
   getJobRates: (id) => api.get(`/users/${id}/rates`),
   setJobRate: (id, data) => api.post(`/users/${id}/rates`, data),
   removeJobRate: (userId, jobId) => api.delete(`/users/${userId}/rates/${jobId}`),
 };
-
 // Jobs endpoints
 export const jobsApi = {
   getAll: () => api.get('/jobs'),

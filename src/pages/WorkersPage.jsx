@@ -105,6 +105,20 @@ const Icons = {
       <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
   ),
+  userCheck: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <polyline points="17 11 19 13 23 9"/>
+    </svg>
+  ),
+  userX: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/>
+    </svg>
+  ),
 };
 
 function WorkersPage() {
@@ -184,19 +198,48 @@ function WorkersPage() {
     }
   };
 
+  const handleApprove = async (id) => {
+    try {
+      await usersApi.approve(id);
+      loadData();
+    } catch (error) {
+      console.error('Error approving worker:', error);
+    }
+  };
+
+  const handleDecline = async (id) => {
+    if (window.confirm('Decline this worker? They will not be able to access the app.')) {
+      try {
+        await usersApi.decline(id);
+        loadData();
+      } catch (error) {
+        console.error('Error declining worker:', error);
+      }
+    }
+  };
+
+  const getApprovalStatus = (worker) => {
+    if (worker.approvalStatus) return worker.approvalStatus;
+    if (worker.isActive) return 'APPROVED';
+    return 'PENDING';
+  };
+
   const filteredWorkers = workers.filter(w => {
     const matchesSearch = w.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          w.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const approvalStatus = getApprovalStatus(w);
     const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && (w.status === 'active' || w.isActive)) ||
-                         (statusFilter === 'inactive' && (w.status === 'inactive' || !w.isActive));
+                         (statusFilter === 'active' && approvalStatus === 'APPROVED' && w.isActive) ||
+                         (statusFilter === 'inactive' && (!w.isActive || approvalStatus === 'DECLINED')) ||
+                         (statusFilter === 'pending' && approvalStatus === 'PENDING');
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
     total: workers.length,
-    active: workers.filter(w => w.status === 'active' || w.isActive).length,
-    inactive: workers.filter(w => w.status === 'inactive' || !w.isActive).length
+    active: workers.filter(w => getApprovalStatus(w) === 'APPROVED' && w.isActive).length,
+    inactive: workers.filter(w => !w.isActive || getApprovalStatus(w) === 'DECLINED').length,
+    pending: workers.filter(w => getApprovalStatus(w) === 'PENDING').length
   };
 
   if (loading) {
@@ -250,6 +293,15 @@ function WorkersPage() {
             <div className="stat-label">Inactive</div>
           </div>
         </div>
+        {stats.pending > 0 && (
+          <div className="stat-card">
+            <div className="stat-icon orange">{Icons.clock}</div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.pending}</div>
+              <div className="stat-label">Pending Approval</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -268,6 +320,7 @@ function WorkersPage() {
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            <option value="pending">Pending Approval</option>
           </select>
         </div>
       </div>
@@ -285,49 +338,67 @@ function WorkersPage() {
         </div>
       ) : (
         <div className="workers-grid">
-          {filteredWorkers.map(worker => (
-            <div key={worker.id} className="worker-card">
-              <div className="worker-header">
-                <div className="worker-avatar">
-                  {worker.name?.split(' ').map(n => n[0]).join('') || '?'}
-                </div>
-                <div className="worker-info">
-                  <h3>{worker.name}</h3>
-                  <span className={`status-badge ${worker.status === 'active' || worker.isActive ? 'active' : 'inactive'}`}>
-                    {worker.status === 'active' || worker.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div className="worker-actions">
-                  <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
-                    {Icons.edit}
-                  </button>
-                  <button className="action-btn danger" onClick={() => handleDeactivate(worker.id)} title="Deactivate">
-                    {Icons.trash}
-                  </button>
-                </div>
-              </div>
-              <div className="worker-details">
-                <div className="detail-row">
-                  <span className="detail-icon">{Icons.mail}</span>
-                  <span>{worker.email || 'No email'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-icon">{Icons.phone}</span>
-                  <span>{worker.phone || 'No phone'}</span>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-icon">{Icons.shield}</span>
-                  <span className="role-badge">{worker.role || 'Worker'}</span>
-                </div>
-                {worker.hourlyRate && (
-                  <div className="detail-row">
-                    <span className="detail-icon">{Icons.dollarSign}</span>
-                    <span className="rate">${worker.hourlyRate}/hr</span>
+          {filteredWorkers.map(worker => {
+            const approvalStatus = getApprovalStatus(worker);
+            const isPending = approvalStatus === 'PENDING';
+            
+            return (
+              <div key={worker.id} className={`worker-card ${isPending ? 'pending' : ''}`}>
+                <div className="worker-header">
+                  <div className="worker-avatar">
+                    {worker.name?.split(' ').map(n => n[0]).join('') || '?'}
                   </div>
-                )}
+                  <div className="worker-info">
+                    <h3>{worker.name}</h3>
+                    <span className={`status-badge ${isPending ? 'pending' : approvalStatus === 'APPROVED' && worker.isActive ? 'active' : 'inactive'}`}>
+                      {isPending ? 'Pending' : approvalStatus === 'APPROVED' && worker.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="worker-actions">
+                    {isPending ? (
+                      <>
+                        <button className="action-btn approve" onClick={() => handleApprove(worker.id)} title="Approve">
+                          {Icons.userCheck}
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleDecline(worker.id)} title="Decline">
+                          {Icons.userX}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
+                          {Icons.edit}
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleDeactivate(worker.id)} title="Deactivate">
+                          {Icons.trash}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="worker-details">
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.mail}</span>
+                    <span>{worker.email || 'No email'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.phone}</span>
+                    <span>{worker.phone || 'No phone'}</span>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.shield}</span>
+                    <span className="role-badge">{worker.role || 'Worker'}</span>
+                  </div>
+                  {worker.hourlyRate && (
+                    <div className="detail-row">
+                      <span className="detail-icon">{Icons.dollarSign}</span>
+                      <span className="rate">${worker.hourlyRate}/hr</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

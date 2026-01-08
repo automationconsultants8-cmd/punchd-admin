@@ -547,3 +547,30 @@
   .workers-page .search-box { max-width: 100%; }
   .workers-page .form-row { grid-template-columns: 1fr; }
 }
+/* Pending worker card */
+.worker-card.pending {
+  border: 2px solid #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+/* Status badge pending */
+.status-badge.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* Approve button */
+.action-btn.approve {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.action-btn.approve:hover {
+  background: #bbf7d0;
+}
+
+/* Stat icon orange for pending */
+.stat-icon.orange {
+  background: #fff7ed;
+  color: #f59e0b;
+}
