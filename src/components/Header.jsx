@@ -71,11 +71,18 @@ const Icons = {
       <line x1="12" y1="8" x2="12.01" y2="8"/>
     </svg>
   ),
+  copy: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  ),
 };
 
 function Header({ user, pageTitle, onLogout }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [copied, setCopied] = useState(false);
   const profileRef = useRef(null);
   const notifRef = useRef(null);
 
@@ -98,6 +105,14 @@ function Header({ user, pageTitle, onLogout }) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const copyInviteCode = () => {
+    if (user?.inviteCode) {
+      navigator.clipboard.writeText(user.inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const notifications = [
     { id: 1, type: 'alert', message: 'Alex T. clocked in outside geofence', time: '5m ago' },
     { id: 2, type: 'info', message: 'Weekly timesheet report ready', time: '1h ago' },
@@ -108,6 +123,14 @@ function Header({ user, pageTitle, onLogout }) {
     <header className="app-header">
       <div className="header-left">
         <h1 className="header-title">{pageTitle || 'Dashboard'}</h1>
+        {user?.inviteCode && (
+          <div className="invite-code-badge" onClick={copyInviteCode} title="Click to copy">
+            <span className="invite-code-label">Invite Code:</span>
+            <span className="invite-code-value">{user.inviteCode}</span>
+            <span className="invite-code-icon">{Icons.copy}</span>
+            {copied && <span className="invite-code-copied">Copied!</span>}
+          </div>
+        )}
       </div>
 
       <div className="header-right">
