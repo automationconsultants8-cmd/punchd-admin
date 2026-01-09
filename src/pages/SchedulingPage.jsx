@@ -270,16 +270,23 @@ function SchedulingPage() {
                   </div>
                 ) : (
                   <div className="shifts-list">
-                    {dayShifts.map(shift => (
-                      <div key={shift.id} className="shift-item" onClick={(e) => e.stopPropagation()}>
-                        <div className="shift-time">{shift.startTime} - {shift.endTime}</div>
-                        <div className="shift-worker">{shift.user?.name || 'Unassigned'}</div>
-                        <div className="shift-job">{shift.job?.name || 'No site'}</div>
-                        <button className="shift-delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }}>
-                          {Icons.trash}
-                        </button>
-                      </div>
-                    ))}
+                    {dayShifts.map(shift => {
+  const formatTime = (dateStr) => {
+    if (!dateStr) return '--';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
+  return (
+    <div key={shift.id} className="shift-item" onClick={(e) => e.stopPropagation()}>
+      <div className="shift-time">{formatTime(shift.startTime)} - {formatTime(shift.endTime)}</div>
+      <div className="shift-worker">{shift.user?.name || 'Unassigned'}</div>
+      <div className="shift-job">{shift.job?.name || 'No site'}</div>
+      <button className="shift-delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }}>
+        {Icons.trash}
+      </button>
+    </div>
+  );
+})}
                   </div>
                 )}
               </div>
