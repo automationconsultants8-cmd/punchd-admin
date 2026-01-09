@@ -128,6 +128,7 @@ export const messagesApi = {
   send: (data) => api.post('/messages', data),
   markAsRead: (id) => api.patch(`/messages/${id}/read`),
   markAllAsRead: () => api.patch('/messages/read-all'),
+  delete: (id) => api.delete(`/messages/${id}`),
 };
 
 // Audit
