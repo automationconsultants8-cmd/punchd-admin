@@ -13,6 +13,7 @@ function MessagesPage() {
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [deleteLoading, setDeleteLoading] = useState(null);
   const [composeData, setComposeData] = useState({
     recipientId: '',
     subject: '',
@@ -30,11 +31,9 @@ function MessagesPage() {
 
       let messagesRes;
       if (activeTab === 'inbox') {
-        messagesRes = await messagesApi.getAdminMessages();
-      } else if (activeTab === 'sent') {
-        messagesRes = await messagesApi.getSent();
+        messagesRes = await messagesApi.getInbox();
       } else {
-        messagesRes = await messagesApi.getUnread();
+        messagesRes = await messagesApi.getSent();
       }
 
       const [workersRes, countRes] = await Promise.all([
@@ -42,8 +41,8 @@ function MessagesPage() {
         messagesApi.getUnreadCount(),
       ]);
 
-      setMessages(messagesRes.data);
-      setWorkers(workersRes.data.filter(w => w.isActive));
+      setMessages(messagesRes.data || []);
+      setWorkers((workersRes.data || []).filter(w => w.isActive));
       setUnreadCount(typeof countRes.data === 'number' ? countRes.data : 0);
     } catch (err) {
       setError('Failed to load messages');
@@ -57,8 +56,7 @@ function MessagesPage() {
     setSelectedMessage(message);
     setShowMessageModal(true);
 
-    // Mark as read if unread
-    if (!message.isRead) {
+    if (!message.isRead && activeTab === 'inbox') {
       try {
         await messagesApi.markAsRead(message.id);
         loadData();
@@ -85,6 +83,26 @@ function MessagesPage() {
       loadData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send message');
+    }
+  };
+
+  const handleDelete = async (e, messageId) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+    
+    setDeleteLoading(messageId);
+    try {
+      await messagesApi.delete(messageId);
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      if (showMessageModal && selectedMessage?.id === messageId) {
+        setShowMessageModal(false);
+        setSelectedMessage(null);
+      }
+    } catch (err) {
+      setError('Failed to delete message');
+      console.error(err);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -239,7 +257,7 @@ function MessagesPage() {
                 <div className="message-header">
                   <span className="message-sender">
                     {activeTab === 'sent' 
-                      ? (message.recipient?.name || 'All Admins')
+                      ? (message.recipient?.name || 'All Workers')
                       : message.sender?.name}
                   </span>
                   {!message.isRead && activeTab === 'inbox' && (
@@ -260,6 +278,18 @@ function MessagesPage() {
 
               <div className="message-meta">
                 <span className="message-time">{getTimeAgo(message.createdAt)}</span>
+                <button 
+                  className="btn-delete-message"
+                  onClick={(e) => handleDelete(e, message.id)}
+                  disabled={deleteLoading === message.id}
+                >
+                  {deleteLoading === message.id ? '...' : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
           ))
@@ -293,7 +323,7 @@ function MessagesPage() {
                       <option key={worker.id} value={worker.id}>{worker.name}</option>
                     ))}
                   </select>
-                  <small>Leave empty to broadcast to recipient when they log in</small>
+                  <small>Leave empty to broadcast to all workers</small>
                 </div>
 
                 <div className="form-group">
@@ -376,6 +406,16 @@ function MessagesPage() {
             </div>
 
             <div className="modal-footer">
+              <button
+                className="btn-delete"
+                onClick={(e) => handleDelete(e, selectedMessage.id)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                Delete
+              </button>
               <button
                 className="btn-secondary"
                 onClick={() => setShowMessageModal(false)}

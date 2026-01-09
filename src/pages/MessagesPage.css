@@ -602,3 +602,96 @@
     justify-content: flex-start;
   }
 }
+/* Delete Button */
+.btn-delete-message {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #8A8A8A;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  margin-top: 8px;
+}
+
+.message-card:hover .btn-delete-message {
+  opacity: 1;
+}
+
+.btn-delete-message:hover {
+  background: #FEF2F2;
+  color: #B54B4B;
+}
+
+.btn-delete-message svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-delete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #B54B4B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: auto;
+}
+
+.btn-delete:hover {
+  background: #B54B4B;
+  color: white;
+}
+
+.btn-delete svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Modal Overlay with Blur */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
