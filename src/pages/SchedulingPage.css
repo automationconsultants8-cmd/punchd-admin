@@ -372,16 +372,15 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 24px;
 }
-
 .scheduling-page .modal {
   background: #FFFFFF;
   border: 2px solid #D4D0C8;

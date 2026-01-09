@@ -335,11 +335,10 @@ tbody tr:hover {
 }
 
 .modal-overlay {
-  background: rgba(0, 0, 0, 0.3) !important;
+  background: rgba(0, 0, 0, 0.4) !important;
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
 }
-
 /* Buttons */
 .btn-secondary {
   background: #FFFFFF !important;
