@@ -168,10 +168,14 @@ function SchedulingPage() {
   const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const isToday = (date) => date.toDateString() === new Date().toDateString();
   const getShiftsForDay = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return shifts.filter(s => s.date === dateStr);
-  };
-
+  const dateStr = date.toISOString().split('T')[0];
+  return shifts.filter(s => {
+    const shiftDate = s.shiftDate || s.date;
+    if (!shiftDate) return false;
+    const shiftDateStr = new Date(shiftDate).toISOString().split('T')[0];
+    return shiftDateStr === dateStr;
+  });
+};
   const weekDays = getWeekDays();
   const stats = {
     totalShifts: shifts.length,
