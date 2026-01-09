@@ -82,6 +82,18 @@ const Icons = {
   ),
 };
 
+// Helper to format time from ISO string using UTC
+const formatShiftTime = (dateStr) => {
+  if (!dateStr) return '--';
+  const date = new Date(dateStr);
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  const displayMinutes = minutes.toString().padStart(2, '0');
+  return `${displayHours}:${displayMinutes} ${ampm}`;
+};
+
 function SchedulingPage() {
   const [shifts, setShifts] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -167,21 +179,23 @@ function SchedulingPage() {
 
   const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const isToday = (date) => date.toDateString() === new Date().toDateString();
+  
   const getShiftsForDay = (date) => {
-  const dateStr = date.toISOString().split('T')[0];
-  return shifts.filter(s => {
-    const shiftDate = s.shiftDate || s.date;
-    if (!shiftDate) return false;
-    const shiftDateStr = new Date(shiftDate).toISOString().split('T')[0];
-    return shiftDateStr === dateStr;
-  });
-};
+    const dateStr = date.toISOString().split('T')[0];
+    return shifts.filter(s => {
+      const shiftDate = s.shiftDate || s.date;
+      if (!shiftDate) return false;
+      const shiftDateStr = new Date(shiftDate).toISOString().split('T')[0];
+      return shiftDateStr === dateStr;
+    });
+  };
+
   const weekDays = getWeekDays();
   const stats = {
     totalShifts: shifts.length,
     workers: workers.length,
     jobSites: jobSites.length,
-    upcoming: shifts.filter(s => new Date(s.date) >= new Date()).length
+    upcoming: shifts.filter(s => new Date(s.shiftDate || s.date) >= new Date()).length
   };
 
   if (loading) {
@@ -270,23 +284,16 @@ function SchedulingPage() {
                   </div>
                 ) : (
                   <div className="shifts-list">
-                    {dayShifts.map(shift => {
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '--';
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  };
-  return (
-    <div key={shift.id} className="shift-item" onClick={(e) => e.stopPropagation()}>
-      <div className="shift-time">{formatTime(shift.startTime)} - {formatTime(shift.endTime)}</div>
-      <div className="shift-worker">{shift.user?.name || 'Unassigned'}</div>
-      <div className="shift-job">{shift.job?.name || 'No site'}</div>
-      <button className="shift-delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }}>
-        {Icons.trash}
-      </button>
-    </div>
-  );
-})}
+                    {dayShifts.map(shift => (
+                      <div key={shift.id} className="shift-item" onClick={(e) => e.stopPropagation()}>
+                        <div className="shift-time">{formatShiftTime(shift.startTime)} - {formatShiftTime(shift.endTime)}</div>
+                        <div className="shift-worker">{shift.user?.name || 'Unassigned'}</div>
+                        <div className="shift-job">{shift.job?.name || 'No site'}</div>
+                        <button className="shift-delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }}>
+                          {Icons.trash}
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
