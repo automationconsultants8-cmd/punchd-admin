@@ -97,9 +97,15 @@ const Icons = {
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
     </svg>
   ),
+  edit: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  ),
 };
 
-// Helper to format date as YYYY-MM-DD in LOCAL timezone
+// Helper to format date as YYYY-MM-DD in LOCAL timezone (DO NOT TOUCH)
 const toLocalDateString = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -107,7 +113,7 @@ const toLocalDateString = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Helper to format time for display - use UTC since we store as UTC
+// Helper to format time for display using UTC (DO NOT TOUCH)
 const formatShiftTime = (dateStr) => {
   if (!dateStr) return '--';
   const date = new Date(dateStr);
@@ -117,6 +123,15 @@ const formatShiftTime = (dateStr) => {
   const displayHours = hours % 12 || 12;
   const displayMinutes = minutes.toString().padStart(2, '0');
   return `${displayHours}:${displayMinutes} ${ampm}`;
+};
+
+// Helper to format time for input field (HH:MM) using UTC
+const formatTimeForInput = (dateStr) => {
+  if (!dateStr) return '07:00';
+  const date = new Date(dateStr);
+  const hours = date.getUTCHours().toString().padStart(2, '0');
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
 };
 
 // Add days to a date
@@ -133,6 +148,7 @@ function SchedulingPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [editingShift, setEditingShift] = useState(null);
   const [currentWeek, setCurrentWeek] = useState(getWeekStart(new Date()));
   const [formData, setFormData] = useState({
     jobId: '',
@@ -191,35 +207,83 @@ function SchedulingPage() {
         basePayload.userId = formData.userId;
       }
 
-      // Create shifts for each week if recurring
-      const weeksToCreate = formData.isRecurring ? formData.repeatWeeks : 1;
-      const baseDate = new Date(formData.date + 'T12:00:00');
-
-      for (let week = 0; week < weeksToCreate; week++) {
-        const shiftDate = addDays(baseDate, week * 7);
-        await shiftsApi.create({
+      if (editingShift) {
+        // Update existing shift
+        await shiftsApi.update(editingShift.id, {
           ...basePayload,
-          date: toLocalDateString(shiftDate)
+          shiftDate: formData.date
         });
+      } else {
+        // Create new shift(s)
+        const weeksToCreate = formData.isRecurring ? formData.repeatWeeks : 1;
+        const baseDate = new Date(formData.date + 'T12:00:00');
+
+        for (let week = 0; week < weeksToCreate; week++) {
+          const shiftDate = addDays(baseDate, week * 7);
+          await shiftsApi.create({
+            ...basePayload,
+            date: toLocalDateString(shiftDate)
+          });
+        }
       }
 
       setShowModal(false);
+      setEditingShift(null);
       setFormData({ 
         jobId: '', userId: '', date: '', startTime: '07:00', endTime: '15:30', 
         notes: '', isOpen: false, isRecurring: false, repeatWeeks: 1 
       });
       loadData();
     } catch (error) {
-      console.error('Error creating shift:', error);
-      alert('Failed to create shift. Please try again.');
+      console.error('Error saving shift:', error);
+      alert('Failed to save shift. Please try again.');
     }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Delete this shift?')) {
+      try {
+        await shiftsApi.delete(id);
+        loadData();
+      } catch (error) {
+        console.error('Error deleting shift:', error);
+      }
+    }
+  };
+
+  const handleMarkAsOpen = async (id) => {
+    if (window.confirm('Mark this shift as open? The worker will be unassigned and any worker can claim it.')) {
+      try {
+        await shiftsApi.markAsOpen(id);
+        loadData();
+      } catch (error) {
+        console.error('Error marking shift as open:', error);
+        alert('Failed to mark shift as open');
+      }
+    }
+  };
+
+  const handleEdit = (shift) => {
+    setEditingShift(shift);
+    const shiftDateObj = new Date(shift.shiftDate);
+    setFormData({
+      jobId: shift.jobId || '',
+      userId: shift.userId || '',
+      date: toLocalDateString(shiftDateObj),
+      startTime: formatTimeForInput(shift.startTime),
+      endTime: formatTimeForInput(shift.endTime),
+      notes: shift.notes || '',
+      isOpen: shift.isOpen || false,
+      isRecurring: false,
+      repeatWeeks: 1
+    });
+    setShowModal(true);
   };
 
   const handleCopyPreviousWeek = async () => {
     const prevWeekStart = addDays(currentWeek, -7);
     const prevWeekEnd = addDays(currentWeek, -1);
     
-    // Get shifts from previous week
     const prevWeekShifts = shifts.filter(s => {
       const shiftDate = new Date(s.shiftDate || s.date);
       return shiftDate >= prevWeekStart && shiftDate <= prevWeekEnd;
@@ -244,8 +308,8 @@ function SchedulingPage() {
           jobId: shift.jobId,
           userId: shift.userId,
           date: toLocalDateString(newDate),
-          startTime: formatShiftTime(shift.startTime).replace(' AM', '').replace(' PM', ''),
-          endTime: formatShiftTime(shift.endTime).replace(' AM', '').replace(' PM', ''),
+          startTime: formatTimeForInput(shift.startTime),
+          endTime: formatTimeForInput(shift.endTime),
           notes: shift.notes,
           isOpen: shift.isOpen
         });
@@ -257,28 +321,6 @@ function SchedulingPage() {
       alert('Failed to copy some shifts. Please try again.');
     } finally {
       setCopying(false);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Delete this shift?')) {
-      try {
-        await shiftsApi.delete(id);
-        loadData();
-      } catch (error) {
-        console.error('Error deleting shift:', error);
-      }
-    }
-  };
-
-  const handleMarkAsOpen = async (id) => {
-    if (window.confirm('Mark this shift as open? The worker will be unassigned.')) {
-      try {
-        await shiftsApi.update(id, { isOpen: true, userId: null, status: 'OPEN' });
-        loadData();
-      } catch (error) {
-        console.error('Error marking shift as open:', error);
-      }
     }
   };
 
@@ -301,36 +343,36 @@ function SchedulingPage() {
   const formatDisplayDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const isToday = (date) => toLocalDateString(date) === toLocalDateString(new Date());
   
- const getShiftsForDay = (date) => {
-  const targetYear = date.getFullYear();
-  const targetMonth = date.getMonth();
-  const targetDay = date.getDate();
-  
-  return shifts.filter(s => {
-    const shiftDate = s.shiftDate || s.date;
-    if (!shiftDate) return false;
-    const d = new Date(shiftDate);
-    // Compare using UTC date parts since we store at noon UTC
-    return d.getUTCFullYear() === targetYear && 
-           d.getUTCMonth() === targetMonth && 
-           d.getUTCDate() === targetDay;
-  });
-};
+  // DO NOT TOUCH THIS FUNCTION
+  const getShiftsForDay = (date) => {
+    const targetYear = date.getFullYear();
+    const targetMonth = date.getMonth();
+    const targetDay = date.getDate();
+    
+    return shifts.filter(s => {
+      const shiftDate = s.shiftDate || s.date;
+      if (!shiftDate) return false;
+      const d = new Date(shiftDate);
+      return d.getUTCFullYear() === targetYear && 
+             d.getUTCMonth() === targetMonth && 
+             d.getUTCDate() === targetDay;
+    });
+  };
 
   const openModal = (day = null, isOpen = false) => {
+    setEditingShift(null);
     const dateStr = day ? toLocalDateString(day) : toLocalDateString(new Date());
-    setFormData(prev => ({ 
-      ...prev, 
-      date: dateStr, 
-      isOpen: isOpen,
-      userId: '',
+    setFormData({ 
       jobId: '',
+      userId: '',
+      date: dateStr, 
       startTime: '07:00',
       endTime: '15:30',
       notes: '',
+      isOpen: isOpen,
       isRecurring: false,
       repeatWeeks: 1
-    }));
+    });
     setShowModal(true);
   };
 
@@ -449,6 +491,9 @@ function SchedulingPage() {
                           <div className="shift-worker">{isOpenShift ? 'Available' : (shift.user?.name || 'Unassigned')}</div>
                           <div className="shift-job">{shift.job?.name || 'No site'}</div>
                           <div className="shift-actions">
+                            <button className="shift-action-btn edit" onClick={(e) => { e.stopPropagation(); handleEdit(shift); }} title="Edit">
+                              {Icons.edit}
+                            </button>
                             {!isOpenShift && shift.user && (
                               <button className="shift-action-btn mark-open" onClick={(e) => { e.stopPropagation(); handleMarkAsOpen(shift.id); }} title="Mark as Open">
                                 {Icons.briefcase}
@@ -469,16 +514,16 @@ function SchedulingPage() {
         })}
       </div>
 
-      {/* Create Shift Modal */}
+      {/* Create/Edit Shift Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setEditingShift(null); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
                 <span className="modal-icon">{formData.isOpen ? Icons.briefcase : Icons.calendar}</span>
-                <h2>{formData.isOpen ? 'Create Open Shift' : 'Assign Shift'}</h2>
+                <h2>{editingShift ? 'Edit Shift' : (formData.isOpen ? 'Create Open Shift' : 'Assign Shift')}</h2>
               </div>
-              <button className="modal-close" onClick={() => setShowModal(false)}>{Icons.x}</button>
+              <button className="modal-close" onClick={() => { setShowModal(false); setEditingShift(null); }}>{Icons.x}</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
@@ -545,31 +590,35 @@ function SchedulingPage() {
                   </div>
                 </div>
 
-                {/* Recurring Option */}
-                <div className="form-group">
-                  <label className="checkbox-label">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.isRecurring} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, isRecurring: e.target.checked }))}
-                    />
-                    <span>{Icons.repeat} Repeat weekly</span>
-                  </label>
-                </div>
+                {/* Recurring Option - only show when creating new */}
+                {!editingShift && (
+                  <>
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.isRecurring} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, isRecurring: e.target.checked }))}
+                        />
+                        <span>{Icons.repeat} Repeat weekly</span>
+                      </label>
+                    </div>
 
-                {formData.isRecurring && (
-                  <div className="form-group indent">
-                    <label>Repeat for how many weeks?</label>
-                    <select 
-                      value={formData.repeatWeeks} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, repeatWeeks: parseInt(e.target.value) }))}
-                    >
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
-                        <option key={n} value={n}>{n} week{n > 1 ? 's' : ''}</option>
-                      ))}
-                    </select>
-                    <small>This will create {formData.repeatWeeks} shift{formData.repeatWeeks > 1 ? 's' : ''} on the same day each week</small>
-                  </div>
+                    {formData.isRecurring && (
+                      <div className="form-group indent">
+                        <label>Repeat for how many weeks?</label>
+                        <select 
+                          value={formData.repeatWeeks} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, repeatWeeks: parseInt(e.target.value) }))}
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+                            <option key={n} value={n}>{n} week{n > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                        <small>This will create {formData.repeatWeeks} shift{formData.repeatWeeks > 1 ? 's' : ''} on the same day each week</small>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="form-group">
@@ -583,13 +632,15 @@ function SchedulingPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingShift(null); }}>Cancel</button>
                 <button type="submit" className="btn-primary">
                   {Icons.check}
                   <span>
-                    {formData.isRecurring && formData.repeatWeeks > 1 
-                      ? `Create ${formData.repeatWeeks} Shifts` 
-                      : (formData.isOpen ? 'Create Open Shift' : 'Assign Shift')}
+                    {editingShift 
+                      ? 'Save Changes'
+                      : (formData.isRecurring && formData.repeatWeeks > 1 
+                          ? `Create ${formData.repeatWeeks} Shifts` 
+                          : (formData.isOpen ? 'Create Open Shift' : 'Assign Shift'))}
                   </span>
                 </button>
               </div>

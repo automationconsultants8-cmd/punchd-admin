@@ -87,10 +87,11 @@ export const shiftsApi = {
   getAll: (params) => api.get('/shifts', { params }),
   getById: (id) => api.get(`/shifts/${id}`),
   create: (data) => api.post('/shifts', data),
-  update: (id, data) => api.put(`/shifts/${id}`, data),
+  update: (id, data) => api.patch(`/shifts/${id}`, data),
   delete: (id) => api.delete(`/shifts/${id}`),
-  getByUser: (userId) => api.get(`/shifts/user/${userId}`),
-  getToday: () => api.get('/shifts/today'),
+  getOpenShifts: () => api.get('/shifts/open'),
+  claimShift: (id) => api.post(`/shifts/${id}/claim`),
+  markAsOpen: (id) => api.patch(`/shifts/${id}/mark-open`),
 };
 
 // Shift Requests

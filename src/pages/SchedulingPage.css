@@ -660,3 +660,6 @@
   .week-grid { grid-template-columns: 1fr; }
   .scheduling-page .stats-grid { grid-template-columns: 1fr; }
 }
+
+.shift-action-btn.edit { color: #C9A227; }
+.shift-action-btn.edit:hover { background: #FFFDF5; }
