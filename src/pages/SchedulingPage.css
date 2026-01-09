@@ -372,7 +372,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,9 +390,20 @@
   max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
 }
 
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
 .scheduling-page .modal-header {
   display: flex;
   justify-content: space-between;
@@ -554,4 +567,55 @@
   .week-grid { grid-template-columns: 1fr; }
   .day-column { min-height: 100px; }
   .scheduling-page .form-row { grid-template-columns: 1fr; }
+}
+/* Cool Animated Buttons */
+.scheduling-page .btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #C9A227 0%, #E8D48A 50%, #C9A227 100%);
+  background-size: 200% 200%;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.scheduling-page .btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.scheduling-page .btn-primary:hover::before {
+  left: 100%;
+}
+
+.scheduling-page .btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(201, 162, 39, 0.5);
+  background-position: 100% 0;
+}
+
+.scheduling-page .btn-primary:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(201, 162, 39, 0.4);
+}
+
+.scheduling-page .modal-footer .btn-primary {
+  padding: 14px 28px;
+  font-size: 15px;
+  border-radius: 12px;
 }

@@ -118,7 +118,7 @@ function SchedulingPage() {
       ]);
       setShifts(shiftsRes.data || []);
       setWorkers((workersRes.data || []).filter(w => w.status === 'active' || w.isActive));
-      setJobSites((jobsRes.data || []).filter(j => j.status === 'active'));
+      setJobSites(jobsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
