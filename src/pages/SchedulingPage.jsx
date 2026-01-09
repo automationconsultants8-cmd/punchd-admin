@@ -107,12 +107,12 @@ const toLocalDateString = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Helper to format time for display
+// Helper to format time for display - use UTC since we store as UTC
 const formatShiftTime = (dateStr) => {
   if (!dateStr) return '--';
   const date = new Date(dateStr);
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
+  const hours = date.getUTCHours();
+  const minutes = date.getUTCMinutes();
   const ampm = hours >= 12 ? 'PM' : 'AM';
   const displayHours = hours % 12 || 12;
   const displayMinutes = minutes.toString().padStart(2, '0');
@@ -301,15 +301,21 @@ function SchedulingPage() {
   const formatDisplayDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const isToday = (date) => toLocalDateString(date) === toLocalDateString(new Date());
   
-  const getShiftsForDay = (date) => {
-    const targetDateStr = toLocalDateString(date);
-    return shifts.filter(s => {
-      const shiftDate = s.shiftDate || s.date;
-      if (!shiftDate) return false;
-      const shiftDateObj = new Date(shiftDate);
-      return toLocalDateString(shiftDateObj) === targetDateStr;
-    });
-  };
+ const getShiftsForDay = (date) => {
+  const targetYear = date.getFullYear();
+  const targetMonth = date.getMonth();
+  const targetDay = date.getDate();
+  
+  return shifts.filter(s => {
+    const shiftDate = s.shiftDate || s.date;
+    if (!shiftDate) return false;
+    const d = new Date(shiftDate);
+    // Compare using UTC date parts since we store at noon UTC
+    return d.getUTCFullYear() === targetYear && 
+           d.getUTCMonth() === targetMonth && 
+           d.getUTCDate() === targetDay;
+  });
+};
 
   const openModal = (day = null, isOpen = false) => {
     const dateStr = day ? toLocalDateString(day) : toLocalDateString(new Date());
