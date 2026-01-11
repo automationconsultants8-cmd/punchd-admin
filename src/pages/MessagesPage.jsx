@@ -20,9 +20,10 @@ function MessagesPage() {
     body: '',
   });
 
-  useEffect(() => {
-    loadData();
-  }, [activeTab]);
+ useEffect(() => {
+  setMessages([]); // Clear messages immediately when tab changes
+  loadData();
+}, [activeTab]);
 
   const loadData = async () => {
     try {
