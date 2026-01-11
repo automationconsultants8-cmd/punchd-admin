@@ -430,7 +430,7 @@ function WorkersPage() {
                 </div>
                 <div className="form-group">
                   <label><span className="label-icon">{Icons.mail}</span>Email</label>
-                  <input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="john@example.com" required />
+                  <input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="john@example.com" />
                 </div>
                 <div className="form-group">
                   <label><span className="label-icon">{Icons.phone}</span>Phone</label>
