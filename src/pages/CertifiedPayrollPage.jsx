@@ -132,10 +132,12 @@ function CertifiedPayrollPage() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '--';
-    return new Date(dateString).toLocaleDateString('en-US', { 
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
-      year: 'numeric' 
+      year: 'numeric',
+      timeZone: 'UTC'
     });
   };
 
@@ -155,10 +157,10 @@ function CertifiedPayrollPage() {
 
   const getWorkerWarnings = (worker) => {
     const warnings = [];
-    if (worker.address === 'Address not provided') warnings.push('Missing address');
-    if (worker.lastFourSSN === 'XXXX') warnings.push('Missing SSN');
-    if (!worker.tradeClassification || worker.tradeClassification === 'Laborer') warnings.push('Trade not set');
-    if (worker.hourlyRate === 0) warnings.push('No hourly rate');
+    if (worker.address === 'Address not provided') warnings.push('No address');
+    if (worker.lastFourSSN === 'XXXX') warnings.push('No SSN');
+    if (!worker.tradeClassification) warnings.push('No trade');
+    if (!worker.hourlyRate || worker.hourlyRate === 0) warnings.push('No rate');
     return warnings;
   };
 
@@ -315,7 +317,7 @@ function CertifiedPayrollPage() {
                                   <td>
                                     {warnings.length > 0 ? (
                                       <span className="status-warning" title={warnings.join(', ')}>
-                                        ⚠️ {warnings.length} issue{warnings.length > 1 ? 's' : ''}
+                                        ⚠️ {warnings.join(', ')}
                                       </span>
                                     ) : (
                                       <span className="status-ok">✓ Complete</span>
