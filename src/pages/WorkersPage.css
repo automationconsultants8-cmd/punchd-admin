@@ -574,3 +574,49 @@
   background: #fff7ed;
   color: #f59e0b;
 }
+/* Add these styles to your existing WorkersPage.css */
+
+/* Larger modal for more fields */
+.modal-large {
+  max-width: 700px;
+  width: 95%;
+}
+
+/* Form sections */
+.form-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.form-section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.form-section-subtitle {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+/* Form rows for side-by-side fields */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+/* Ensure modal body scrolls if needed */
+.modal-large .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}

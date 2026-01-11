@@ -119,7 +119,45 @@ const Icons = {
       <line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/>
     </svg>
   ),
+  mapPin: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+      <circle cx="12" cy="10" r="3"/>
+    </svg>
+  ),
+  hash: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>
+      <line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>
+    </svg>
+  ),
+  briefcase: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+  ),
 };
+
+const TRADE_CLASSIFICATIONS = [
+  'Laborer',
+  'Carpenter',
+  'Electrician',
+  'Plumber',
+  'HVAC Technician',
+  'Ironworker',
+  'Mason',
+  'Painter',
+  'Roofer',
+  'Sheet Metal Worker',
+  'Pipefitter',
+  'Welder',
+  'Equipment Operator',
+  'Truck Driver',
+  'Foreman',
+  'Superintendent',
+  'Other',
+];
 
 function WorkersPage() {
   const [workers, setWorkers] = useState([]);
@@ -135,7 +173,14 @@ function WorkersPage() {
     phone: '',
     role: 'worker',
     hourlyRate: '',
-    status: 'active'
+    status: 'active',
+    // WH-347 fields
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    lastFourSSN: '',
+    tradeClassification: '',
   });
 
   useEffect(() => {
@@ -158,40 +203,72 @@ function WorkersPage() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    // Convert frontend fields to backend fields
-    const payload = {
-      name: formData.name,
-      email: formData.email || undefined,
-      phone: formData.phone || undefined,
-      role: formData.role?.toUpperCase() || 'WORKER',
-      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
-      isActive: formData.status === 'active',
-    };
+    e.preventDefault();
+    try {
+      // Convert frontend fields to backend fields
+      const payload = {
+        name: formData.name,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        role: formData.role?.toUpperCase() || 'WORKER',
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+        isActive: formData.status === 'active',
+        // WH-347 fields
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        zip: formData.zip || undefined,
+        lastFourSSN: formData.lastFourSSN || undefined,
+        tradeClassification: formData.tradeClassification || undefined,
+      };
 
-    if (editingWorker) {
-      await usersApi.update(editingWorker.id, payload);
-    } else {
-      await usersApi.create(payload);
+      if (editingWorker) {
+        await usersApi.update(editingWorker.id, payload);
+      } else {
+        await usersApi.create(payload);
+      }
+      setShowModal(false);
+      setEditingWorker(null);
+      resetForm();
+      loadData();
+    } catch (error) {
+      console.error('Error saving worker:', error);
+      alert(error.response?.data?.message || 'Failed to save worker');
     }
-    setShowModal(false);
-    setEditingWorker(null);
-    setFormData({ name: '', email: '', phone: '', role: 'worker', hourlyRate: '', status: 'active' });
-    loadData();
-  } catch (error) {
-    console.error('Error saving worker:', error);
-  }
-};
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      role: 'worker',
+      hourlyRate: '',
+      status: 'active',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      lastFourSSN: '',
+      tradeClassification: '',
+    });
+  };
+
   const handleEdit = (worker) => {
     setEditingWorker(worker);
     setFormData({
       name: worker.name || '',
       email: worker.email || '',
       phone: worker.phone || '',
-      role: worker.role || 'worker',
+      role: worker.role?.toLowerCase() || 'worker',
       hourlyRate: worker.hourlyRate || '',
-      status: worker.status || 'active'
+      status: worker.isActive ? 'active' : 'inactive',
+      address: worker.address || '',
+      city: worker.city || '',
+      state: worker.state || '',
+      zip: worker.zip || '',
+      lastFourSSN: worker.lastFourSSN || '',
+      tradeClassification: worker.tradeClassification || '',
     });
     setShowModal(true);
   };
@@ -273,7 +350,7 @@ function WorkersPage() {
           </div>
           <p>Manage your workforce</p>
         </div>
-        <button className="btn-primary" onClick={() => { setEditingWorker(null); setFormData({ name: '', email: '', phone: '', role: 'worker', hourlyRate: '', status: 'active' }); setShowModal(true); }}>
+        <button className="btn-primary" onClick={() => { setEditingWorker(null); resetForm(); setShowModal(true); }}>
           {Icons.userPlus}
           <span>Add Worker</span>
         </button>
@@ -404,6 +481,12 @@ function WorkersPage() {
                       <span className="rate">${worker.hourlyRate}/hr</span>
                     </div>
                   )}
+                  {worker.tradeClassification && (
+                    <div className="detail-row">
+                      <span className="detail-icon">{Icons.briefcase}</span>
+                      <span>{worker.tradeClassification}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -414,7 +497,7 @@ function WorkersPage() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
                 <span className="modal-icon">{editingWorker ? Icons.edit : Icons.userPlus}</span>
@@ -424,38 +507,137 @@ function WorkersPage() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                <div className="form-group">
-                  <label><span className="label-icon">{Icons.user}</span>Full Name</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="John Smith" required />
-                </div>
-                <div className="form-group">
-                  <label><span className="label-icon">{Icons.mail}</span>Email</label>
-                  <input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="john@example.com" />
-                </div>
-                <div className="form-group">
-                  <label><span className="label-icon">{Icons.phone}</span>Phone</label>
-                  <input type="tel" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="(555) 123-4567" />
-                </div>
-                <div className="form-row">
+                {/* Basic Info Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Basic Information</h3>
                   <div className="form-group">
-                    <label><span className="label-icon">{Icons.shield}</span>Role</label>
-                    <select value={formData.role} onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}>
-                      <option value="worker">Worker</option>
-                      <option value="supervisor">Supervisor</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    <label><span className="label-icon">{Icons.user}</span>Full Name *</label>
+                    <input 
+                      type="text" 
+                      value={formData.name} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
+                      placeholder="John Smith" 
+                      required 
+                    />
                   </div>
-                  <div className="form-group">
-                    <label><span className="label-icon">{Icons.dollarSign}</span>Hourly Rate</label>
-                    <input type="number" step="0.01" value={formData.hourlyRate} onChange={(e) => setFormData(prev => ({ ...prev, hourlyRate: e.target.value }))} placeholder="25.00" />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.mail}</span>Email</label>
+                      <input 
+                        type="email" 
+                        value={formData.email} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
+                        placeholder="john@example.com (optional)" 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.phone}</span>Phone</label>
+                      <input 
+                        type="tel" 
+                        value={formData.phone} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} 
+                        placeholder="(555) 123-4567" 
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.shield}</span>Role</label>
+                      <select value={formData.role} onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}>
+                        <option value="worker">Worker</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.dollarSign}</span>Hourly Rate</label>
+                      <input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.hourlyRate} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, hourlyRate: e.target.value }))} 
+                        placeholder="25.00" 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.checkCircle}</span>Status</label>
+                      <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <div className="form-group">
-                  <label><span className="label-icon">{Icons.checkCircle}</span>Status</label>
-                  <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+
+                {/* WH-347 / Certified Payroll Section */}
+                <div className="form-section">
+                  <h3 className="form-section-title">Certified Payroll Info (WH-347)</h3>
+                  <p className="form-section-subtitle">Required for prevailing wage projects</p>
+                  
+                  <div className="form-group">
+                    <label><span className="label-icon">{Icons.mapPin}</span>Street Address</label>
+                    <input 
+                      type="text" 
+                      value={formData.address} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))} 
+                      placeholder="123 Main Street" 
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>City</label>
+                      <input 
+                        type="text" 
+                        value={formData.city} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))} 
+                        placeholder="San Jose" 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>State</label>
+                      <input 
+                        type="text" 
+                        value={formData.state} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))} 
+                        placeholder="CA" 
+                        maxLength={2}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>ZIP Code</label>
+                      <input 
+                        type="text" 
+                        value={formData.zip} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, zip: e.target.value }))} 
+                        placeholder="95123" 
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.hash}</span>Last 4 of SSN</label>
+                      <input 
+                        type="text" 
+                        value={formData.lastFourSSN} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, lastFourSSN: e.target.value.replace(/\D/g, '').slice(0, 4) }))} 
+                        placeholder="1234" 
+                        maxLength={4}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.briefcase}</span>Trade Classification</label>
+                      <select 
+                        value={formData.tradeClassification} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, tradeClassification: e.target.value }))}
+                      >
+                        <option value="">Select trade...</option>
+                        {TRADE_CLASSIFICATIONS.map(trade => (
+                          <option key={trade} value={trade}>{trade}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">
