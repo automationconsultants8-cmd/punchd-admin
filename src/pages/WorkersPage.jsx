@@ -158,22 +158,31 @@ function WorkersPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingWorker) {
-        await usersApi.update(editingWorker.id, formData);
-      } else {
-        await usersApi.create(formData);
-      }
-      setShowModal(false);
-      setEditingWorker(null);
-      setFormData({ name: '', email: '', phone: '', role: 'worker', hourlyRate: '', status: 'active' });
-      loadData();
-    } catch (error) {
-      console.error('Error saving worker:', error);
-    }
-  };
+  e.preventDefault();
+  try {
+    // Convert frontend fields to backend fields
+    const payload = {
+      name: formData.name,
+      email: formData.email || undefined,
+      phone: formData.phone || undefined,
+      role: formData.role?.toUpperCase() || 'WORKER',
+      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+      isActive: formData.status === 'active',
+    };
 
+    if (editingWorker) {
+      await usersApi.update(editingWorker.id, payload);
+    } else {
+      await usersApi.create(payload);
+    }
+    setShowModal(false);
+    setEditingWorker(null);
+    setFormData({ name: '', email: '', phone: '', role: 'worker', hourlyRate: '', status: 'active' });
+    loadData();
+  } catch (error) {
+    console.error('Error saving worker:', error);
+  }
+};
   const handleEdit = (worker) => {
     setEditingWorker(worker);
     setFormData({
