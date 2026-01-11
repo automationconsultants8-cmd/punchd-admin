@@ -125,19 +125,26 @@ function AnalyticsPage() {
   const formatCurrency = (amount) => `$${(amount || 0).toFixed(2)}`;
   const formatHours = (hours) => `${(hours || 0).toFixed(1)}h`;
 
-  // Default values
+  // Calculate stats from API response
+  const totals = data?.totals || {};
+  const byWorker = data?.byWorker || [];
+
   const stats = {
-    totalHours: data?.totalHours || 0,
-    totalCost: data?.totalLaborCost || 0,
-    overtimeHours: (data?.overtimeHours || 0) + (data?.doubleTimeHours || 0),
-    overtimeCost: data?.overtimeCost || 0,
-    regularHours: data?.regularHours || 0,
-    regularCost: data?.regularCost || 0,
-    doubleTimeHours: data?.doubleTimeHours || 0,
-    doubleTimeCost: data?.doubleTimeCost || 0,
-    avgDailyCost: data?.totalLaborCost ? data.totalLaborCost / parseInt(dateRange) : 0,
-    otPercentage: data?.totalHours ? ((data.overtimeHours || 0) / data.totalHours * 100) : 0,
-    avgHoursPerWorker: data?.avgHoursPerWorker || 0,
+    totalHours: (totals.regularHours || 0) + (totals.overtimeHours || 0) + (totals.doubleTimeHours || 0),
+    totalCost: totals.totalPay || 0,
+    overtimeHours: (totals.overtimeHours || 0) + (totals.doubleTimeHours || 0),
+    overtimeCost: (totals.overtimePay || 0) + (totals.doubleTimePay || 0),
+    regularHours: totals.regularHours || 0,
+    regularCost: totals.regularPay || 0,
+    doubleTimeHours: totals.doubleTimeHours || 0,
+    doubleTimeCost: totals.doubleTimePay || 0,
+    avgDailyCost: totals.totalPay ? totals.totalPay / parseInt(dateRange) : 0,
+    otPercentage: ((totals.regularHours || 0) + (totals.overtimeHours || 0) + (totals.doubleTimeHours || 0)) > 0 
+      ? ((totals.overtimeHours || 0) / ((totals.regularHours || 0) + (totals.overtimeHours || 0) + (totals.doubleTimeHours || 0)) * 100) 
+      : 0,
+    avgHoursPerWorker: byWorker.length > 0 
+      ? ((totals.regularHours || 0) + (totals.overtimeHours || 0) + (totals.doubleTimeHours || 0)) / byWorker.length 
+      : 0,
   };
 
   if (loading) {
@@ -232,8 +239,8 @@ function AnalyticsPage() {
           </div>
           <div className="breakdown-card">
             <div className="breakdown-label">Overtime (1.5x)</div>
-            <div className="breakdown-value orange">{formatHours(data?.overtimeHours || 0)}</div>
-            <div className="breakdown-cost">{formatCurrency((data?.overtimeHours || 0) * (data?.avgHourlyRate || 0) * 1.5)}</div>
+            <div className="breakdown-value orange">{formatHours(totals.overtimeHours || 0)}</div>
+            <div className="breakdown-cost">{formatCurrency(totals.overtimePay || 0)}</div>
             <div className="breakdown-note">Over 8 hrs/day or 40 hrs/week</div>
           </div>
           <div className="breakdown-card">
@@ -277,18 +284,20 @@ function AnalyticsPage() {
             <span className="section-icon">{Icons.users}</span>
             Cost by Worker
           </h3>
-          {data?.byWorker?.length > 0 ? (
+          {byWorker.length > 0 ? (
             <div className="cost-list">
-              {data.byWorker.slice(0, 5).map((worker, i) => (
+              {byWorker.slice(0, 5).map((worker, i) => (
                 <div key={i} className="cost-row">
                   <div className="cost-info">
                     <div className="worker-indicator" style={{ background: ['#4B7BB5', '#3D8B5F', '#C9A227', '#B54B4B', '#6B5B7A'][i % 5] }}></div>
                     <span className="cost-name">{worker.name}</span>
-                    <span className="cost-details">{formatHours(worker.hours)} • +{formatHours(worker.overtimeHours || 0)} OT</span>
+                    <span className="cost-details">
+                      {formatHours((worker.regularMinutes + worker.overtimeMinutes + worker.doubleTimeMinutes) / 60)} • +{formatHours((worker.overtimeMinutes + worker.doubleTimeMinutes) / 60)} OT
+                    </span>
                   </div>
                   <div className="cost-right">
-                    <span className="cost-amount">{formatCurrency(worker.cost)}</span>
-                    <span className="cost-percentage">{((worker.cost / stats.totalCost) * 100 || 0).toFixed(1)}%</span>
+                    <span className="cost-amount">{formatCurrency(worker.totalPay)}</span>
+                    <span className="cost-percentage">{((worker.totalPay / stats.totalCost) * 100 || 0).toFixed(1)}%</span>
                   </div>
                 </div>
               ))}
