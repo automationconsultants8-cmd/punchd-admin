@@ -39,14 +39,14 @@ function CompliancePage() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '--';
-    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  if (!dateString) return '--';
+  return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+};
 
-  const formatTime = (dateString) => {
-    if (!dateString) return '--';
-    return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  };
+const formatTime = (dateString) => {
+  if (!dateString) return '--';
+  return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' });
+};
 
   const formatCurrency = (amount) => {
     if (!amount) return '$0.00';
