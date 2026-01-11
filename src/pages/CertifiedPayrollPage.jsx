@@ -17,23 +17,23 @@ function CertifiedPayrollPage() {
   useEffect(() => {
     loadData();
     // Set default week ending date to this Saturday (or today if Saturday)
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
-    const daysUntilSaturday = (6 - dayOfWeek + 7) % 7; // Days until next Saturday
-    const daysFromLastSaturday = (dayOfWeek + 1) % 7; // Days since last Saturday (Sun=1, Mon=2, etc., Sat=0)
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
     
-    const saturday = new Date(today);
+    // Calculate days to add/subtract to get to Saturday
+    let daysToSaturday;
     if (dayOfWeek === 6) {
-      // Today is Saturday, use today
+      daysToSaturday = 0; // Today is Saturday
     } else if (dayOfWeek === 0) {
-      // Today is Sunday, use yesterday (Saturday)
-      saturday.setDate(today.getDate() - 1);
+      daysToSaturday = -1; // Sunday, go back 1 day
     } else {
-      // Mon-Fri: go back to last Saturday
-      saturday.setDate(today.getDate() - dayOfWeek - 1);
+      daysToSaturday = -(dayOfWeek + 1); // Mon-Fri, go back to last Saturday
     }
     
-    // Format as YYYY-MM-DD
+    const saturday = new Date(now);
+    saturday.setDate(now.getDate() + daysToSaturday);
+    
+    // Format as YYYY-MM-DD using local date parts
     const year = saturday.getFullYear();
     const month = String(saturday.getMonth() + 1).padStart(2, '0');
     const day = String(saturday.getDate()).padStart(2, '0');
