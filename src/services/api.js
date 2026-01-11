@@ -156,16 +156,19 @@ export const companyApi = {
   update: (data) => api.patch('/company', data),
 };
 
+
 // Certified Payroll
 export const certifiedPayrollApi = {
   getJobs: () => api.get('/certified-payroll/jobs'),
   getPrevailingWageJobs: () => api.get('/certified-payroll/jobs'),
   getPayrolls: () => api.get('/certified-payroll'),
-  previewPayroll: (jobId, weekEndingDate) => api.post('/certified-payroll/preview', { jobId, weekEndingDate }),
+  previewPayroll: (jobId, weekEndingDate) => api.get('/certified-payroll/preview', { 
+    params: { jobId, weekEndingDate } 
+  }),
   generatePayroll: (jobId, weekEndingDate) => api.post('/certified-payroll/generate', { jobId, weekEndingDate }),
   getHistory: (jobId) => api.get(`/certified-payroll/history/${jobId}`),
   downloadPDF: (id) => api.get(`/certified-payroll/${id}/pdf`, { responseType: 'blob' }),
-  submitPayroll: (id) => api.patch(`/certified-payroll/${id}/submit`),
+  submitPayroll: (id) => api.post(`/certified-payroll/${id}/submit`),
 };
 
 // Break Compliance

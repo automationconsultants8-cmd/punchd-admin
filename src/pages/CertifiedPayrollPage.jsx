@@ -11,16 +11,20 @@ function CertifiedPayrollPage() {
   const [weekEndingDate, setWeekEndingDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
 
   useEffect(() => {
     loadData();
-    // Set default week ending date to last Saturday
+    // Set default week ending date to last Saturday (or today if Saturday)
     const today = new Date();
     const dayOfWeek = today.getDay();
     const lastSaturday = new Date(today);
     if (dayOfWeek === 6) {
+      // Today is Saturday, use today
       lastSaturday.setDate(today.getDate());
     } else {
+      // Go back to last Saturday
       lastSaturday.setDate(today.getDate() - dayOfWeek - 1);
     }
     setWeekEndingDate(lastSaturday.toISOString().split('T')[0]);
@@ -41,10 +45,44 @@ function CertifiedPayrollPage() {
     setLoading(false);
   };
 
+  const handlePreview = async () => {
+    if (!selectedJob || !weekEndingDate) {
+      alert('Please select a job and week ending date');
+      return;
+    }
+
+    setPreviewing(true);
+    setPreviewData(null);
+    try {
+      const response = await certifiedPayrollApi.previewPayroll(selectedJob, weekEndingDate);
+      setPreviewData(response.data);
+    } catch (err) {
+      console.error('Failed to preview:', err);
+      alert(err.response?.data?.message || 'Failed to preview payroll');
+    }
+    setPreviewing(false);
+  };
+
   const handleGenerate = async () => {
     if (!selectedJob || !weekEndingDate) {
       alert('Please select a job and week ending date');
       return;
+    }
+
+    // Warn if workers have missing info
+    if (previewData?.workers?.length > 0) {
+      const workersWithMissingInfo = previewData.workers.filter(w => 
+        w.address === 'Address not provided' || 
+        w.lastFourSSN === 'XXXX' ||
+        !w.tradeClassification
+      );
+      
+      if (workersWithMissingInfo.length > 0) {
+        const proceed = window.confirm(
+          `${workersWithMissingInfo.length} worker(s) have incomplete WH-347 information (address, SSN, or trade classification). The report will show placeholder values.\n\nDo you want to continue anyway?`
+        );
+        if (!proceed) return;
+      }
     }
 
     setGenerating(true);
@@ -52,6 +90,7 @@ function CertifiedPayrollPage() {
       await certifiedPayrollApi.generatePayroll(selectedJob, weekEndingDate);
       alert('Certified payroll generated successfully!');
       setActiveTab('history');
+      setPreviewData(null);
       loadData();
     } catch (err) {
       console.error('Failed to generate:', err);
@@ -100,6 +139,10 @@ function CertifiedPayrollPage() {
     });
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'SUBMITTED':
@@ -108,6 +151,15 @@ function CertifiedPayrollPage() {
       default:
         return <span className="badge badge-warning">Draft</span>;
     }
+  };
+
+  const getWorkerWarnings = (worker) => {
+    const warnings = [];
+    if (worker.address === 'Address not provided') warnings.push('Missing address');
+    if (worker.lastFourSSN === 'XXXX') warnings.push('Missing SSN');
+    if (!worker.tradeClassification || worker.tradeClassification === 'Laborer') warnings.push('Trade not set');
+    if (worker.hourlyRate === 0) warnings.push('No hourly rate');
+    return warnings;
   };
 
   if (loading) {
@@ -167,7 +219,7 @@ function CertifiedPayrollPage() {
                     <label className="form-label">Prevailing Wage Job *</label>
                     <select 
                       value={selectedJob} 
-                      onChange={(e) => setSelectedJob(e.target.value)}
+                      onChange={(e) => { setSelectedJob(e.target.value); setPreviewData(null); }}
                       className="form-select"
                     >
                       <option value="">Select a job...</option>
@@ -183,11 +235,18 @@ function CertifiedPayrollPage() {
                     <input 
                       type="date" 
                       value={weekEndingDate}
-                      onChange={(e) => setWeekEndingDate(e.target.value)}
+                      onChange={(e) => { setWeekEndingDate(e.target.value); setPreviewData(null); }}
                       className="form-input"
                     />
                   </div>
                   <div className="form-group form-actions-inline">
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={handlePreview}
+                      disabled={!selectedJob || !weekEndingDate || previewing}
+                    >
+                      {previewing ? 'Loading...' : 'Preview'}
+                    </button>
                     <button 
                       className="btn btn-primary"
                       onClick={handleGenerate}
@@ -198,6 +257,89 @@ function CertifiedPayrollPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Preview Section */}
+              {previewData && (
+                <div className="card preview-card">
+                  <h3>Preview: {previewData.job?.name}</h3>
+                  <p className="preview-subtitle">
+                    Week ending {formatDate(previewData.weekEnding)} • {previewData.entryCount} time entries
+                  </p>
+
+                  {previewData.workers?.length === 0 ? (
+                    <div className="empty-state small">
+                      <span className="empty-icon">📭</span>
+                      <p>No approved time entries found for this week.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Warnings */}
+                      {previewData.workers?.some(w => getWorkerWarnings(w).length > 0) && (
+                        <div className="warning-banner">
+                          <span className="warning-icon">⚠️</span>
+                          <div className="warning-content">
+                            <strong>Some workers have incomplete information</strong>
+                            <p>Update worker profiles in the Workers page to include address, SSN, and trade classification for accurate WH-347 reports.</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Workers Table */}
+                      <div className="preview-table-wrapper">
+                        <table className="preview-table">
+                          <thead>
+                            <tr>
+                              <th>Worker</th>
+                              <th>Trade</th>
+                              <th>Hours</th>
+                              <th>Rate</th>
+                              <th>Gross Pay</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previewData.workers?.map((worker, idx) => {
+                              const warnings = getWorkerWarnings(worker);
+                              return (
+                                <tr key={idx} className={warnings.length > 0 ? 'has-warnings' : ''}>
+                                  <td>
+                                    <div className="worker-cell">
+                                      <strong>{worker.name}</strong>
+                                      <span className="worker-ssn">XXX-XX-{worker.lastFourSSN}</span>
+                                    </div>
+                                  </td>
+                                  <td>{worker.tradeClassification || 'Not set'}</td>
+                                  <td>{worker.totalHours?.toFixed(1)}h</td>
+                                  <td>{formatCurrency(worker.hourlyRate)}/hr</td>
+                                  <td>{formatCurrency(worker.grossPay)}</td>
+                                  <td>
+                                    {warnings.length > 0 ? (
+                                      <span className="status-warning" title={warnings.join(', ')}>
+                                        ⚠️ {warnings.length} issue{warnings.length > 1 ? 's' : ''}
+                                      </span>
+                                    ) : (
+                                      <span className="status-ok">✓ Complete</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colSpan="2"><strong>TOTALS</strong></td>
+                              <td><strong>{previewData.workers?.reduce((sum, w) => sum + (w.totalHours || 0), 0).toFixed(1)}h</strong></td>
+                              <td></td>
+                              <td><strong>{formatCurrency(previewData.totalGrossPay)}</strong></td>
+                              <td></td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

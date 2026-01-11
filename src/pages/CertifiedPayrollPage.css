@@ -567,3 +567,135 @@
     font-size: 22px;
   }
 }
+/* Add these styles to your existing CertifiedPayrollPage.css */
+
+/* Preview Card */
+.preview-card {
+  margin-top: 1rem;
+}
+
+.preview-subtitle {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+/* Warning Banner */
+.warning-banner {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fff8e6;
+  border: 1px solid #f0d860;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.warning-icon {
+  font-size: 1.25rem;
+}
+
+.warning-content strong {
+  display: block;
+  color: #8a6d00;
+  margin-bottom: 0.25rem;
+}
+
+.warning-content p {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Preview Table */
+.preview-table-wrapper {
+  overflow-x: auto;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.preview-table th,
+.preview-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.preview-table th {
+  background: #f8f8f8;
+  font-weight: 600;
+  color: #555;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.preview-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.preview-table tbody tr.has-warnings {
+  background: #fffdf5;
+}
+
+.preview-table tfoot td {
+  background: #f0f0f0;
+  border-top: 2px solid #ddd;
+}
+
+/* Worker Cell */
+.worker-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.worker-cell strong {
+  color: #333;
+}
+
+.worker-ssn {
+  font-size: 0.8rem;
+  color: #888;
+  font-family: monospace;
+}
+
+/* Status Indicators */
+.status-warning {
+  color: #b8860b;
+  font-size: 0.85rem;
+  cursor: help;
+}
+
+.status-ok {
+  color: #2e7d32;
+  font-size: 0.85rem;
+}
+
+/* Empty State Small */
+.empty-state.small {
+  padding: 2rem;
+}
+
+.empty-state.small .empty-icon {
+  font-size: 2rem;
+}
+
+/* Form Actions Inline */
+.form-actions-inline {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+/* Button Secondary */
+.btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #e5e5e5;
+}
