@@ -63,29 +63,29 @@ function TimeTrackingPage() {
     setLoading(false);
   };
 
-  // Format date in user's local timezone
-  const formatDate = (dateString) => {
-    if (!dateString) return '--';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    });
-  };
+ // Format date in UTC
+const formatDate = (dateString) => {
+  if (!dateString) return '--';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric',
+    timeZone: 'UTC'
+  });
+};
 
-  // Format time in user's local timezone
-  const formatTime = (dateString) => {
-    if (!dateString) return '--';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    });
-  };
+  // Format time in UTC (times are stored as UTC)
+const formatTime = (dateString) => {
+  if (!dateString) return '--';
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit', 
+    hour12: true,
+    timeZone: 'UTC'
+  });
+};
 
   const formatDuration = (minutes) => {
     if (!minutes) return '--';
