@@ -92,6 +92,7 @@ export const shiftsApi = {
   getOpenShifts: () => api.get('/shifts/open'),
   claimShift: (id) => api.post(`/shifts/${id}/claim`),
   markAsOpen: (id) => api.patch(`/shifts/${id}/mark-open`),
+  deleteFutureShifts: (userId) => api.delete(`/shifts/worker/${userId}/future`),
 };
 
 // Shift Requests
