@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { usersApi, jobsApi } from '../services/api';
+import { usersApi, jobsApi, shiftsApi } from '../services/api';
 import './WorkersPage.css';
 
 // SVG Icons
@@ -137,6 +137,19 @@ const Icons = {
       <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
     </svg>
   ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+  ),
+  alertTriangle: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
 };
 
 const TRADE_CLASSIFICATIONS = [
@@ -167,6 +180,7 @@ function WorkersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editingWorker, setEditingWorker] = useState(null);
+  const [deactivateModal, setDeactivateModal] = useState({ open: false, worker: null, deleteShifts: true, loading: false });
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -273,14 +287,36 @@ function WorkersPage() {
     setShowModal(true);
   };
 
-  const handleDeactivate = async (id) => {
-    if (window.confirm('Deactivate this worker?')) {
-      try {
-        await usersApi.deactivate(id);
-        loadData();
-      } catch (error) {
-        console.error('Error deactivating worker:', error);
+  const openDeactivateModal = (worker) => {
+    setDeactivateModal({ open: true, worker, deleteShifts: true, loading: false });
+  };
+
+  const handleDeactivateConfirm = async () => {
+    const { worker, deleteShifts } = deactivateModal;
+    if (!worker) return;
+
+    setDeactivateModal(prev => ({ ...prev, loading: true }));
+
+    try {
+      // Delete future shifts first if checkbox is checked
+      if (deleteShifts) {
+        try {
+          await shiftsApi.deleteFutureShifts(worker.id);
+        } catch (err) {
+          console.error('Error deleting future shifts:', err);
+          // Continue with deactivation even if shift deletion fails
+        }
       }
+
+      // Then deactivate the worker
+      await usersApi.deactivate(worker.id);
+      
+      setDeactivateModal({ open: false, worker: null, deleteShifts: true, loading: false });
+      loadData();
+    } catch (error) {
+      console.error('Error deactivating worker:', error);
+      alert(error.response?.data?.message || 'Failed to deactivate worker');
+      setDeactivateModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -455,7 +491,7 @@ function WorkersPage() {
                         <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
                           {Icons.edit}
                         </button>
-                        <button className="action-btn danger" onClick={() => handleDeactivate(worker.id)} title="Deactivate">
+                        <button className="action-btn danger" onClick={() => openDeactivateModal(worker)} title="Deactivate">
                           {Icons.trash}
                         </button>
                       </>
@@ -645,6 +681,66 @@ function WorkersPage() {
                 <button type="submit" className="btn-primary">{Icons.check}<span>{editingWorker ? 'Save Changes' : 'Add Worker'}</span></button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Confirmation Modal */}
+      {deactivateModal.open && deactivateModal.worker && (
+        <div className="modal-overlay" onClick={() => !deactivateModal.loading && setDeactivateModal({ open: false, worker: null, deleteShifts: true, loading: false })}>
+          <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span className="modal-icon danger">{Icons.alertTriangle}</span>
+                <h2>Deactivate Worker</h2>
+              </div>
+              <button 
+                className="modal-close" 
+                onClick={() => !deactivateModal.loading && setDeactivateModal({ open: false, worker: null, deleteShifts: true, loading: false })}
+                disabled={deactivateModal.loading}
+              >
+                {Icons.x}
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="deactivate-message">
+                Are you sure you want to deactivate <strong>{deactivateModal.worker.name}</strong>?
+              </p>
+              <p className="deactivate-submessage">
+                They will no longer be able to access the app or clock in.
+              </p>
+              
+              <div className="deactivate-option">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={deactivateModal.deleteShifts}
+                    onChange={(e) => setDeactivateModal(prev => ({ ...prev, deleteShifts: e.target.checked }))}
+                    disabled={deactivateModal.loading}
+                  />
+                  <span className="checkbox-icon">{Icons.calendar}</span>
+                  <span>Also delete all future scheduled shifts</span>
+                </label>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={() => setDeactivateModal({ open: false, worker: null, deleteShifts: true, loading: false })}
+                disabled={deactivateModal.loading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn-danger" 
+                onClick={handleDeactivateConfirm}
+                disabled={deactivateModal.loading}
+              >
+                {deactivateModal.loading ? 'Deactivating...' : 'Deactivate Worker'}
+              </button>
+            </div>
           </div>
         </div>
       )}
