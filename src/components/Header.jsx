@@ -113,11 +113,7 @@ function Header({ user, pageTitle, onLogout }) {
     }
   };
 
-  const notifications = [
-    { id: 1, type: 'alert', message: 'Alex T. clocked in outside geofence', time: '5m ago' },
-    { id: 2, type: 'info', message: 'Weekly timesheet report ready', time: '1h ago' },
-    { id: 3, type: 'warning', message: "Maria's OSHA cert expires in 7 days", time: '2h ago' },
-  ];
+  const notifications = [];
 
   return (
     <header className="app-header">
