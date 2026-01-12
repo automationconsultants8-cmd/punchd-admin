@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { companyApi } from '../services/api';
 import './SettingsPage.css';
@@ -12,6 +13,7 @@ function SettingsPage() {
     city: '',
     state: '',
     zip: '',
+    defaultHourlyRate: '',
   });
 
   useEffect(() => {
@@ -27,6 +29,7 @@ function SettingsPage() {
         city: res.data.city || '',
         state: res.data.state || '',
         zip: res.data.zip || '',
+        defaultHourlyRate: res.data.defaultHourlyRate || '',
       });
     } catch (err) {
       console.error('Failed to load company data:', err);
@@ -39,7 +42,13 @@ function SettingsPage() {
     setMessage({ type: '', text: '' });
 
     try {
-      await companyApi.update(companyData);
+      const dataToSave = {
+        ...companyData,
+        defaultHourlyRate: companyData.defaultHourlyRate 
+          ? parseFloat(companyData.defaultHourlyRate) 
+          : null,
+      };
+      await companyApi.update(dataToSave);
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {
@@ -139,6 +148,32 @@ function SettingsPage() {
               placeholder="95123"
               maxLength="10"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Pay Rates */}
+      <div className="settings-card">
+        <div className="card-header">
+          <span className="card-icon">💰</span>
+          <div>
+            <h2>Default Pay Rate</h2>
+            <p>Default hourly rate for new workers (can be overridden per worker or job)</p>
+          </div>
+        </div>
+
+        <div className="form-grid">
+          <div className="form-group">
+            <label>Default Hourly Rate ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={companyData.defaultHourlyRate}
+              onChange={(e) => handleChange('defaultHourlyRate', e.target.value)}
+              placeholder="25.00"
+            />
+            <small>Applied to workers without a specific rate set</small>
           </div>
         </div>
       </div>
