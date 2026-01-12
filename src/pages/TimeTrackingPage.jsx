@@ -63,7 +63,7 @@ function TimeTrackingPage() {
     setLoading(false);
   };
 
- // Format date in UTC
+// Format date in local timezone
 const formatDate = (dateString) => {
   if (!dateString) return '--';
   const date = new Date(dateString);
@@ -71,11 +71,11 @@ const formatDate = (dateString) => {
     month: 'short', 
     day: 'numeric', 
     year: 'numeric',
-    timeZone: 'UTC'
+    timeZone: 'America/Los_Angeles'
   });
 };
 
-  // Format time in UTC (times are stored as UTC)
+// Format time in local timezone
 const formatTime = (dateString) => {
   if (!dateString) return '--';
   const date = new Date(dateString);
@@ -83,7 +83,7 @@ const formatTime = (dateString) => {
     hour: 'numeric', 
     minute: '2-digit', 
     hour12: true,
-    timeZone: 'UTC'
+    timeZone: 'America/Los_Angeles'
   });
 };
 
