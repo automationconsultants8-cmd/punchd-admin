@@ -36,6 +36,7 @@ function TimeTrackingPage() {
 
   const [rejectModal, setRejectModal] = useState({ open: false, entryId: null, reason: '' });
   const [viewModal, setViewModal] = useState({ open: false, entry: null });
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -213,6 +214,7 @@ const formatTime = (dateString) => {
 
   const handleExport = async (format) => {
     setExportLoading(format);
+    setExportMenuOpen(false);
     try {
       let response;
       let filename;
@@ -226,9 +228,25 @@ const formatTime = (dateString) => {
         response = await timeEntriesApi.exportPdf({ startDate: dateRange.start, endDate: dateRange.end });
         filename = `timesheet-${dateRange.start}-${dateRange.end}.pdf`;
         mimeType = 'application/pdf';
+      } else if (format === 'csv') {
+        response = await timeEntriesApi.exportCsv({ startDate: dateRange.start, endDate: dateRange.end });
+        filename = `timesheet-${dateRange.start}-${dateRange.end}.csv`;
+        mimeType = 'text/csv';
       } else if (format === 'quickbooks') {
         response = await timeEntriesApi.exportQuickBooks({ startDate: dateRange.start, endDate: dateRange.end, format: 'csv' });
         filename = `quickbooks-timesheet-${dateRange.start}-${dateRange.end}.csv`;
+        mimeType = 'text/csv';
+      } else if (format === 'adp') {
+        response = await timeEntriesApi.exportAdp({ startDate: dateRange.start, endDate: dateRange.end });
+        filename = `adp-timesheet-${dateRange.start}-${dateRange.end}.csv`;
+        mimeType = 'text/csv';
+      } else if (format === 'gusto') {
+        response = await timeEntriesApi.exportGusto({ startDate: dateRange.start, endDate: dateRange.end });
+        filename = `gusto-timesheet-${dateRange.start}-${dateRange.end}.csv`;
+        mimeType = 'text/csv';
+      } else if (format === 'paychex') {
+        response = await timeEntriesApi.exportPaychex({ startDate: dateRange.start, endDate: dateRange.end });
+        filename = `paychex-timesheet-${dateRange.start}-${dateRange.end}.csv`;
         mimeType = 'text/csv';
       }
 
@@ -283,18 +301,42 @@ const formatTime = (dateString) => {
           </button>
           <button 
             className="btn btn-secondary" 
-            onClick={() => handleExport('quickbooks')}
-            disabled={exportLoading === 'quickbooks'}
-          >
-            {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
-          </button>
-          <button 
-            className="btn btn-primary" 
             onClick={() => handleExport('pdf')}
             disabled={exportLoading === 'pdf'}
           >
             {exportLoading === 'pdf' ? '...' : '📄'} PDF
           </button>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => handleExport('csv')}
+            disabled={exportLoading === 'csv'}
+          >
+            {exportLoading === 'csv' ? '...' : '📋'} CSV
+          </button>
+          <div className="export-dropdown">
+            <button 
+              className="btn btn-primary"
+              onClick={() => setExportMenuOpen(!exportMenuOpen)}
+            >
+              Payroll Export ▾
+            </button>
+            {exportMenuOpen && (
+              <div className="export-dropdown-menu">
+                <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
+                  {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
+                </button>
+                <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
+                  {exportLoading === 'adp' ? '...' : '📘'} ADP
+                </button>
+                <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
+                  {exportLoading === 'gusto' ? '...' : '📙'} Gusto
+                </button>
+                <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
+                  {exportLoading === 'paychex' ? '...' : '📕'} Paychex
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -356,9 +398,9 @@ const formatTime = (dateString) => {
             </select>
           </div>
           <div className="filter-group">
-            <label>Job Site</label>
+            <label>Location</label>
             <select value={filters.job} onChange={(e) => setFilters(prev => ({ ...prev, job: e.target.value }))} className="form-select">
-              <option value="">All Sites</option>
+              <option value="">All Locations</option>
               {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
             </select>
           </div>
@@ -386,7 +428,7 @@ const formatTime = (dateString) => {
                   <thead>
                     <tr>
                       <th>Worker</th>
-                      <th>Job Site</th>
+                      <th>Location</th>
                       <th>Date</th>
                       <th>Clock In</th>
                       <th>Clock Out</th>
@@ -546,7 +588,7 @@ const formatTime = (dateString) => {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Job Site</label>
+                    <label className="form-label">Location</label>
                     <select value={manualEntry.jobId} onChange={(e) => setManualEntry(prev => ({ ...prev, jobId: e.target.value }))} className="form-select">
                       <option value="">Select...</option>
                       {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
@@ -619,7 +661,7 @@ const formatTime = (dateString) => {
             <div className="modal-body">
               <div className="detail-grid">
                 <div className="detail-item"><span>Worker</span><strong>{viewModal.entry.user?.name || 'Unknown'}</strong></div>
-                <div className="detail-item"><span>Job Site</span><strong>{viewModal.entry.job?.name || 'Unassigned'}</strong></div>
+                <div className="detail-item"><span>Location</span><strong>{viewModal.entry.job?.name || 'Unassigned'}</strong></div>
                 <div className="detail-item"><span>Date</span><strong>{formatDate(viewModal.entry.clockInTime)}</strong></div>
                 <div className="detail-item"><span>Clock In</span><strong>{formatTime(viewModal.entry.clockInTime)}</strong></div>
                 <div className="detail-item"><span>Clock Out</span><strong>{viewModal.entry.clockOutTime ? formatTime(viewModal.entry.clockOutTime) : 'Active'}</strong></div>

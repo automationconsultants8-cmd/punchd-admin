@@ -80,6 +80,10 @@ export const timeEntriesApi = {
   bulkReject: (entryIds, reason) => api.post('/time-entries/bulk-reject', { entryIds, rejectionReason: reason }),
   createManual: (data) => api.post('/time-entries/manual', data),
   getOvertimeSummary: (params) => api.get('/time-entries/overtime-summary', { params }),
+  exportCsv: (params) => api.get('/time-entries/export/csv', { params, responseType: 'blob' }),
+  exportAdp: (params) => api.get('/time-entries/export/adp', { params, responseType: 'blob' }),
+  exportGusto: (params) => api.get('/time-entries/export/gusto', { params, responseType: 'blob' }),
+  exportPaychex: (params) => api.get('/time-entries/export/paychex', { params, responseType: 'blob' }),
 };
 
 // Shifts endpoints
