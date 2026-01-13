@@ -118,6 +118,15 @@ const Icons = {
   ),
 };
 
+// Shield + Clock Logo
+const PunchdLogo = () => (
+  <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
+    <path d="M24 4 L42 12 L42 24 C42 34 34 42 24 46 C14 42 6 34 6 24 L6 12 L24 4Z" fill="#C9A227"/>
+    <circle cx="24" cy="24" r="12" fill="white"/>
+    <polyline points="24,16 24,24 30,27" stroke="#C9A227" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+
 function Sidebar({ collapsed, onToggle, userRole }) {
   const [requestCounts, setRequestCounts] = useState({
     shiftRequests: 0,
@@ -155,7 +164,7 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/time', icon: 'clock', label: 'Time Tracking' },
     { path: '/workers', icon: 'users', label: 'Workers', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
-    { path: '/job-sites', icon: 'mapPin', label: 'Job Sites', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/locations', icon: 'mapPin', label: 'Locations', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
   ];
 
@@ -169,7 +178,7 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     { path: '/analytics', icon: 'barChart', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/compliance', icon: 'shield', label: 'Break Compliance', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/audit', icon: 'scrollText', label: 'Audit Log', roles: ['ADMIN', 'OWNER'] },
-    { path: '/certified-payroll', icon: 'fileText', label: 'Certified Payroll', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/compliance-reports', icon: 'fileText', label: 'Compliance Reports', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
   ];
 
   const settingsNavItems = [
@@ -202,10 +211,7 @@ function Sidebar({ collapsed, onToggle, userRole }) {
       <div className="sidebar-header">
         <a href="/" className="sidebar-logo">
           <div className="sidebar-logo-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 10"/>
-            </svg>
+            <PunchdLogo />
           </div>
           {!collapsed && (
             <div className="sidebar-logo-text">

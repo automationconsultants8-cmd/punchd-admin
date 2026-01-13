@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { jobsApi } from '../services/api';
-import './JobSitesPage.css';
+import './LocationsPage.css';
 
 // SVG Icons
 const Icons = {
@@ -83,13 +83,13 @@ const Icons = {
   ),
 };
 
-function JobSitesPage() {
-  const [jobs, setJobs] = useState([]);
+function LocationsPage() {
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
-  const [editingJob, setEditingJob] = useState(null);
+  const [editingLocation, setEditingLocation] = useState(null);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -109,9 +109,9 @@ function JobSitesPage() {
   const loadData = async () => {
     try {
       const response = await jobsApi.getAll();
-      setJobs(response.data || []);
+      setLocations(response.data || []);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      console.error('Error loading locations:', error);
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ function JobSitesPage() {
     e.preventDefault();
     
     if (!formData.latitude || !formData.longitude) {
-      alert('Please enter or lookup coordinates for the job site.');
+      alert('Please enter or lookup coordinates for the location.');
       return;
     }
 
@@ -161,97 +161,97 @@ function JobSitesPage() {
         defaultHourlyRate: formData.defaultHourlyRate ? parseFloat(formData.defaultHourlyRate) : undefined,
       };
 
-      if (editingJob) {
-        await jobsApi.update(editingJob.id, submitData);
+      if (editingLocation) {
+        await jobsApi.update(editingLocation.id, submitData);
       } else {
         await jobsApi.create(submitData);
       }
       setShowModal(false);
-      setEditingJob(null);
+      setEditingLocation(null);
       setFormData({ name: '', address: '', latitude: '', longitude: '', geofenceRadiusMeters: 100, status: 'active', isPrevailingWage: false, defaultHourlyRate: '' });
       loadData();
     } catch (error) {
-      console.error('Error saving job:', error);
-      alert(error.response?.data?.message || 'Error saving job site');
+      console.error('Error saving location:', error);
+      alert(error.response?.data?.message || 'Error saving location');
     }
   };
 
-  const handleEdit = (job) => {
-    setEditingJob(job);
+  const handleEdit = (location) => {
+    setEditingLocation(location);
     setFormData({
-      name: job.name || '',
-      address: job.address || '',
-      latitude: job.latitude || '',
-      longitude: job.longitude || '',
-      geofenceRadiusMeters: job.geofenceRadiusMeters || 100,
-      status: job.isActive ? 'active' : 'inactive',
-      isPrevailingWage: job.isPrevailingWage || false,
-      defaultHourlyRate: job.defaultHourlyRate || ''
+      name: location.name || '',
+      address: location.address || '',
+      latitude: location.latitude || '',
+      longitude: location.longitude || '',
+      geofenceRadiusMeters: location.geofenceRadiusMeters || 100,
+      status: location.isActive ? 'active' : 'inactive',
+      isPrevailingWage: location.isPrevailingWage || false,
+      defaultHourlyRate: location.defaultHourlyRate || ''
     });
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this job site?')) {
+    if (window.confirm('Delete this location?')) {
       try {
         await jobsApi.delete(id);
         loadData();
       } catch (error) {
-        console.error('Error deleting job:', error);
+        console.error('Error deleting location:', error);
       }
     }
   };
 
-  const filteredJobs = jobs.filter(j => {
-    const matchesSearch = j.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         j.address?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLocations = locations.filter(l => {
+    const matchesSearch = l.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         l.address?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && j.isActive) ||
-                         (statusFilter === 'inactive' && !j.isActive);
+                         (statusFilter === 'active' && l.isActive) ||
+                         (statusFilter === 'inactive' && !l.isActive);
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
-    total: jobs.length,
-    active: jobs.filter(j => j.isActive).length,
-    prevailingWage: jobs.filter(j => j.isPrevailingWage).length
+    total: locations.length,
+    active: locations.filter(l => l.isActive).length,
+    payOverride: locations.filter(l => l.isPrevailingWage).length
   };
 
   if (loading) {
     return (
-      <div className="job-sites-page">
+      <div className="locations-page">
         <div className="loading-state">
           <div className="loading-spinner"></div>
-          <p>Loading job sites...</p>
+          <p>Loading locations...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="job-sites-page">
+    <div className="locations-page">
       {/* Header */}
       <div className="page-header">
         <div className="page-header-content">
           <div className="page-title-row">
-            <div className="page-icon">{Icons.building}</div>
-            <h1>Job Sites</h1>
+            <div className="page-icon">{Icons.mapPin}</div>
+            <h1>Locations</h1>
           </div>
-          <p>Manage your construction sites</p>
+          <p>Manage your work locations</p>
         </div>
-        <button className="btn-primary" onClick={() => { setEditingJob(null); setFormData({ name: '', address: '', latitude: '', longitude: '', geofenceRadiusMeters: 100, status: 'active', isPrevailingWage: false, defaultHourlyRate: '' }); setShowModal(true); }}>
+        <button className="btn-primary" onClick={() => { setEditingLocation(null); setFormData({ name: '', address: '', latitude: '', longitude: '', geofenceRadiusMeters: 100, status: 'active', isPrevailingWage: false, defaultHourlyRate: '' }); setShowModal(true); }}>
           {Icons.plus}
-          <span>Add Job Site</span>
+          <span>Add Location</span>
         </button>
       </div>
 
       {/* Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon gold">{Icons.building}</div>
+          <div className="stat-icon gold">{Icons.mapPin}</div>
           <div className="stat-content">
             <div className="stat-value">{stats.total}</div>
-            <div className="stat-label">Total Sites</div>
+            <div className="stat-label">Total Locations</div>
           </div>
         </div>
         <div className="stat-card">
@@ -262,10 +262,10 @@ function JobSitesPage() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon blue">{Icons.shield}</div>
+          <div className="stat-icon blue">{Icons.dollarSign}</div>
           <div className="stat-content">
-            <div className="stat-value">{stats.prevailingWage}</div>
-            <div className="stat-label">Prevailing Wage</div>
+            <div className="stat-value">{stats.payOverride}</div>
+            <div className="stat-label">Pay Override</div>
           </div>
         </div>
       </div>
@@ -274,7 +274,7 @@ function JobSitesPage() {
       <div className="filters-bar">
         <div className="search-box">
           <span className="search-icon">{Icons.search}</span>
-          <input type="text" placeholder="Search job sites..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search locations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <div className="filter-group">
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -285,49 +285,49 @@ function JobSitesPage() {
         </div>
       </div>
 
-      {/* Jobs List */}
-      {filteredJobs.length === 0 ? (
+      {/* Locations List */}
+      {filteredLocations.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">{Icons.building}</div>
-          <h3>No job sites found</h3>
-          <p>Add your first job site to get started</p>
+          <div className="empty-icon">{Icons.mapPin}</div>
+          <h3>No locations found</h3>
+          <p>Add your first location to get started</p>
           <button className="btn-primary" onClick={() => setShowModal(true)}>
             {Icons.plus}
-            <span>Add Job Site</span>
+            <span>Add Location</span>
           </button>
         </div>
       ) : (
-        <div className="jobs-grid">
-          {filteredJobs.map(job => (
-            <div key={job.id} className="job-card">
-              <div className="job-header">
-                <div className="job-icon">{Icons.building}</div>
-                <div className="job-info">
-                  <h3>{job.name}</h3>
-                  <span className={`status-badge ${job.isActive ? 'active' : 'inactive'}`}>
-                    {job.isActive ? 'Active' : 'Inactive'}
+        <div className="locations-grid">
+          {filteredLocations.map(location => (
+            <div key={location.id} className="location-card">
+              <div className="location-header">
+                <div className="location-icon">{Icons.mapPin}</div>
+                <div className="location-info">
+                  <h3>{location.name}</h3>
+                  <span className={`status-badge ${location.isActive ? 'active' : 'inactive'}`}>
+                    {location.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <div className="job-actions">
-                  <button className="action-btn" onClick={() => handleEdit(job)} title="Edit">{Icons.edit}</button>
-                  <button className="action-btn danger" onClick={() => handleDelete(job.id)} title="Delete">{Icons.trash}</button>
+                <div className="location-actions">
+                  <button className="action-btn" onClick={() => handleEdit(location)} title="Edit">{Icons.edit}</button>
+                  <button className="action-btn danger" onClick={() => handleDelete(location.id)} title="Delete">{Icons.trash}</button>
                 </div>
               </div>
-              <div className="job-details">
+              <div className="location-details">
                 <div className="detail-row">
                   <span className="detail-icon">{Icons.mapPin}</span>
-                  <span>{job.address || 'No address'}</span>
+                  <span>{location.address || 'No address'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-icon">{Icons.crosshair}</span>
-                  <span className="coords">{job.latitude?.toFixed(4)}, {job.longitude?.toFixed(4)}</span>
-                  <span className="geofence">({job.geofenceRadiusMeters || 100}m radius)</span>
+                  <span className="coords">{location.latitude?.toFixed(4)}, {location.longitude?.toFixed(4)}</span>
+                  <span className="geofence">({location.geofenceRadiusMeters || 100}m radius)</span>
                 </div>
-                {job.isPrevailingWage && (
+                {location.isPrevailingWage && (
                   <div className="detail-row">
-                    <span className="detail-icon">{Icons.shield}</span>
-                    <span className="prevailing-badge">Prevailing Wage</span>
-                    {job.defaultHourlyRate && <span className="rate">${job.defaultHourlyRate}/hr</span>}
+                    <span className="detail-icon">{Icons.dollarSign}</span>
+                    <span className="compliance-badge">Pay Override</span>
+                    {location.defaultHourlyRate && <span className="rate">${location.defaultHourlyRate}/hr</span>}
                   </div>
                 )}
               </div>
@@ -342,16 +342,16 @@ function JobSitesPage() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
-                <span className="modal-icon">{editingJob ? Icons.edit : Icons.building}</span>
-                <h2>{editingJob ? 'Edit Job Site' : 'Add New Job Site'}</h2>
+                <span className="modal-icon">{editingLocation ? Icons.edit : Icons.mapPin}</span>
+                <h2>{editingLocation ? 'Edit Location' : 'Add New Location'}</h2>
               </div>
               <button className="modal-close" onClick={() => setShowModal(false)}>{Icons.x}</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label><span className="label-icon">{Icons.building}</span>Site Name</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Main Street Construction" required />
+                  <label><span className="label-icon">{Icons.building}</span>Location Name</label>
+                  <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} placeholder="Main Office" required />
                 </div>
                 <div className="form-group">
                   <label><span className="label-icon">{Icons.mapPin}</span>Address</label>
@@ -377,14 +377,21 @@ function JobSitesPage() {
                   <input type="number" min="10" value={formData.geofenceRadiusMeters} onChange={(e) => setFormData(prev => ({ ...prev, geofenceRadiusMeters: e.target.value }))} placeholder="100" />
                   <span className="form-hint">Workers must be within this radius to clock in</span>
                 </div>
+                
+                {/* Compliance Section */}
+                <div className="form-section-divider">
+                  <span>Compliance Settings</span>
+                </div>
+                
                 <div className="form-group checkbox-group">
                   <label className="checkbox-label">
                     <input type="checkbox" checked={formData.isPrevailingWage} onChange={(e) => setFormData(prev => ({ ...prev, isPrevailingWage: e.target.checked }))} />
                     <span className="checkbox-text">
-                      <span className="checkbox-icon">{Icons.shield}</span>
-                      Prevailing Wage Project
+                      <span className="checkbox-icon">{Icons.dollarSign}</span>
+                      Enable Pay Override (Prevailing Wage)
                     </span>
                   </label>
+                  <span className="form-hint">Use location-specific pay rates for compliance requirements</span>
                 </div>
                 {formData.isPrevailingWage && (
                   <div className="form-group">
@@ -395,7 +402,7 @@ function JobSitesPage() {
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">{Icons.check}<span>{editingJob ? 'Save Changes' : 'Add Job Site'}</span></button>
+                <button type="submit" className="btn-primary">{Icons.check}<span>{editingLocation ? 'Save Changes' : 'Add Location'}</span></button>
               </div>
             </form>
           </div>
@@ -405,4 +412,4 @@ function JobSitesPage() {
   );
 }
 
-export default JobSitesPage;
+export default LocationsPage;
