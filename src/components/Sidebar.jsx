@@ -120,10 +120,10 @@ const Icons = {
 
 // Shield + Clock Logo
 const PunchdLogo = () => (
-  <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
-    <path d="M24 4 L42 12 L42 24 C42 34 34 42 24 46 C14 42 6 34 6 24 L6 12 L24 4Z" fill="#C9A227"/>
-    <circle cx="24" cy="24" r="12" fill="white"/>
-    <polyline points="24,16 24,24 30,27" stroke="#C9A227" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  <svg viewBox="0 0 48 48" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+    <path d="M24 4L42 12V24C42 34 34 42 24 46C14 42 6 34 6 24V12L24 4Z" fill="#C9A227"/>
+    <circle cx="24" cy="24" r="12" fill="#FFFFFF"/>
+    <path d="M24 16V24L30 27" stroke="#C9A227" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
   </svg>
 );
 
@@ -216,7 +216,7 @@ function Sidebar({ collapsed, onToggle, userRole }) {
           {!collapsed && (
             <div className="sidebar-logo-text">
               <span className="sidebar-logo-name">Punch'd</span>
-              <span className="sidebar-logo-byline">by Kyronos</span>
+              <span className="sidebar-logo-byline">by Krynovo</span>
             </div>
           )}
         </a>
