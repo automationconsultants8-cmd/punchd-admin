@@ -38,6 +38,7 @@ export const authApi = {
   forgotPassword: (email) => api.post('/admin/auth/forgot-password', { email }),
   resetPassword: (data) => api.post('/admin/auth/reset-password', data),
   getSubscriptionStatus: () => api.get('/admin/auth/subscription-status'),
+  loginDashboard: (email, password) => api.post('/auth/login/dashboard', { email, password }),
 };
 
 // Users endpoints

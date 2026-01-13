@@ -106,6 +106,20 @@ const Icons = {
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
   ),
+  userPlus: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <line x1="19" y1="8" x2="19" y2="14"/>
+      <line x1="22" y1="11" x2="16" y2="11"/>
+    </svg>
+  ),
+  lock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  ),
   chevronLeft: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="15 18 9 12 15 6"/>
@@ -127,12 +141,24 @@ const PunchdLogo = () => (
   </svg>
 );
 
+// Helper to get permissions from localStorage
+const getPermissions = () => {
+  try {
+    const perms = localStorage.getItem('adminPermissions');
+    return perms ? JSON.parse(perms) : null;
+  } catch {
+    return null;
+  }
+};
+
 function Sidebar({ collapsed, onToggle, userRole }) {
   const [requestCounts, setRequestCounts] = useState({
     shiftRequests: 0,
     timeOff: 0,
     messages: 0,
   });
+  
+  const permissions = getPermissions();
 
   // Fetch pending counts on mount
   useEffect(() => {
@@ -155,30 +181,44 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     };
 
     fetchCounts();
-    // Refresh every 30 seconds
     const interval = setInterval(fetchCounts, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // Check if user has permission (for managers)
+  const hasPermission = (permKey) => {
+    if (userRole === 'OWNER' || userRole === 'ADMIN') return true;
+    if (userRole === 'MANAGER' && permissions) {
+      return permissions[permKey] === true;
+    }
+    return false;
+  };
+
+  // Navigation items with role AND permission requirements
   const mainNavItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/time', icon: 'clock', label: 'Time Tracking' },
-    { path: '/workers', icon: 'users', label: 'Workers', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/workers', icon: 'users', label: 'Team', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/locations', icon: 'mapPin', label: 'Locations', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
-    { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canCreateShifts' },
   ];
 
   const requestsNavItems = [
-    { path: '/requests/shifts', icon: 'arrowLeftRight', label: 'Shift Requests', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'shiftRequests' },
-    { path: '/requests/time-off', icon: 'calendarOff', label: 'Time Off', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'timeOff' },
+    { path: '/requests/shifts', icon: 'arrowLeftRight', label: 'Shift Requests', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canApproveShiftSwaps', badgeKey: 'shiftRequests' },
+    { path: '/requests/time-off', icon: 'calendarOff', label: 'Time Off', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canApproveTimeOff', badgeKey: 'timeOff' },
     { path: '/requests/messages', icon: 'messageSquare', label: 'Messages', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'messages' },
   ];
 
   const reportsNavItems = [
-    { path: '/analytics', icon: 'barChart', label: 'Analytics', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
-    { path: '/compliance', icon: 'shield', label: 'Break Compliance', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/analytics', icon: 'barChart', label: 'Analytics', roles: ['ADMIN', 'OWNER'], managerPerm: 'canViewAnalytics' },
+    { path: '/compliance', icon: 'shield', label: 'Break Compliance', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canReviewViolations' },
     { path: '/audit', icon: 'scrollText', label: 'Audit Log', roles: ['ADMIN', 'OWNER'] },
-    { path: '/compliance-reports', icon: 'fileText', label: 'Compliance Reports', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/compliance-reports', icon: 'fileText', label: 'Compliance Reports', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canGenerateReports' },
+  ];
+
+  const adminNavItems = [
+    { path: '/pay-periods', icon: 'lock', label: 'Pay Periods', roles: ['ADMIN', 'OWNER'] },
+    { path: '/team-management', icon: 'userPlus', label: 'Role Management', roles: ['ADMIN', 'OWNER'] },
   ];
 
   const settingsNavItems = [
@@ -186,8 +226,22 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     { path: '/settings', icon: 'settings', label: 'Settings', roles: ['ADMIN', 'OWNER'] },
   ];
 
-  const filterByRole = (items) => {
-    return items.filter(item => !item.roles || item.roles.includes(userRole));
+  // Filter items by role and permissions
+  const filterByRoleAndPermission = (items) => {
+    return items.filter(item => {
+      if (item.roles && !item.roles.includes(userRole)) {
+        return false;
+      }
+      if (userRole === 'MANAGER') {
+        if (item.managerPerm && !hasPermission(item.managerPerm)) {
+          return false;
+        }
+        if (item.permission && !hasPermission(item.permission)) {
+          return false;
+        }
+      }
+      return true;
+    });
   };
 
   const NavItem = ({ item }) => {
@@ -207,7 +261,6 @@ function Sidebar({ collapsed, onToggle, userRole }) {
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      {/* Logo */}
       <div className="sidebar-header">
         <a href="/" className="sidebar-logo">
           <div className="sidebar-logo-icon">
@@ -222,48 +275,51 @@ function Sidebar({ collapsed, onToggle, userRole }) {
         </a>
       </div>
 
-      {/* Navigation */}
       <nav className="sidebar-nav">
-        {/* Main */}
         <div className="sidebar-section">
           {!collapsed && <div className="sidebar-section-title">Main</div>}
-          {filterByRole(mainNavItems).map(item => (
+          {filterByRoleAndPermission(mainNavItems).map(item => (
             <NavItem key={item.path} item={item} />
           ))}
         </div>
 
-        {/* Requests - Phase 1 */}
-        {filterByRole(requestsNavItems).length > 0 && (
+        {filterByRoleAndPermission(requestsNavItems).length > 0 && (
           <div className="sidebar-section">
             {!collapsed && <div className="sidebar-section-title">Requests</div>}
-            {filterByRole(requestsNavItems).map(item => (
+            {filterByRoleAndPermission(requestsNavItems).map(item => (
               <NavItem key={item.path} item={item} />
             ))}
           </div>
         )}
 
-        {/* Reports */}
-        {filterByRole(reportsNavItems).length > 0 && (
+        {filterByRoleAndPermission(reportsNavItems).length > 0 && (
           <div className="sidebar-section">
             {!collapsed && <div className="sidebar-section-title">Reports</div>}
-            {filterByRole(reportsNavItems).map(item => (
+            {filterByRoleAndPermission(reportsNavItems).map(item => (
               <NavItem key={item.path} item={item} />
             ))}
           </div>
         )}
 
-        {/* Settings */}
-        {filterByRole(settingsNavItems).length > 0 && (
+        {filterByRoleAndPermission(adminNavItems).length > 0 && (
+          <div className="sidebar-section">
+            {!collapsed && <div className="sidebar-section-title">Admin</div>}
+            {filterByRoleAndPermission(adminNavItems).map(item => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </div>
+        )}
+
+        {filterByRoleAndPermission(settingsNavItems).length > 0 && (
           <div className="sidebar-section">
             {!collapsed && <div className="sidebar-section-title">Settings</div>}
-            {filterByRole(settingsNavItems).map(item => (
+            {filterByRoleAndPermission(settingsNavItems).map(item => (
               <NavItem key={item.path} item={item} />
             ))}
           </div>
         )}
       </nav>
 
-      {/* Footer */}
       <div className="sidebar-footer">
         <button className="sidebar-toggle" onClick={onToggle}>
           <span className="sidebar-toggle-icon">

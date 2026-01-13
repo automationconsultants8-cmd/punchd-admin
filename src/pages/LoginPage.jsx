@@ -58,35 +58,51 @@ function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  
-  if (loading) return;
-  
-  setError('');
-  setLoading(true);
-
-  try {
-    const response = await authApi.login(email, password);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    if (response.data?.accessToken) {
-      localStorage.setItem('adminToken', response.data.accessToken);
-      localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+    if (loading) return;
+    
+    setError('');
+    setLoading(true);
+
+    try {
+      // Use the new dashboard login endpoint
+      const response = await authApi.loginDashboard(email, password);
       
-      if (onLogin) {
-        onLogin(response.data.user);
+      if (response.data?.accessToken) {
+        // Store token and user data
+        localStorage.setItem('adminToken', response.data.accessToken);
+        localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+        
+        // Store permissions for managers
+        if (response.data.user.permissions) {
+          localStorage.setItem('adminPermissions', JSON.stringify(response.data.user.permissions));
+        }
+        
+        // Store assigned locations/workers for managers
+        if (response.data.user.assignedLocationIds) {
+          localStorage.setItem('assignedLocationIds', JSON.stringify(response.data.user.assignedLocationIds));
+        }
+        if (response.data.user.assignedWorkerIds) {
+          localStorage.setItem('assignedWorkerIds', JSON.stringify(response.data.user.assignedWorkerIds));
+        }
+        
+        if (onLogin) {
+          onLogin(response.data.user);
+        }
+        
+        navigate('/dashboard');
       }
-      
-      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login error:', err);
+      const message = err.response?.data?.message || 'Invalid email or password';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Login error:', err);
-    setError(err.response?.data?.message || 'Invalid email or password');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="login-page">
