@@ -12,7 +12,7 @@ import TrialExpiredPaywall from './components/TrialExpiredPaywall';
 import DashboardPage from './pages/DashboardPage';
 import TimeTrackingPage from './pages/TimeTrackingPage';
 import WorkersPage from './pages/WorkersPage';
-import JobSitesPage from './pages/JobSitesPage';
+import LocationsPage from './pages/LocationsPage';
 import SchedulingPage from './pages/SchedulingPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AuditPage from './pages/AuditPage';
@@ -37,11 +37,13 @@ const pageTitles = {
   '/time': 'Time Tracking',
   '/timesheets': 'Timesheets',
   '/workers': 'Workers',
-  '/job-sites': 'Job Sites',
+  '/locations': 'Locations',
   '/scheduling': 'Scheduling',
   '/analytics': 'Analytics',
   '/audit': 'Audit Log',
   '/billing': 'Billing',
+  '/compliance': 'Break Compliance',
+  '/compliance-reports': 'Compliance Reports',
   '/requests/shifts': 'Shift Requests',
   '/requests/time-off': 'Time Off Requests',
   '/requests/messages': 'Messages',
@@ -80,7 +82,7 @@ function AppContent({ user, onLogout, subscription }) {
             <Route path="/time" element={<TimeTrackingPage />} />
             <Route path="/timesheets" element={<TimeTrackingPage />} />
             <Route path="/workers" element={<WorkersPage />} />
-            <Route path="/job-sites" element={<JobSitesPage />} />
+            <Route path="/locations" element={<LocationsPage />} />
             <Route path="/scheduling" element={<SchedulingPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/audit" element={<AuditPage />} />
@@ -88,7 +90,11 @@ function AppContent({ user, onLogout, subscription }) {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/compliance" element={<CompliancePage />} />
-            <Route path="/certified-payroll" element={<CertifiedPayrollPage />} />
+            <Route path="/compliance-reports" element={<CertifiedPayrollPage />} />
+            
+            {/* Legacy route redirects */}
+            <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
+            <Route path="/certified-payroll" element={<Navigate to="/compliance-reports" replace />} />
             
             {/* Phase 1: Requests */}
             <Route path="/requests/shifts" element={<ShiftRequestsPage />} />
