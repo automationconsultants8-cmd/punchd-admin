@@ -186,4 +186,15 @@ export const breakComplianceApi = {
   getStats: (params) => api.get('/break-compliance/stats', { params }),
 };
 
+export const roleManagementApi = {
+  getTeam: () => api.get('/role-management/team'),
+  create: (data) => api.post('/role-management/create', data),
+  promote: (data) => api.post('/role-management/promote', data),
+  demote: (userId) => api.post(`/role-management/demote/${userId}`),
+  getManagerDetails: (managerId) => api.get(`/role-management/manager/${managerId}`),
+  updatePermissions: (managerId, permissions) => api.patch(`/role-management/manager/${managerId}/permissions`, permissions),
+  assignLocations: (managerId, data) => api.patch(`/role-management/manager/${managerId}/locations`, data),
+  assignWorkers: (managerId, data) => api.patch(`/role-management/manager/${managerId}/workers`, data),
+};
+
 export default api;

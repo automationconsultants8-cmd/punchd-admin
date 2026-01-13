@@ -31,6 +31,8 @@ import CertifiedPayrollPage from './pages/CertifiedPayrollPage';
 import ShiftRequestsPage from './pages/ShiftRequestsPage';
 import MessagesPage from './pages/MessagesPage';
 import { FeaturesProvider } from './hooks/useFeatures';
+import RoleManagementPage from './pages/RoleManagementPage';
+
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -91,6 +93,7 @@ function AppContent({ user, onLogout, subscription }) {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/compliance" element={<CompliancePage />} />
             <Route path="/compliance-reports" element={<CertifiedPayrollPage />} />
+            <Route path="/team-management" element={<RoleManagementPage />} />
             
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
