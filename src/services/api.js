@@ -197,4 +197,14 @@ export const roleManagementApi = {
   assignWorkers: (managerId, data) => api.patch(`/role-management/manager/${managerId}/workers`, data),
 };
 
+export const payPeriodsApi = {
+  getAll: (params) => api.get('/pay-periods', { params }),
+  getCurrent: () => api.get('/pay-periods/current'),
+  create: (data) => api.post('/pay-periods', data),
+  getDetails: (id) => api.get(`/pay-periods/${id}`),
+  lock: (id) => api.post(`/pay-periods/${id}/lock`),
+  unlock: (id, data) => api.post(`/pay-periods/${id}/unlock`, data),
+  markExported: (id) => api.post(`/pay-periods/${id}/export`),
+};
+
 export default api;

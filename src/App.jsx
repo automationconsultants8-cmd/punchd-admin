@@ -32,6 +32,7 @@ import ShiftRequestsPage from './pages/ShiftRequestsPage';
 import MessagesPage from './pages/MessagesPage';
 import { FeaturesProvider } from './hooks/useFeatures';
 import RoleManagementPage from './pages/RoleManagementPage';
+import PayPeriodsPage from './pages/PayPeriodsPage';
 
 
 const pageTitles = {
@@ -94,7 +95,7 @@ function AppContent({ user, onLogout, subscription }) {
             <Route path="/compliance" element={<CompliancePage />} />
             <Route path="/compliance-reports" element={<CertifiedPayrollPage />} />
             <Route path="/team-management" element={<RoleManagementPage />} />
-            
+            <Route path="/pay-periods" element={<PayPeriodsPage />} />
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
             <Route path="/certified-payroll" element={<Navigate to="/compliance-reports" replace />} />
