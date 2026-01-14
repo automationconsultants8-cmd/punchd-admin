@@ -198,13 +198,22 @@ export const roleManagementApi = {
 };
 
 export const payPeriodsApi = {
+  // Settings
+  getSettings: () => api.get('/pay-periods/settings'),
+  configureSettings: (data) => api.patch('/pay-periods/settings', data),
+  
+  // Pay periods
   getAll: (params) => api.get('/pay-periods', { params }),
   getCurrent: () => api.get('/pay-periods/current'),
   create: (data) => api.post('/pay-periods', data),
   getDetails: (id) => api.get(`/pay-periods/${id}`),
+  
+  // Actions
   lock: (id) => api.post(`/pay-periods/${id}/lock`),
   unlock: (id, data) => api.post(`/pay-periods/${id}/unlock`, data),
-  markExported: (id) => api.post(`/pay-periods/${id}/export`),
+  markExported: (id) => api.post(`/pay-periods/${id}/mark-exported`),
+  
+  // Export - note: use window.open for CSV download
+  // export: (id, format) => api.get(`/pay-periods/${id}/export`, { params: { format } }),
 };
-
 export default api;
