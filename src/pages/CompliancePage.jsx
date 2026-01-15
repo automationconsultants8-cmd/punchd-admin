@@ -45,7 +45,7 @@ function CompliancePage() {
 
 const formatTime = (dateString) => {
   if (!dateString) return '--';
-  return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' });
+  return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Los_Angeles' });
 };
 
   const formatCurrency = (amount) => {
