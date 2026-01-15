@@ -1020,3 +1020,38 @@
   background: #dc2626;
   color: white;
 }
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item span {
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.detail-item strong {
+  color: #fff;
+  font-size: 15px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.cost-highlight {
+  color: #C9A227 !important;
+  font-size: 18px !important;
+}
+
+.rejection-text {
+  color: #ef4444 !important;
+}
