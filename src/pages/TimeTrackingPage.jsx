@@ -277,68 +277,75 @@ const formatTime = (dateString) => {
   };
 
   const getOvertimeBadge = (entry) => {
-    const otMins = (entry.overtimeMinutes || 0) + (entry.doubleTimeMinutes || 0);
-    if (otMins === 0) return null;
-    const otHours = (otMins / 60).toFixed(1);
-    return <span className="badge badge-overtime">⚡ {otHours}h OT</span>;
-  };
-
+  const otMins = entry.overtimeMinutes || 0;
+  const dtMins = entry.doubleTimeMinutes || 0;
+  
+  if (otMins === 0 && dtMins === 0) return null;
+  
   return (
-    <div className="time-tracking-page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Time Tracking</h1>
-          <p className="page-subtitle">View, approve, and manage time entries</p>
-        </div>
-        <div className="page-actions">
-          <button className="btn btn-secondary" onClick={() => setActiveTab('manual')}>+ Manual Entry</button>
+    <>
+      {otMins > 0 && <span className="badge badge-overtime">⚡ {(otMins / 60).toFixed(1)}h OT</span>}
+      {dtMins > 0 && <span className="badge badge-doubletime">🔥 {(dtMins / 60).toFixed(1)}h DT</span>}
+    </>
+  );
+};
+
+return (
+  <div className="time-tracking-page">
+    <div className="page-header">
+      <div>
+        <h1 className="page-title">Time Tracking</h1>
+        <p className="page-subtitle">View, approve, and manage time entries</p>
+      </div>
+      <div className="page-actions">
+        <button className="btn btn-secondary" onClick={() => setActiveTab('manual')}>+ Manual Entry</button>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => handleExport('excel')}
+          disabled={exportLoading === 'excel'}
+        >
+          {exportLoading === 'excel' ? '...' : '📊'} Excel
+        </button>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => handleExport('pdf')}
+          disabled={exportLoading === 'pdf'}
+        >
+          {exportLoading === 'pdf' ? '...' : '📄'} PDF
+        </button>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => handleExport('csv')}
+          disabled={exportLoading === 'csv'}
+        >
+          {exportLoading === 'csv' ? '...' : '📋'} CSV
+        </button>
+        <div className="export-dropdown">
           <button 
-            className="btn btn-secondary" 
-            onClick={() => handleExport('excel')}
-            disabled={exportLoading === 'excel'}
+            className="btn btn-primary"
+            onClick={() => setExportMenuOpen(!exportMenuOpen)}
           >
-            {exportLoading === 'excel' ? '...' : '📊'} Excel
+            Payroll Export ▾
           </button>
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => handleExport('pdf')}
-            disabled={exportLoading === 'pdf'}
-          >
-            {exportLoading === 'pdf' ? '...' : '📄'} PDF
-          </button>
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => handleExport('csv')}
-            disabled={exportLoading === 'csv'}
-          >
-            {exportLoading === 'csv' ? '...' : '📋'} CSV
-          </button>
-          <div className="export-dropdown">
-            <button 
-              className="btn btn-primary"
-              onClick={() => setExportMenuOpen(!exportMenuOpen)}
-            >
-              Payroll Export ▾
-            </button>
-            {exportMenuOpen && (
-              <div className="export-dropdown-menu">
-                <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
-                  {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
-                </button>
-                <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
-                  {exportLoading === 'adp' ? '...' : '📘'} ADP
-                </button>
-                <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
-                  {exportLoading === 'gusto' ? '...' : '📙'} Gusto
-                </button>
-                <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
-                  {exportLoading === 'paychex' ? '...' : '📕'} Paychex
-                </button>
-              </div>
-            )}
-          </div>
+          {exportMenuOpen && (
+            <div className="export-dropdown-menu">
+              <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
+                {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
+              </button>
+              <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
+                {exportLoading === 'adp' ? '...' : '📘'} ADP
+              </button>
+              <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
+                {exportLoading === 'gusto' ? '...' : '📙'} Gusto
+              </button>
+              <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
+                {exportLoading === 'paychex' ? '...' : '📕'} Paychex
+              </button>
+            </div>
+          )}
         </div>
       </div>
+    </div>
 
       {/* Approval Stats Cards */}
       <div className="stats-row">
