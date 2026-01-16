@@ -197,23 +197,21 @@ export const roleManagementApi = {
   assignWorkers: (managerId, data) => api.patch(`/role-management/manager/${managerId}/workers`, data),
 };
 
+// ============================================
+// ADD THIS TO YOUR api.js / api.ts FILE
+// ============================================
+
 export const payPeriodsApi = {
-  // Settings
-  getSettings: () => api.get('/pay-periods/settings'),
-  configureSettings: (data) => api.patch('/pay-periods/settings', data),
-  
-  // Pay periods
   getAll: (params) => api.get('/pay-periods', { params }),
   getCurrent: () => api.get('/pay-periods/current'),
+  getSettings: () => api.get('/pay-periods/settings'),
+  updateSettings: (data) => api.patch('/pay-periods/settings', data),
+  getById: (id) => api.get(`/pay-periods/${id}`),
   create: (data) => api.post('/pay-periods', data),
-  getDetails: (id) => api.get(`/pay-periods/${id}`),
-  
-  // Actions
   lock: (id) => api.post(`/pay-periods/${id}/lock`),
-  unlock: (id, data) => api.post(`/pay-periods/${id}/unlock`, data),
+  unlock: (id, reason) => api.post(`/pay-periods/${id}/unlock`, { reason }),
   markExported: (id) => api.post(`/pay-periods/${id}/mark-exported`),
-  
-  // Export - note: use window.open for CSV download
-  // export: (id, format) => api.get(`/pay-periods/${id}/export`, { params: { format } }),
+  export: (id, format = 'CSV') => api.get(`/pay-periods/${id}/export`, { params: { format } }),
 };
+
 export default api;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { timeEntriesApi, usersApi, jobsApi } from '../services/api';
+import { timeEntriesApi, usersApi, jobsApi, payPeriodsApi } from '../services/api';
 import './TimeTrackingPage.css';
 
 function TimeTrackingPage() {
@@ -13,6 +13,12 @@ function TimeTrackingPage() {
   const [actionLoading, setActionLoading] = useState(null);
   const [exportLoading, setExportLoading] = useState(null);
   const [selectedEntries, setSelectedEntries] = useState([]);
+  
+  // Pay period state
+  const [payPeriods, setPayPeriods] = useState([]);
+  const [selectedPayPeriod, setSelectedPayPeriod] = useState(null);
+  const [payPeriodLoading, setPayPeriodLoading] = useState(false);
+
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
@@ -37,10 +43,104 @@ function TimeTrackingPage() {
   const [rejectModal, setRejectModal] = useState({ open: false, entryId: null, reason: '' });
   const [viewModal, setViewModal] = useState({ open: false, entry: null });
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [unlockModal, setUnlockModal] = useState({ open: false, reason: '' });
+  const [settingsModal, setSettingsModal] = useState({ open: false });
+  const [payPeriodSettings, setPayPeriodSettings] = useState({
+    payPeriodType: 'BIWEEKLY',
+    payPeriodStartDay: 1,
+    payPeriodAnchorDate: '',
+    customPayPeriodDays: 14,
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
+  useEffect(() => {
+    loadPayPeriods();
+    loadPayPeriodSettings();
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, [dateRange]);
+  }, [dateRange, selectedPayPeriod]);
+
+  const loadPayPeriods = async () => {
+    try {
+      const res = await payPeriodsApi.getAll().catch(() => ({ data: [] }));
+      const periods = res.data || [];
+      setPayPeriods(periods);
+      
+      // Auto-select current open period if exists
+      const currentPeriod = periods.find(p => p.status === 'OPEN');
+      if (currentPeriod) {
+        setSelectedPayPeriod(currentPeriod);
+        // Update date range to match pay period
+        setDateRange({
+          start: new Date(currentPeriod.startDate).toISOString().split('T')[0],
+          end: new Date(currentPeriod.endDate).toISOString().split('T')[0],
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load pay periods:', err);
+    }
+  };
+
+  const loadPayPeriodSettings = async () => {
+    try {
+      const res = await payPeriodsApi.getSettings().catch(() => ({ data: null }));
+      if (res.data && res.data.isConfigured) {
+        setPayPeriodSettings({
+          payPeriodType: res.data.payPeriodType || 'BIWEEKLY',
+          payPeriodStartDay: res.data.payPeriodStartDay ?? 1,
+          payPeriodAnchorDate: res.data.payPeriodAnchorDate 
+            ? new Date(res.data.payPeriodAnchorDate).toISOString().split('T')[0] 
+            : '',
+          customPayPeriodDays: res.data.customPayPeriodDays || 14,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load pay period settings:', err);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      await payPeriodsApi.updateSettings({
+        payPeriodType: payPeriodSettings.payPeriodType,
+        payPeriodStartDay: parseInt(payPeriodSettings.payPeriodStartDay),
+        payPeriodAnchorDate: payPeriodSettings.payPeriodAnchorDate || undefined,
+        customPayPeriodDays: payPeriodSettings.payPeriodType === 'CUSTOM' 
+          ? parseInt(payPeriodSettings.customPayPeriodDays) 
+          : undefined,
+      });
+      setSettingsModal({ open: false });
+      await loadPayPeriods(); // Reload periods after settings change
+    } catch (err) {
+      console.error('Failed to save pay period settings:', err);
+      alert(err.response?.data?.message || 'Failed to save settings. Please try again.');
+    }
+    setSettingsLoading(false);
+  };
+
+  const getStartDayOptions = () => {
+    if (payPeriodSettings.payPeriodType === 'WEEKLY' || payPeriodSettings.payPeriodType === 'BIWEEKLY') {
+      return [
+        { value: 0, label: 'Sunday' },
+        { value: 1, label: 'Monday' },
+        { value: 2, label: 'Tuesday' },
+        { value: 3, label: 'Wednesday' },
+        { value: 4, label: 'Thursday' },
+        { value: 5, label: 'Friday' },
+        { value: 6, label: 'Saturday' },
+      ];
+    }
+    if (payPeriodSettings.payPeriodType === 'SEMIMONTHLY') {
+      return Array.from({ length: 15 }, (_, i) => ({ value: i + 1, label: `${i + 1}` }));
+    }
+    if (payPeriodSettings.payPeriodType === 'MONTHLY') {
+      return Array.from({ length: 28 }, (_, i) => ({ value: i + 1, label: `${i + 1}` }));
+    }
+    return [];
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -62,6 +162,86 @@ function TimeTrackingPage() {
       console.error('Failed to load time data:', err);
     }
     setLoading(false);
+  };
+
+  const handlePayPeriodChange = (periodId) => {
+    if (!periodId) {
+      setSelectedPayPeriod(null);
+      // Reset to default 7 day range
+      setDateRange({
+        start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        end: new Date().toISOString().split('T')[0],
+      });
+      return;
+    }
+    
+    const period = payPeriods.find(p => p.id === periodId);
+    if (period) {
+      setSelectedPayPeriod(period);
+      setDateRange({
+        start: new Date(period.startDate).toISOString().split('T')[0],
+        end: new Date(period.endDate).toISOString().split('T')[0],
+      });
+    }
+  };
+
+  const handleLockPayPeriod = async () => {
+    if (!selectedPayPeriod) return;
+    
+    setPayPeriodLoading(true);
+    try {
+      await payPeriodsApi.lock(selectedPayPeriod.id);
+      await loadPayPeriods();
+      // Re-select the same period to get updated status
+      const updatedPeriods = await payPeriodsApi.getAll();
+      const updatedPeriod = (updatedPeriods.data || []).find(p => p.id === selectedPayPeriod.id);
+      if (updatedPeriod) {
+        setSelectedPayPeriod(updatedPeriod);
+      }
+    } catch (err) {
+      console.error('Failed to lock pay period:', err);
+      alert(err.response?.data?.message || 'Failed to lock pay period. Make sure all entries are approved.');
+    }
+    setPayPeriodLoading(false);
+  };
+
+  const handleUnlockPayPeriod = async () => {
+    if (!selectedPayPeriod || !unlockModal.reason.trim()) {
+      alert('Please provide a reason for unlocking');
+      return;
+    }
+    
+    setPayPeriodLoading(true);
+    try {
+      await payPeriodsApi.unlock(selectedPayPeriod.id, unlockModal.reason);
+      setUnlockModal({ open: false, reason: '' });
+      await loadPayPeriods();
+      const updatedPeriods = await payPeriodsApi.getAll();
+      const updatedPeriod = (updatedPeriods.data || []).find(p => p.id === selectedPayPeriod.id);
+      if (updatedPeriod) {
+        setSelectedPayPeriod(updatedPeriod);
+      }
+    } catch (err) {
+      console.error('Failed to unlock pay period:', err);
+      alert(err.response?.data?.message || 'Failed to unlock pay period.');
+    }
+    setPayPeriodLoading(false);
+  };
+
+  const formatPayPeriodLabel = (period) => {
+    const start = new Date(period.startDate).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      timeZone: 'America/Los_Angeles'
+    });
+    const end = new Date(period.endDate).toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      timeZone: 'America/Los_Angeles'
+    });
+    const statusLabel = period.status === 'LOCKED' ? '🔒' : period.status === 'EXPORTED' ? '📤' : '';
+    return `${start} — ${end} ${statusLabel}`.trim();
   };
 
 // Format date in local timezone
@@ -290,6 +470,24 @@ const formatTime = (dateString) => {
   );
 };
 
+  // Calculate stats for selected pay period
+  const getPayPeriodStats = () => {
+    if (!selectedPayPeriod) return null;
+    
+    const periodEntries = timeEntries;
+    const pending = periodEntries.filter(e => e.approvalStatus === 'PENDING').length;
+    const totalMinutes = periodEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
+    
+    return {
+      entries: periodEntries.length,
+      pending,
+      totalHours: formatDuration(totalMinutes),
+      status: selectedPayPeriod.status,
+    };
+  };
+
+  const payPeriodStats = getPayPeriodStats();
+
 return (
   <div className="time-tracking-page">
     <div className="page-header">
@@ -388,40 +586,105 @@ return (
       </div>
 
       {activeTab === 'entries' && (
-        <div className="filters-bar">
-          <div className="filter-group">
-            <label>Date Range</label>
-            <div className="date-range">
-              <input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="form-input" />
-              <span>to</span>
-              <input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="form-input" />
+        <>
+          {/* Pay Period Filter Bar */}
+          <div className="pay-period-bar">
+            <div className="pay-period-select-group">
+              <label>Pay Period</label>
+              <select 
+                value={selectedPayPeriod?.id || ''} 
+                onChange={(e) => handlePayPeriodChange(e.target.value)}
+                className="form-select pay-period-select"
+              >
+                <option value="">Custom Date Range</option>
+                {payPeriods.map(period => (
+                  <option key={period.id} value={period.id}>
+                    {formatPayPeriodLabel(period)}
+                  </option>
+                ))}
+              </select>
+              <button 
+                className="btn btn-ghost btn-icon"
+                onClick={() => setSettingsModal({ open: true })}
+                title="Pay Period Settings"
+              >
+                ⚙️
+              </button>
             </div>
+              
+              {selectedPayPeriod && payPeriodStats && (
+                <div className="pay-period-status">
+                  <span className="pay-period-stat">{payPeriodStats.entries} entries</span>
+                  <span className="pay-period-stat">{payPeriodStats.totalHours}</span>
+                  {payPeriodStats.pending > 0 && (
+                    <span className="pay-period-stat pay-period-pending">⚠️ {payPeriodStats.pending} pending</span>
+                  )}
+                  <span className={`pay-period-badge ${selectedPayPeriod.status.toLowerCase()}`}>
+                    {selectedPayPeriod.status === 'LOCKED' ? '🔒 Locked' : 
+                     selectedPayPeriod.status === 'EXPORTED' ? '📤 Exported' : '🔓 Open'}
+                  </span>
+                  
+                  {selectedPayPeriod.status === 'OPEN' && (
+                    <button 
+                      className="btn btn-sm btn-secondary"
+                      onClick={handleLockPayPeriod}
+                      disabled={payPeriodLoading || payPeriodStats.pending > 0}
+                      title={payPeriodStats.pending > 0 ? 'Approve all entries before locking' : 'Lock pay period'}
+                    >
+                      {payPeriodLoading ? '...' : '🔒 Lock Period'}
+                    </button>
+                  )}
+                  
+                  {selectedPayPeriod.status === 'LOCKED' && (
+                    <button 
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => setUnlockModal({ open: true, reason: '' })}
+                      disabled={payPeriodLoading}
+                    >
+                      {payPeriodLoading ? '...' : '🔓 Unlock'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+          <div className="filters-bar">
+            {!selectedPayPeriod && (
+              <div className="filter-group">
+                <label>Date Range</label>
+                <div className="date-range">
+                  <input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="form-input" />
+                  <span>to</span>
+                  <input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="form-input" />
+                </div>
+              </div>
+            )}
+            <div className="filter-group">
+              <label>Worker</label>
+              <select value={filters.worker} onChange={(e) => setFilters(prev => ({ ...prev, worker: e.target.value }))} className="form-select">
+                <option value="">All Workers</option>
+                {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>Location</label>
+              <select value={filters.job} onChange={(e) => setFilters(prev => ({ ...prev, job: e.target.value }))} className="form-select">
+                <option value="">All Locations</option>
+                {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>Approval</label>
+              <select value={filters.approvalStatus} onChange={(e) => setFilters(prev => ({ ...prev, approvalStatus: e.target.value }))} className="form-select">
+                <option value="">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <button className="btn btn-ghost" onClick={() => setFilters({ worker: '', job: '', status: '', approvalStatus: '' })}>Clear</button>
           </div>
-          <div className="filter-group">
-            <label>Worker</label>
-            <select value={filters.worker} onChange={(e) => setFilters(prev => ({ ...prev, worker: e.target.value }))} className="form-select">
-              <option value="">All Workers</option>
-              {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-          </div>
-          <div className="filter-group">
-            <label>Location</label>
-            <select value={filters.job} onChange={(e) => setFilters(prev => ({ ...prev, job: e.target.value }))} className="form-select">
-              <option value="">All Locations</option>
-              {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
-            </select>
-          </div>
-          <div className="filter-group">
-            <label>Approval</label>
-            <select value={filters.approvalStatus} onChange={(e) => setFilters(prev => ({ ...prev, approvalStatus: e.target.value }))} className="form-select">
-              <option value="">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-          </div>
-          <button className="btn btn-ghost" onClick={() => setFilters({ worker: '', job: '', status: '', approvalStatus: '' })}>Clear</button>
-        </div>
+        </>
       )}
 
       {loading ? (
@@ -657,6 +920,42 @@ return (
         </div>
       )}
 
+      {/* Unlock Modal */}
+      {unlockModal.open && (
+        <div className="modal-overlay" onClick={() => setUnlockModal({ open: false, reason: '' })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Unlock Pay Period</h3>
+              <button className="modal-close" onClick={() => setUnlockModal({ open: false, reason: '' })}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Unlocking a pay period allows editing of time entries. This action is logged for audit purposes.</p>
+              <div className="form-group">
+                <label className="form-label">Reason for Unlocking *</label>
+                <textarea 
+                  className="form-textarea" 
+                  rows="3" 
+                  placeholder="e.g., Need to correct missed punch for John Smith..."
+                  value={unlockModal.reason}
+                  onChange={(e) => setUnlockModal(prev => ({ ...prev, reason: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setUnlockModal({ open: false, reason: '' })}>Cancel</button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleUnlockPayPeriod}
+                disabled={payPeriodLoading || unlockModal.reason.trim().length < 10}
+              >
+                {payPeriodLoading ? 'Unlocking...' : 'Unlock Period'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* View Modal */}
       {viewModal.open && viewModal.entry && (
         <div className="modal-overlay" onClick={() => setViewModal({ open: false, entry: null })}>
@@ -685,6 +984,103 @@ return (
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setViewModal({ open: false, entry: null })}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pay Period Settings Modal */}
+      {settingsModal.open && (
+        <div className="modal-overlay" onClick={() => setSettingsModal({ open: false })}>
+          <div className="modal modal-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Pay Period Settings</h3>
+              <button className="modal-close" onClick={() => setSettingsModal({ open: false })}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Pay Period Type</label>
+                <select 
+                  className="form-select"
+                  value={payPeriodSettings.payPeriodType}
+                  onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, payPeriodType: e.target.value }))}
+                >
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="BIWEEKLY">Bi-weekly (Every 2 weeks)</option>
+                  <option value="SEMIMONTHLY">Semi-monthly (1st & 16th)</option>
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="CUSTOM">Custom</option>
+                </select>
+              </div>
+
+              {(payPeriodSettings.payPeriodType === 'WEEKLY' || payPeriodSettings.payPeriodType === 'BIWEEKLY') && (
+                <div className="form-group">
+                  <label className="form-label">Start Day</label>
+                  <select 
+                    className="form-select"
+                    value={payPeriodSettings.payPeriodStartDay}
+                    onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, payPeriodStartDay: e.target.value }))}
+                  >
+                    {getStartDayOptions().map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(payPeriodSettings.payPeriodType === 'SEMIMONTHLY' || payPeriodSettings.payPeriodType === 'MONTHLY') && (
+                <div className="form-group">
+                  <label className="form-label">
+                    {payPeriodSettings.payPeriodType === 'SEMIMONTHLY' ? 'First Period Starts On Day' : 'Period Starts On Day'}
+                  </label>
+                  <select 
+                    className="form-select"
+                    value={payPeriodSettings.payPeriodStartDay}
+                    onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, payPeriodStartDay: e.target.value }))}
+                  >
+                    {getStartDayOptions().map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(payPeriodSettings.payPeriodType === 'BIWEEKLY' || payPeriodSettings.payPeriodType === 'CUSTOM') && (
+                <div className="form-group">
+                  <label className="form-label">Anchor Date</label>
+                  <input 
+                    type="date" 
+                    className="form-input"
+                    value={payPeriodSettings.payPeriodAnchorDate}
+                    onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, payPeriodAnchorDate: e.target.value }))}
+                  />
+                  <p className="form-hint">The date a pay period starts or started. Used to calculate all other periods.</p>
+                </div>
+              )}
+
+              {payPeriodSettings.payPeriodType === 'CUSTOM' && (
+                <div className="form-group">
+                  <label className="form-label">Period Length (days)</label>
+                  <input 
+                    type="number" 
+                    className="form-input"
+                    min="1"
+                    max="31"
+                    value={payPeriodSettings.customPayPeriodDays}
+                    onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, customPayPeriodDays: e.target.value }))}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setSettingsModal({ open: false })}>Cancel</button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSaveSettings}
+                disabled={settingsLoading}
+              >
+                {settingsLoading ? 'Saving...' : 'Save Settings'}
+              </button>
             </div>
           </div>
         </div>
