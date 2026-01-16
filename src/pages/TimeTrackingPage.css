@@ -413,6 +413,12 @@
   font-size: 13px;
 }
 
+.btn-icon {
+  padding: 8px 10px;
+  font-size: 16px;
+  line-height: 1;
+}
+
 /* Approvals Grid */
 .approvals-grid {
   display: grid;
@@ -573,6 +579,12 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.form-hint {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
 /* Empty State */
 .empty-state {
   padding: 60px 20px;
@@ -635,6 +647,15 @@
   width: 100%;
   max-width: 480px;
   overflow: hidden;
+  color: #fff;
+}
+
+.modal-md {
+  max-width: 480px;
+}
+
+.modal-lg {
+  max-width: 700px;
 }
 
 .modal-header {
@@ -667,6 +688,7 @@
 
 .modal-body {
   padding: 24px;
+  color: #fff;
 }
 
 .modal-body p {
@@ -682,6 +704,43 @@
   padding: 16px 24px;
   background: rgba(255, 255, 255, 0.02);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Detail Grid (View Modal) */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-item span {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.detail-item strong {
+  font-size: 14px;
+  color: #fff;
+}
+
+.cost-highlight {
+  color: #C9A227 !important;
+  font-size: 18px !important;
+}
+
+.rejection-text {
+  color: #ef4444 !important;
 }
 
 /* Responsive */
@@ -724,10 +783,16 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
 /* Overtime Badge */
 .badge-overtime {
   background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
+}
+
+.badge-doubletime {
+  background: #dc2626;
+  color: white;
 }
 
 /* Duration Cell with OT badge */
@@ -786,197 +851,8 @@
   font-weight: 700;
   color: #22c55e;
 }
-/* View Modal Styles */
-.modal-lg {
-  max-width: 700px;
-}
 
-.view-section {
-  margin-bottom: 25px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.view-section:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-}
-
-.view-section h5 {
-  color: #888;
-  font-size: 12px;
-  text-transform: uppercase;
-  margin: 0 0 15px 0;
-  font-weight: 600;
-}
-
-.view-worker-header {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.view-worker-header h4 {
-  color: #fff;
-  margin: 0 0 4px 0;
-  font-size: 18px;
-}
-
-.view-worker-header p {
-  color: #888;
-  margin: 0;
-  font-size: 14px;
-}
-
-.avatar-lg {
-  width: 60px;
-  height: 60px;
-  font-size: 22px;
-}
-
-.view-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-}
-
-.view-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.view-label {
-  color: #888;
-  font-size: 12px;
-}
-
-.view-value {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.view-location {
-  font-size: 13px;
-  font-family: monospace;
-  color: #a0a0a0;
-}
-
-.highlight-ot {
-  color: #f59e0b;
-}
-
-.highlight-dt {
-  color: #ef4444;
-}
-
-.view-pay-totals {
-  margin-top: 15px;
-  padding: 15px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 10px;
-}
-
-.pay-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 14px;
-  color: #ccc;
-}
-
-.pay-row.total {
-  border-top: 1px solid rgba(255,255,255,0.1);
-  margin-top: 10px;
-  padding-top: 15px;
-  font-weight: 600;
-  font-size: 16px;
-  color: #22c55e;
-}
-
-.view-flag {
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #f59e0b;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-.view-flag span {
-  font-weight: 600;
-}
-
-.view-rejection {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-.view-rejection span {
-  font-weight: 600;
-}
-
-.view-notes {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: #818cf8;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.view-notes span {
-  font-weight: 600;
-}
-/* View Modal Detail Grid */
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.detail-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.detail-item span {
-  font-size: 12px;
-  color: #888;
-  text-transform: uppercase;
-}
-
-.detail-item strong {
-  font-size: 14px;
-  color: #fff;
-}
-
-.cost-highlight {
-  color: #22c55e !important;
-  font-size: 18px !important;
-}
-
-.rejection-text {
-  color: #ef4444 !important;
-}
-
-/* Export buttons loading state */
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* Export Dropdown */
 .export-dropdown {
   position: relative;
 }
@@ -986,10 +862,10 @@
   top: 100%;
   right: 0;
   margin-top: 4px;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   z-index: 100;
   min-width: 150px;
 }
@@ -1003,10 +879,11 @@
   border: none;
   cursor: pointer;
   font-size: 14px;
+  color: #fff;
 }
 
 .export-dropdown-menu button:hover {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .export-dropdown-menu button:first-child {
@@ -1016,244 +893,94 @@
 .export-dropdown-menu button:last-child {
   border-radius: 0 0 8px 8px;
 }
-.badge-doubletime {
-  background: #dc2626;
-  color: white;
-}
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+
+/* ============================================
+   PAY PERIOD BAR
+   ============================================ */
+
+.pay-period-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 16px;
 }
 
-.detail-item {
+.pay-period-select-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
 }
 
-.detail-item span {
+.pay-period-select-group label {
+  font-weight: 500;
   color: #888;
-  font-size: 12px;
-  text-transform: uppercase;
-}
-
-.detail-item strong {
-  color: #fff;
-  font-size: 15px;
-}
-
-.detail-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.cost-highlight {
-  color: #C9A227 !important;
-  font-size: 18px !important;
-}
-
-.rejection-text {
-  color: #ef4444 !important;
-}
-/* ============================================
-   PAY PERIOD BAR - Add to TimeTrackingPage.css
-   ============================================ */
-
-.pay-period-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.pay-period-select-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.pay-period-select-group label {
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.pay-period-select {
-  min-width: 220px;
-}
-
-.pay-period-status {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.pay-period-stat {
-  font-size: 0.875rem;
-  color: var(--text-secondary, #6b7280);
-}
-
-.pay-period-pending {
-  color: var(--warning-color, #f59e0b);
-  font-weight: 500;
-}
-
-.pay-period-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.pay-period-badge.open {
-  background: var(--success-bg, #dcfce7);
-  color: var(--success-color, #16a34a);
-}
-
-.pay-period-badge.locked {
-  background: var(--warning-bg, #fef3c7);
-  color: var(--warning-color, #d97706);
-}
-
-.pay-period-badge.exported {
-  background: var(--info-bg, #dbeafe);
-  color: var(--info-color, #2563eb);
-}
-
-/* Button sizing for pay period actions */
-.btn-sm {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-.btn-icon {
-  padding: 0.375rem 0.5rem;
-  font-size: 1rem;
-  line-height: 1;
-}
-
-/* Settings modal */
-.modal-md {
-  max-width: 480px;
-}
-
-.form-hint {
-  font-size: 0.75rem;
-  color: var(--text-secondary, #6b7280);
-  margin-top: 0.25rem;
-}
-/* ============================================
-   PAY PERIOD BAR - Add to TimeTrackingPage.css
-   ============================================ */
-
-.pay-period-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  color: var(--text-primary, #111827);
-}
-
-.pay-period-select-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.pay-period-select-group label {
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  font-size: 0.875rem;
+  font-size: 14px;
   white-space: nowrap;
 }
 
 .pay-period-select {
   min-width: 180px;
-  color: var(--text-primary, #111827);
-  background: var(--input-bg, #fff);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.pay-period-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.pay-period-date-display {
+  font-size: 14px;
+  color: #888;
+  font-weight: 500;
 }
 
 .pay-period-status {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  color: var(--text-primary, #111827);
+  gap: 16px;
 }
 
 .pay-period-stat {
-  font-size: 0.875rem;
-  color: var(--text-secondary, #6b7280);
-}
-
-.pay-period-date-display {
-  font-size: 0.875rem;
-  color: var(--text-secondary, #6b7280);
-  font-weight: 500;
+  font-size: 14px;
+  color: #888;
 }
 
 .pay-period-pending {
-  color: var(--warning-color, #f59e0b);
+  color: #f59e0b;
   font-weight: 500;
 }
 
 .pay-period-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.75rem;
+  gap: 4px;
+  padding: 4px 12px;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .pay-period-badge.open {
-  background: var(--success-bg, #dcfce7);
-  color: var(--success-color, #16a34a);
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
 }
 
 .pay-period-badge.locked {
-  background: var(--warning-bg, #fef3c7);
-  color: var(--warning-color, #d97706);
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
 }
 
 .pay-period-badge.exported {
-  background: var(--info-bg, #dbeafe);
-  color: var(--info-color, #2563eb);
-}
-
-/* Button sizing for pay period actions */
-.btn-sm {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-.btn-icon {
-  padding: 0.375rem 0.5rem;
-  font-size: 1rem;
-  line-height: 1;
-}
-
-/* Settings modal */
-.modal-md {
-  max-width: 480px;
-}
-
-.form-hint {
-  font-size: 0.75rem;
-  color: var(--text-secondary, #6b7280);
-  margin-top: 0.25rem;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
 }
