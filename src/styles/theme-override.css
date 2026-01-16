@@ -2150,3 +2150,188 @@ html,
 .app-content {
   background: #FCFCFA !important;
 }
+/* ==========================================
+   ADD THIS TO THE END OF theme-override.css
+   ========================================== */
+
+/* Ghost button - for View button and other ghost buttons */
+.btn-ghost {
+  background: transparent !important;
+  border: 1px solid #D4D0C8 !important;
+  color: #5C5C5C !important;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: #F5F4F0 !important;
+  border-color: #C9A227 !important;
+  color: #1A1A1A !important;
+}
+
+/* Pay Period Bar */
+.pay-period-bar {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 12px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 16px !important;
+}
+
+.pay-period-select-group > label {
+  color: #5C5C5C !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.pay-period-select {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 8px !important;
+  color: #1A1A1A !important;
+  padding: 10px 14px !important;
+}
+
+.pay-period-select:focus {
+  border-color: #C9A227 !important;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
+}
+
+.pay-period-select option {
+  background: #FFFFFF !important;
+  color: #1A1A1A !important;
+}
+
+/* Pay Period Settings Button */
+.pay-period-settings-btn {
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 8px !important;
+  color: #5C5C5C !important;
+  cursor: pointer !important;
+}
+
+.pay-period-settings-btn:hover {
+  background: #F5F4F0 !important;
+  border-color: #C9A227 !important;
+  color: #1A1A1A !important;
+}
+
+.pay-period-settings-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: inherit !important;
+}
+
+/* Pay Period Date Display */
+.pay-period-date-display {
+  font-size: 14px !important;
+  color: #1A1A1A !important;
+  font-weight: 500 !important;
+  padding: 8px 14px !important;
+  background: rgba(201, 162, 39, 0.1) !important;
+  border: 1px solid rgba(201, 162, 39, 0.3) !important;
+  border-radius: 6px !important;
+}
+
+/* Pay Period Stats */
+.pay-period-stat {
+  font-size: 13px !important;
+  color: #5C5C5C !important;
+}
+
+.pay-period-stat.pay-period-pending {
+  color: #B54B4B !important;
+  font-weight: 600 !important;
+}
+
+/* Pay Period Status Badges */
+.pay-period-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.pay-period-badge.open {
+  background: rgba(61, 139, 95, 0.12) !important;
+  color: #2D7A4A !important;
+  border: 1px solid rgba(61, 139, 95, 0.3) !important;
+}
+
+.pay-period-badge.locked {
+  background: rgba(201, 162, 39, 0.12) !important;
+  color: #8B7021 !important;
+  border: 1px solid rgba(201, 162, 39, 0.3) !important;
+}
+
+.pay-period-badge.exported {
+  background: rgba(75, 123, 181, 0.12) !important;
+  color: #3D6A99 !important;
+  border: 1px solid rgba(75, 123, 181, 0.3) !important;
+}
+
+/* Modal Detail Grid - Fix text colors */
+.detail-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 16px !important;
+}
+
+.detail-item {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1 !important;
+}
+
+.detail-item span {
+  font-size: 11px !important;
+  color: #8B7021 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.detail-item strong {
+  font-size: 15px !important;
+  color: #1A1A1A !important;
+  font-weight: 500 !important;
+}
+
+.cost-highlight {
+  color: #2D7A4A !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+.rejection-text {
+  color: #B54B4B !important;
+}
+
+/* Modal body text fix */
+.modal-body {
+  color: #1A1A1A !important;
+}
+
+.modal-body p {
+  color: #5C5C5C !important;
+}
+
+/* Filters bar label in pay period bar */
+.filters-bar {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+  border-radius: 12px !important;
+}
