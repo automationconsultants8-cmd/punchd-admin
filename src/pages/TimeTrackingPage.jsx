@@ -602,46 +602,59 @@ return (
         <>
           {/* Pay Period Filter Bar */}
           <div className="pay-period-bar">
-            <div className="pay-period-select-group">
-              <label>Pay Period</label>
-              <select 
-                value={selectedPayPeriod?.id || ''} 
-                onChange={(e) => handlePayPeriodChange(e.target.value)}
-                className="form-select pay-period-select"
-              >
-                <option value="">Custom Date Range</option>
-                {payPeriods.map((period, index) => (
-                  <option key={period.id} value={period.id}>
-                    {formatPayPeriodLabel(period, index)}
-                  </option>
-                ))}
-              </select>
-              <button 
-                className="pay-period-settings-btn"
-                onClick={() => setSettingsModal({ open: true })}
-                title="Pay Period Settings"
-              >
-                <SettingsIcon />
-              </button>
+            <div className="pay-period-left">
+              <div className="pay-period-selector">
+                <label>Pay Period</label>
+                <select 
+                  value={selectedPayPeriod?.id || ''} 
+                  onChange={(e) => handlePayPeriodChange(e.target.value)}
+                  className="form-select pay-period-select"
+                >
+                  <option value="">Custom Date Range</option>
+                  {payPeriods.map((period, index) => (
+                    <option key={period.id} value={period.id}>
+                      {formatPayPeriodLabel(period, index)}
+                    </option>
+                  ))}
+                </select>
+                <button 
+                  className="pay-period-settings-btn"
+                  onClick={() => setSettingsModal({ open: true })}
+                  title="Pay Period Settings"
+                >
+                  <SettingsIcon />
+                </button>
+              </div>
               {selectedPayPeriod && (
-                <span className="pay-period-date-display">
+                <div className="pay-period-date-display">
                   {formatPayPeriodDateRange(selectedPayPeriod)}
-                </span>
+                </div>
               )}
             </div>
               
-              {selectedPayPeriod && payPeriodStats && (
-                <div className="pay-period-status">
-                  <span className="pay-period-stat">{payPeriodStats.entries} entries</span>
-                  <span className="pay-period-stat">{payPeriodStats.totalHours}</span>
+            {selectedPayPeriod && payPeriodStats && (
+              <div className="pay-period-right">
+                <div className="pay-period-stats-group">
+                  <div className="pay-period-stat-item">
+                    <span className="stat-value">{payPeriodStats.entries}</span>
+                    <span className="stat-label">Entries</span>
+                  </div>
+                  <div className="pay-period-stat-item">
+                    <span className="stat-value">{payPeriodStats.totalHours}</span>
+                    <span className="stat-label">Hours</span>
+                  </div>
                   {payPeriodStats.pending > 0 && (
-                    <span className="pay-period-stat pay-period-pending">{payPeriodStats.pending} pending</span>
+                    <div className="pay-period-stat-item pending">
+                      <span className="stat-value">{payPeriodStats.pending}</span>
+                      <span className="stat-label">Pending</span>
+                    </div>
                   )}
+                </div>
+                <div className="pay-period-actions">
                   <span className={`pay-period-badge ${selectedPayPeriod.status.toLowerCase()}`}>
                     {selectedPayPeriod.status === 'LOCKED' ? 'Locked' : 
                      selectedPayPeriod.status === 'EXPORTED' ? 'Exported' : 'Open'}
                   </span>
-                  
                   {selectedPayPeriod.status === 'OPEN' && (
                     <button 
                       className="btn btn-sm btn-secondary"
@@ -652,7 +665,6 @@ return (
                       {payPeriodLoading ? '...' : 'Lock Period'}
                     </button>
                   )}
-                  
                   {selectedPayPeriod.status === 'LOCKED' && (
                     <button 
                       className="btn btn-sm btn-ghost"
@@ -663,8 +675,9 @@ return (
                     </button>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
           <div className="filters-bar">
             {!selectedPayPeriod && (
