@@ -228,7 +228,13 @@ function TimeTrackingPage() {
     setPayPeriodLoading(false);
   };
 
-  const formatPayPeriodLabel = (period) => {
+  const formatPayPeriodLabel = (period, index) => {
+    const statusIcon = period.status === 'LOCKED' ? ' 🔒' : period.status === 'EXPORTED' ? ' 📤' : '';
+    return `Pay Period ${index + 1}${statusIcon}`;
+  };
+
+  const formatPayPeriodDateRange = (period) => {
+    if (!period) return '';
     const start = new Date(period.startDate).toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric',
@@ -240,8 +246,7 @@ function TimeTrackingPage() {
       year: 'numeric',
       timeZone: 'America/Los_Angeles'
     });
-    const statusLabel = period.status === 'LOCKED' ? '🔒' : period.status === 'EXPORTED' ? '📤' : '';
-    return `${start} — ${end} ${statusLabel}`.trim();
+    return `${start} — ${end}`;
   };
 
 // Format date in local timezone
@@ -597,9 +602,9 @@ return (
                 className="form-select pay-period-select"
               >
                 <option value="">Custom Date Range</option>
-                {payPeriods.map(period => (
+                {payPeriods.map((period, index) => (
                   <option key={period.id} value={period.id}>
-                    {formatPayPeriodLabel(period)}
+                    {formatPayPeriodLabel(period, index)}
                   </option>
                 ))}
               </select>
@@ -610,6 +615,11 @@ return (
               >
                 ⚙️
               </button>
+              {selectedPayPeriod && (
+                <span className="pay-period-date-display">
+                  {formatPayPeriodDateRange(selectedPayPeriod)}
+                </span>
+              )}
             </div>
               
               {selectedPayPeriod && payPeriodStats && (

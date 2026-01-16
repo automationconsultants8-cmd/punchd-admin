@@ -217,7 +217,6 @@ function Sidebar({ collapsed, onToggle, userRole }) {
   ];
 
   const adminNavItems = [
-    { path: '/pay-periods', icon: 'lock', label: 'Pay Periods', roles: ['ADMIN', 'OWNER'] },
     { path: '/team-management', icon: 'userPlus', label: 'Role Management', roles: ['ADMIN', 'OWNER'] },
   ];
 

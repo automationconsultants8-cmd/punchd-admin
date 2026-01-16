@@ -1151,3 +1151,109 @@
   color: var(--text-secondary, #6b7280);
   margin-top: 0.25rem;
 }
+/* ============================================
+   PAY PERIOD BAR - Add to TimeTrackingPage.css
+   ============================================ */
+
+.pay-period-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  color: var(--text-primary, #111827);
+}
+
+.pay-period-select-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pay-period-select-group label {
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.pay-period-select {
+  min-width: 180px;
+  color: var(--text-primary, #111827);
+  background: var(--input-bg, #fff);
+}
+
+.pay-period-status {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-primary, #111827);
+}
+
+.pay-period-stat {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.pay-period-date-display {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.pay-period-pending {
+  color: var(--warning-color, #f59e0b);
+  font-weight: 500;
+}
+
+.pay-period-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.pay-period-badge.open {
+  background: var(--success-bg, #dcfce7);
+  color: var(--success-color, #16a34a);
+}
+
+.pay-period-badge.locked {
+  background: var(--warning-bg, #fef3c7);
+  color: var(--warning-color, #d97706);
+}
+
+.pay-period-badge.exported {
+  background: var(--info-bg, #dbeafe);
+  color: var(--info-color, #2563eb);
+}
+
+/* Button sizing for pay period actions */
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.btn-icon {
+  padding: 0.375rem 0.5rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Settings modal */
+.modal-md {
+  max-width: 480px;
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 0.25rem;
+}
