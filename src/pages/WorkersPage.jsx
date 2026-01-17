@@ -193,6 +193,16 @@ const TRADE_CLASSIFICATIONS = [
   'Other',
 ];
 
+// Smart column name mapping
+const COLUMN_MAPPINGS = {
+  name: ['name', 'full name', 'fullname', 'employee name', 'employeename', 'worker name', 'workername', 'first name', 'firstname', 'employee'],
+  phone: ['phone', 'phone number', 'phonenumber', 'mobile', 'cell', 'cell phone', 'cellphone', 'telephone', 'tel'],
+  email: ['email', 'email address', 'emailaddress', 'e-mail', 'mail'],
+  role: ['role', 'position', 'job title', 'jobtitle', 'title', 'type', 'worker type'],
+  hourlyrate: ['hourlyrate', 'hourly rate', 'rate', 'pay rate', 'payrate', 'wage', 'hourly', 'pay', 'salary'],
+  trade: ['trade', 'tradeclassification', 'trade classification', 'classification', 'skill', 'trade type', 'job type', 'occupation'],
+};
+
 function WorkersPage() {
   const [workers, setWorkers] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -209,7 +219,6 @@ function WorkersPage() {
     role: 'worker',
     hourlyRate: '',
     status: 'active',
-    // WH-347 fields
     address: '',
     city: '',
     state: '',
@@ -221,7 +230,7 @@ function WorkersPage() {
   // Import modal state
   const [importModal, setImportModal] = useState({
     open: false,
-    step: 'upload', // 'upload', 'preview', 'importing', 'results'
+    step: 'upload',
     file: null,
     parsedData: [],
     errors: [],
@@ -251,7 +260,6 @@ function WorkersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Convert frontend fields to backend fields
       const payload = {
         name: formData.name,
         email: formData.email || undefined,
@@ -259,7 +267,6 @@ function WorkersPage() {
         role: formData.role?.toUpperCase() || 'WORKER',
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
         isActive: formData.status === 'active',
-        // WH-347 fields
         address: formData.address || undefined,
         city: formData.city || undefined,
         state: formData.state || undefined,
@@ -329,10 +336,8 @@ function WorkersPage() {
     setDeactivateModal(prev => ({ ...prev, loading: true }));
     
     try {
-      // Deactivate the worker
       await usersApi.update(deactivateModal.worker.id, { isActive: false });
       
-      // Delete future shifts if checkbox is checked
       if (deactivateModal.deleteShifts) {
         try {
           await shiftsApi.deleteUserFutureShifts(deactivateModal.worker.id);
@@ -361,8 +366,19 @@ function WorkersPage() {
   };
 
   // ============================================
-  // CSV IMPORT FUNCTIONS
+  // CSV IMPORT FUNCTIONS WITH SMART MATCHING
   // ============================================
+
+  const findColumnMatch = (headerCol) => {
+    const normalized = headerCol.toLowerCase().trim().replace(/['"_-]/g, ' ').replace(/\s+/g, ' ');
+    
+    for (const [standardName, variations] of Object.entries(COLUMN_MAPPINGS)) {
+      if (variations.some(v => normalized === v || normalized.includes(v))) {
+        return standardName;
+      }
+    }
+    return null;
+  };
 
   const parseCSV = (text) => {
     const lines = text.split('\n').filter(line => line.trim());
@@ -370,14 +386,27 @@ function WorkersPage() {
       return { data: [], errors: ['CSV file must have a header row and at least one data row'] };
     }
 
-    // Parse header
-    const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+    // Parse header and map to standard names
+    const rawHeader = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
+    const headerMap = {};
+    const unmappedColumns = [];
     
-    // Validate required columns
-    const requiredColumns = ['name', 'phone'];
-    const missingColumns = requiredColumns.filter(col => !header.includes(col));
-    if (missingColumns.length > 0) {
-      return { data: [], errors: [`Missing required columns: ${missingColumns.join(', ')}`] };
+    rawHeader.forEach((col, idx) => {
+      const standardName = findColumnMatch(col);
+      if (standardName) {
+        headerMap[idx] = standardName;
+      } else {
+        unmappedColumns.push(col);
+      }
+    });
+
+    // Check for required columns
+    const mappedColumns = Object.values(headerMap);
+    if (!mappedColumns.includes('name')) {
+      return { data: [], errors: ['Could not find a "name" column. Please include a column like "Name", "Full Name", or "Employee Name"'] };
+    }
+    if (!mappedColumns.includes('phone')) {
+      return { data: [], errors: ['Could not find a "phone" column. Please include a column like "Phone", "Phone Number", "Mobile", or "Cell"'] };
     }
 
     // Parse data rows
@@ -406,10 +435,10 @@ function WorkersPage() {
       }
       values.push(current.trim());
 
-      // Map to object
+      // Map to standard object using headerMap
       const row = {};
-      header.forEach((col, idx) => {
-        row[col] = values[idx]?.replace(/^["']|["']$/g, '') || '';
+      Object.entries(headerMap).forEach(([idx, standardName]) => {
+        row[standardName] = values[parseInt(idx)]?.replace(/^["']|["']$/g, '') || '';
       });
 
       // Validate row
@@ -417,36 +446,42 @@ function WorkersPage() {
       if (!row.name?.trim()) rowErrors.push('Name is required');
       if (!row.phone?.trim()) rowErrors.push('Phone is required');
       
-      // Validate phone format (basic)
-      if (row.phone && !/^[\d\s\-\(\)\+]+$/.test(row.phone)) {
+      if (row.phone && !/^[\d\s\-\(\)\+\.]+$/.test(row.phone)) {
         rowErrors.push('Invalid phone format');
       }
 
-      // Validate role if provided
       if (row.role && !['worker', 'manager', 'admin', 'owner'].includes(row.role.toLowerCase())) {
-        rowErrors.push('Invalid role (must be worker, manager, or admin)');
+        rowErrors.push(`Invalid role "${row.role}" (must be worker, manager, or admin)`);
       }
 
-      // Validate hourly rate if provided
       if (row.hourlyrate && isNaN(parseFloat(row.hourlyrate))) {
         rowErrors.push('Invalid hourly rate');
       }
 
       if (rowErrors.length > 0) {
-        errors.push(`Row ${i + 1}: ${rowErrors.join(', ')}`);
+        errors.push(`Row ${i + 1} (${row.name || 'unnamed'}): ${rowErrors.join(', ')}`);
       } else {
+        // Clean phone number - keep only digits
+        let cleanPhone = row.phone.replace(/\D/g, '');
+        // If 10 digits, format nicely
+        if (cleanPhone.length === 10) {
+          cleanPhone = `+1${cleanPhone}`;
+        } else if (cleanPhone.length === 11 && cleanPhone.startsWith('1')) {
+          cleanPhone = `+${cleanPhone}`;
+        }
+
         data.push({
           name: row.name.trim(),
-          phone: row.phone.trim().replace(/\D/g, ''), // Strip non-digits
+          phone: cleanPhone,
           email: row.email?.trim() || '',
           role: (row.role?.toUpperCase() || 'WORKER'),
           hourlyRate: row.hourlyrate ? parseFloat(row.hourlyrate) : null,
-          tradeClassification: row.trade || row.tradeclassification || '',
+          tradeClassification: row.trade || '',
         });
       }
     }
 
-    return { data, errors };
+    return { data, errors, unmappedColumns };
   };
 
   const handleFileSelect = (e) => {
@@ -461,13 +496,14 @@ function WorkersPage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result;
-      const { data, errors } = parseCSV(text);
+      const { data, errors, unmappedColumns } = parseCSV(text);
       
       setImportModal(prev => ({
         ...prev,
         file,
         parsedData: data,
         errors,
+        unmappedColumns,
         step: 'preview'
       }));
     };
@@ -551,7 +587,7 @@ function WorkersPage() {
     return (
       <div className="workers-page">
         <div className="loading-state">
-          <div className="spinner"></div>
+          <div className="loading-spinner"></div>
           <p>Loading workers...</p>
         </div>
       </div>
@@ -647,60 +683,60 @@ function WorkersPage() {
         ) : (
           filteredWorkers.map(worker => (
             <div key={worker.id} className={`worker-card ${!worker.isActive ? 'inactive' : ''}`}>
-              <div className="worker-card-header">
+              <div className="worker-header">
                 <div className="worker-avatar">
-                  {worker.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
+                  {worker.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'}
                 </div>
                 <div className="worker-info">
                   <h3>{worker.name}</h3>
-                  <span className={`role-badge ${worker.role?.toLowerCase()}`}>{worker.role}</span>
+                  <span className="role-badge">{worker.role}</span>
                 </div>
-                <div className="worker-status">
+                <div className="worker-actions">
+                  <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
+                    {Icons.edit}
+                  </button>
                   {worker.isActive ? (
-                    <span className="status-badge active">{Icons.checkCircle} Active</span>
+                    <button className="action-btn danger" onClick={() => handleDeactivate(worker)} title="Deactivate">
+                      {Icons.userX}
+                    </button>
                   ) : (
-                    <span className="status-badge inactive">{Icons.xCircle} Inactive</span>
+                    <button className="action-btn" onClick={() => handleReactivate(worker)} title="Reactivate">
+                      {Icons.userCheck}
+                    </button>
                   )}
                 </div>
               </div>
-              <div className="worker-card-body">
+              <div className="worker-details">
                 {worker.phone && (
-                  <div className="worker-detail">
-                    {Icons.phone}
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.phone}</span>
                     <span>{worker.phone}</span>
                   </div>
                 )}
                 {worker.email && (
-                  <div className="worker-detail">
-                    {Icons.mail}
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.mail}</span>
                     <span>{worker.email}</span>
                   </div>
                 )}
                 {worker.hourlyRate && (
-                  <div className="worker-detail">
-                    {Icons.dollarSign}
-                    <span>${Number(worker.hourlyRate).toFixed(2)}/hr</span>
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.dollarSign}</span>
+                    <span className="rate">${Number(worker.hourlyRate).toFixed(2)}/hr</span>
                   </div>
                 )}
                 {worker.tradeClassification && (
-                  <div className="worker-detail">
-                    {Icons.briefcase}
+                  <div className="detail-row">
+                    <span className="detail-icon">{Icons.briefcase}</span>
                     <span>{worker.tradeClassification}</span>
                   </div>
                 )}
               </div>
-              <div className="worker-card-footer">
-                <button className="btn-icon" onClick={() => handleEdit(worker)} title="Edit">
-                  {Icons.edit}
-                </button>
+              <div className="worker-status-row">
                 {worker.isActive ? (
-                  <button className="btn-icon danger" onClick={() => handleDeactivate(worker)} title="Deactivate">
-                    {Icons.userX}
-                  </button>
+                  <span className="status-badge active">{Icons.checkCircle} Active</span>
                 ) : (
-                  <button className="btn-icon success" onClick={() => handleReactivate(worker)} title="Reactivate">
-                    {Icons.userCheck}
-                  </button>
+                  <span className="status-badge inactive">{Icons.xCircle} Inactive</span>
                 )}
               </div>
             </div>
@@ -721,7 +757,6 @@ function WorkersPage() {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                {/* Basic Info Section */}
                 <div className="form-section">
                   <h3 className="form-section-title">Basic Information</h3>
                   
@@ -768,7 +803,6 @@ function WorkersPage() {
                   </div>
                 </div>
 
-                {/* WH-347 / Certified Payroll Section */}
                 <div className="form-section">
                   <h3 className="form-section-title">Certified Payroll Info (WH-347)</h3>
                   <p className="form-section-subtitle">Required for prevailing wage projects</p>
@@ -939,9 +973,11 @@ function WorkersPage() {
                     style={{ display: 'none' }}
                   />
                   <div className="import-help">
-                    <h4>CSV Format</h4>
-                    <p>Required columns: <strong>name</strong>, <strong>phone</strong></p>
-                    <p>Optional columns: email, role, hourlyrate, trade</p>
+                    <h4>Smart Column Matching</h4>
+                    <p>We'll automatically recognize common column names like:</p>
+                    <p><strong>Name:</strong> "Full Name", "Employee Name", "Worker Name"</p>
+                    <p><strong>Phone:</strong> "Phone Number", "Mobile", "Cell"</p>
+                    <p><strong>Rate:</strong> "Pay Rate", "Hourly Rate", "Wage"</p>
                     <button className="btn-link" onClick={downloadTemplate}>
                       {Icons.download} Download template
                     </button>
@@ -1015,7 +1051,7 @@ function WorkersPage() {
               {/* Step 3: Importing */}
               {importModal.step === 'importing' && (
                 <div className="import-loading-step">
-                  <div className="spinner"></div>
+                  <div className="loading-spinner"></div>
                   <p>Importing workers...</p>
                 </div>
               )}

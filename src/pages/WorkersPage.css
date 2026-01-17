@@ -864,3 +864,355 @@
   max-width: 560px !important;
   width: 100% !important;
 }
+/* ==========================================
+   ADD TO WorkersPage.css - MISSING STYLES
+   ========================================== */
+
+/* Worker status row at bottom of card */
+.workers-page .worker-status-row {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #E8E6E1;
+}
+
+.workers-page .worker-status-row .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workers-page .worker-status-row .status-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Page header actions for Import button */
+.workers-page .page-header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.workers-page .btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #FFFFFF;
+  border: 2px solid #D4D0C8;
+  border-radius: 10px;
+  color: #5C5C5C;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.workers-page .btn-secondary:hover {
+  background: #F5F4F0;
+  border-color: #C9A227;
+  color: #8B7021;
+}
+
+.workers-page .btn-secondary svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Modal medium size */
+.workers-page .modal-medium {
+  max-width: 560px;
+  width: 95%;
+}
+
+/* Modal small size */
+.workers-page .modal-small {
+  max-width: 440px;
+  width: 95%;
+}
+
+/* Import Upload Zone */
+.workers-page .upload-zone {
+  border: 2px dashed #D4D0C8;
+  border-radius: 12px;
+  padding: 48px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #FAFAF8;
+}
+
+.workers-page .upload-zone:hover {
+  border-color: #C9A227;
+  background: #F5F0E6;
+}
+
+.workers-page .upload-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  color: #C9A227;
+}
+
+.workers-page .upload-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.workers-page .upload-zone h3 {
+  color: #1A1A1A;
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.workers-page .upload-zone p {
+  color: #8A8A8A;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Import Help */
+.workers-page .import-help {
+  margin-top: 24px;
+  padding: 16px;
+  background: #F8F7F4;
+  border-radius: 8px;
+  border: 1px solid #E8E6E1;
+}
+
+.workers-page .import-help h4 {
+  color: #1A1A1A;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.workers-page .import-help p {
+  color: #5C5C5C;
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.workers-page .btn-link {
+  background: none;
+  border: none;
+  color: #8B7021;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workers-page .btn-link:hover {
+  color: #C9A227;
+  text-decoration: underline;
+}
+
+.workers-page .btn-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Import Summary */
+.workers-page .import-summary {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.workers-page .import-stat {
+  flex: 1;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.workers-page .import-stat.success {
+  background: rgba(61, 139, 95, 0.1);
+  border: 1px solid rgba(61, 139, 95, 0.3);
+}
+
+.workers-page .import-stat.error {
+  background: rgba(181, 75, 75, 0.1);
+  border: 1px solid rgba(181, 75, 75, 0.3);
+}
+
+.workers-page .import-stat-icon {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.workers-page .import-stat-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.workers-page .import-stat.success .import-stat-icon {
+  color: #2D7A4A;
+}
+
+.workers-page .import-stat.error .import-stat-icon {
+  color: #B54B4B;
+}
+
+.workers-page .import-stat-value {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.workers-page .import-stat.success .import-stat-value {
+  color: #2D7A4A;
+}
+
+.workers-page .import-stat.error .import-stat-value {
+  color: #B54B4B;
+}
+
+.workers-page .import-stat-label {
+  display: block;
+  font-size: 13px;
+  color: #5C5C5C;
+  margin-top: 4px;
+}
+
+/* Import Errors */
+.workers-page .import-errors {
+  padding: 16px;
+  background: rgba(181, 75, 75, 0.05);
+  border: 1px solid rgba(181, 75, 75, 0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.workers-page .import-errors h4 {
+  color: #B54B4B;
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.workers-page .import-errors ul {
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+
+.workers-page .import-errors li {
+  color: #5C5C5C;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+/* Import Preview Table */
+.workers-page .import-preview-table {
+  margin-top: 16px;
+}
+
+.workers-page .import-preview-table h4 {
+  color: #1A1A1A;
+  font-size: 14px;
+  margin: 0 0 12px;
+}
+
+.workers-page .import-preview-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.workers-page .import-preview-table th {
+  background: #F5F4F0;
+  color: #5C5C5C;
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid #D4D0C8;
+}
+
+.workers-page .import-preview-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #E8E6E1;
+  color: #1A1A1A;
+}
+
+.workers-page .preview-more {
+  color: #8A8A8A;
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 8px;
+}
+
+/* Import Loading */
+.workers-page .import-loading-step {
+  text-align: center;
+  padding: 48px;
+}
+
+.workers-page .import-loading-step p {
+  color: #5C5C5C;
+  margin-top: 16px;
+}
+
+/* Deactivate modal styles */
+.workers-page .deactivate-message {
+  font-size: 15px;
+  color: #1A1A1A;
+  margin-bottom: 8px;
+}
+
+.workers-page .deactivate-submessage {
+  font-size: 14px;
+  color: #5C5C5C;
+  margin-bottom: 20px;
+}
+
+.workers-page .deactivate-option {
+  padding: 12px;
+  background: #F8F7F4;
+  border-radius: 8px;
+}
+
+.workers-page .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1A1A1A;
+}
+
+.workers-page .checkbox-label input {
+  width: 18px;
+  height: 18px;
+}
+
+.workers-page .checkbox-icon {
+  width: 18px;
+  height: 18px;
+  color: #8A8A8A;
+}
+
+.workers-page .checkbox-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.workers-page .btn-danger {
+  padding: 12px 24px;
+  background: #B54B4B;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.workers-page .btn-danger:hover {
+  background: #9A3F3F;
+}
+
+.workers-page .btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
