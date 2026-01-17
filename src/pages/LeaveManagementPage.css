@@ -703,3 +703,12 @@
     overflow-x: auto;
   }
 }
+.page-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.page-icon svg {
+  width: 24px;
+  height: 24px;
+}

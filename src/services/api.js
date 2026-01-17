@@ -42,7 +42,6 @@ export const authApi = {
 };
 
 // Users endpoints
-// Users endpoints
 export const usersApi = {
   getAll: () => api.get('/users'),
   getById: (id) => api.get(`/users/${id}`),
@@ -55,6 +54,7 @@ export const usersApi = {
   setJobRate: (id, data) => api.post(`/users/${id}/rates`, data),
   removeJobRate: (userId, jobId) => api.delete(`/users/${userId}/rates/${jobId}`),
 };
+
 // Jobs endpoints
 export const jobsApi = {
   getAll: () => api.get('/jobs'),
@@ -163,7 +163,6 @@ export const companyApi = {
   update: (data) => api.patch('/company', data),
 };
 
-
 // Certified Payroll
 export const certifiedPayrollApi = {
   getJobs: () => api.get('/certified-payroll/jobs'),
@@ -187,6 +186,7 @@ export const breakComplianceApi = {
   getStats: (params) => api.get('/break-compliance/stats', { params }),
 };
 
+// Role Management
 export const roleManagementApi = {
   getTeam: () => api.get('/role-management/team'),
   create: (data) => api.post('/role-management/create', data),
@@ -198,10 +198,7 @@ export const roleManagementApi = {
   assignWorkers: (managerId, data) => api.patch(`/role-management/manager/${managerId}/workers`, data),
 };
 
-// ============================================
-// ADD THIS TO YOUR api.js / api.ts FILE
-// ============================================
-
+// Pay Periods
 export const payPeriodsApi = {
   getAll: (params) => api.get('/pay-periods', { params }),
   getCurrent: () => api.get('/pay-periods/current'),
@@ -215,18 +212,17 @@ export const payPeriodsApi = {
   export: (id, format = 'CSV') => api.get(`/pay-periods/${id}/export`, { params: { format } }),
 };
 
-// Leave Management API
+// Leave Management
 export const leaveApi = {
-  // Policies
   getPolicies: () => api.get('/leave/policies'),
   createPolicy: (data) => api.post('/leave/policies', data),
   updatePolicy: (id, data) => api.patch(`/leave/policies/${id}`, data),
   deletePolicy: (id) => api.delete(`/leave/policies/${id}`),
   applyPolicyToAll: (policyId) => api.post(`/leave/policies/${policyId}/apply-to-all`),
-  
-  // Balances
   getBalances: (params) => api.get('/leave/balances', { params }),
   updateBalance: (id, data) => api.patch(`/leave/balances/${id}`, data),
   getWorkerBalances: (userId) => api.get(`/leave/balances/worker/${userId}`),
+  getSummary: () => api.get('/leave/summary'),
 };
+
 export default api;
