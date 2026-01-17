@@ -276,13 +276,13 @@ function TimeTrackingPage() {
 
     setActionLoading(editModal.entry.id);
     try {
-      // Build clock in datetime
-      const clockInDateTime = new Date(`${editModal.clockInDate}T${editModal.clockInTime}:00`);
+      // Build clock in datetime - Pacific time (UTC-8)
+      const clockInDateTime = new Date(`${editModal.clockInDate}T${editModal.clockInTime}:00-08:00`);
       
-      // Build clock out datetime (if provided)
+      // Build clock out datetime (if provided) - Pacific time (UTC-8)
       let clockOutDateTime = null;
       if (editModal.clockOutDate && editModal.clockOutTime) {
-        clockOutDateTime = new Date(`${editModal.clockOutDate}T${editModal.clockOutTime}:00`);
+        clockOutDateTime = new Date(`${editModal.clockOutDate}T${editModal.clockOutTime}:00-08:00`);
       }
 
       // Validate clock out is after clock in
