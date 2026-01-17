@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usersApi, jobsApi, shiftsApi } from '../services/api';
 import './WorkersPage.css';
 
@@ -150,6 +150,27 @@ const Icons = {
       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
   ),
+  upload: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  ),
+  download: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  ),
+  fileText: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
+    </svg>
+  ),
 };
 
 const TRADE_CLASSIFICATIONS = [
@@ -196,6 +217,17 @@ function WorkersPage() {
     lastFourSSN: '',
     tradeClassification: '',
   });
+
+  // Import modal state
+  const [importModal, setImportModal] = useState({
+    open: false,
+    step: 'upload', // 'upload', 'preview', 'importing', 'results'
+    file: null,
+    parsedData: [],
+    errors: [],
+    results: { success: 0, failed: 0, errors: [] }
+  });
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -287,29 +319,27 @@ function WorkersPage() {
     setShowModal(true);
   };
 
-  const openDeactivateModal = (worker) => {
+  const handleDeactivate = (worker) => {
     setDeactivateModal({ open: true, worker, deleteShifts: true, loading: false });
   };
 
   const handleDeactivateConfirm = async () => {
-    const { worker, deleteShifts } = deactivateModal;
-    if (!worker) return;
-
+    if (!deactivateModal.worker) return;
+    
     setDeactivateModal(prev => ({ ...prev, loading: true }));
-
+    
     try {
-      // Delete future shifts first if checkbox is checked
-      if (deleteShifts) {
+      // Deactivate the worker
+      await usersApi.update(deactivateModal.worker.id, { isActive: false });
+      
+      // Delete future shifts if checkbox is checked
+      if (deactivateModal.deleteShifts) {
         try {
-          await shiftsApi.deleteFutureShifts(worker.id);
-        } catch (err) {
-          console.error('Error deleting future shifts:', err);
-          // Continue with deactivation even if shift deletion fails
+          await shiftsApi.deleteUserFutureShifts(deactivateModal.worker.id);
+        } catch (shiftError) {
+          console.error('Error deleting shifts:', shiftError);
         }
       }
-
-      // Then deactivate the worker
-      await usersApi.deactivate(worker.id);
       
       setDeactivateModal({ open: false, worker: null, deleteShifts: true, loading: false });
       loadData();
@@ -320,55 +350,208 @@ function WorkersPage() {
     }
   };
 
-  const handleApprove = async (id) => {
+  const handleReactivate = async (worker) => {
     try {
-      await usersApi.approve(id);
+      await usersApi.update(worker.id, { isActive: true });
       loadData();
     } catch (error) {
-      console.error('Error approving worker:', error);
+      console.error('Error reactivating worker:', error);
+      alert(error.response?.data?.message || 'Failed to reactivate worker');
     }
   };
 
-  const handleDecline = async (id) => {
-    if (window.confirm('Decline this worker? They will not be able to access the app.')) {
-      try {
-        await usersApi.decline(id);
-        loadData();
-      } catch (error) {
-        console.error('Error declining worker:', error);
+  // ============================================
+  // CSV IMPORT FUNCTIONS
+  // ============================================
+
+  const parseCSV = (text) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      return { data: [], errors: ['CSV file must have a header row and at least one data row'] };
+    }
+
+    // Parse header
+    const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+    
+    // Validate required columns
+    const requiredColumns = ['name', 'phone'];
+    const missingColumns = requiredColumns.filter(col => !header.includes(col));
+    if (missingColumns.length > 0) {
+      return { data: [], errors: [`Missing required columns: ${missingColumns.join(', ')}`] };
+    }
+
+    // Parse data rows
+    const data = [];
+    const errors = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+
+      // Handle CSV with quoted values
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+
+      // Map to object
+      const row = {};
+      header.forEach((col, idx) => {
+        row[col] = values[idx]?.replace(/^["']|["']$/g, '') || '';
+      });
+
+      // Validate row
+      const rowErrors = [];
+      if (!row.name?.trim()) rowErrors.push('Name is required');
+      if (!row.phone?.trim()) rowErrors.push('Phone is required');
+      
+      // Validate phone format (basic)
+      if (row.phone && !/^[\d\s\-\(\)\+]+$/.test(row.phone)) {
+        rowErrors.push('Invalid phone format');
+      }
+
+      // Validate role if provided
+      if (row.role && !['worker', 'manager', 'admin', 'owner'].includes(row.role.toLowerCase())) {
+        rowErrors.push('Invalid role (must be worker, manager, or admin)');
+      }
+
+      // Validate hourly rate if provided
+      if (row.hourlyrate && isNaN(parseFloat(row.hourlyrate))) {
+        rowErrors.push('Invalid hourly rate');
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push(`Row ${i + 1}: ${rowErrors.join(', ')}`);
+      } else {
+        data.push({
+          name: row.name.trim(),
+          phone: row.phone.trim().replace(/\D/g, ''), // Strip non-digits
+          email: row.email?.trim() || '',
+          role: (row.role?.toUpperCase() || 'WORKER'),
+          hourlyRate: row.hourlyrate ? parseFloat(row.hourlyrate) : null,
+          tradeClassification: row.trade || row.tradeclassification || '',
+        });
       }
     }
+
+    return { data, errors };
   };
 
-  const getApprovalStatus = (worker) => {
-    if (worker.approvalStatus) return worker.approvalStatus;
-    if (worker.isActive) return 'APPROVED';
-    return 'PENDING';
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      const { data, errors } = parseCSV(text);
+      
+      setImportModal(prev => ({
+        ...prev,
+        file,
+        parsedData: data,
+        errors,
+        step: 'preview'
+      }));
+    };
+    reader.readAsText(file);
   };
 
-  const filteredWorkers = workers.filter(w => {
-    const matchesSearch = w.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         w.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const approvalStatus = getApprovalStatus(w);
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && approvalStatus === 'APPROVED' && w.isActive) ||
-                         (statusFilter === 'inactive' && (!w.isActive || approvalStatus === 'DECLINED')) ||
-                         (statusFilter === 'pending' && approvalStatus === 'PENDING');
+  const handleImport = async () => {
+    setImportModal(prev => ({ ...prev, step: 'importing' }));
+
+    const results = { success: 0, failed: 0, errors: [] };
+
+    for (const worker of importModal.parsedData) {
+      try {
+        await usersApi.create({
+          name: worker.name,
+          phone: worker.phone,
+          email: worker.email || undefined,
+          role: worker.role,
+          hourlyRate: worker.hourlyRate || undefined,
+          tradeClassification: worker.tradeClassification || undefined,
+          isActive: true,
+        });
+        results.success++;
+      } catch (error) {
+        results.failed++;
+        const message = error.response?.data?.message || 'Unknown error';
+        results.errors.push(`${worker.name}: ${message}`);
+      }
+    }
+
+    setImportModal(prev => ({ ...prev, step: 'results', results }));
+    loadData();
+  };
+
+  const resetImportModal = () => {
+    setImportModal({
+      open: false,
+      step: 'upload',
+      file: null,
+      parsedData: [],
+      errors: [],
+      results: { success: 0, failed: 0, errors: [] }
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const downloadTemplate = () => {
+    const template = 'name,phone,email,role,hourlyrate,trade\nJohn Smith,555-123-4567,john@example.com,worker,25.00,Laborer\nJane Doe,555-987-6543,jane@example.com,worker,30.00,Carpenter';
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'workers_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredWorkers = workers.filter(worker => {
+    const matchesSearch = worker.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          worker.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          worker.phone?.includes(searchTerm);
+    
+    const matchesStatus = statusFilter === 'all' ||
+                          (statusFilter === 'active' && worker.isActive) ||
+                          (statusFilter === 'inactive' && !worker.isActive) ||
+                          (statusFilter === 'pending' && worker.approvalStatus === 'PENDING');
+
     return matchesSearch && matchesStatus;
   });
 
   const stats = {
     total: workers.length,
-    active: workers.filter(w => getApprovalStatus(w) === 'APPROVED' && w.isActive).length,
-    inactive: workers.filter(w => !w.isActive || getApprovalStatus(w) === 'DECLINED').length,
-    pending: workers.filter(w => getApprovalStatus(w) === 'PENDING').length
+    active: workers.filter(w => w.isActive).length,
+    inactive: workers.filter(w => !w.isActive).length,
+    pending: workers.filter(w => w.approvalStatus === 'PENDING').length,
   };
 
   if (loading) {
     return (
       <div className="workers-page">
         <div className="loading-state">
-          <div className="loading-spinner"></div>
+          <div className="spinner"></div>
           <p>Loading workers...</p>
         </div>
       </div>
@@ -386,10 +569,16 @@ function WorkersPage() {
           </div>
           <p>Manage your workforce</p>
         </div>
-        <button className="btn-primary" onClick={() => { setEditingWorker(null); resetForm(); setShowModal(true); }}>
-          {Icons.userPlus}
-          <span>Add Worker</span>
-        </button>
+        <div className="page-header-actions">
+          <button className="btn-secondary" onClick={() => setImportModal({ ...importModal, open: true, step: 'upload' })}>
+            {Icons.upload}
+            <span>Import CSV</span>
+          </button>
+          <button className="btn-primary" onClick={() => { setEditingWorker(null); resetForm(); setShowModal(true); }}>
+            {Icons.userPlus}
+            <span>Add Worker</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -448,89 +637,78 @@ function WorkersPage() {
       </div>
 
       {/* Workers List */}
-      {filteredWorkers.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">{Icons.users}</div>
-          <h3>No workers found</h3>
-          <p>Add your first worker to get started</p>
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            {Icons.userPlus}
-            <span>Add Worker</span>
-          </button>
-        </div>
-      ) : (
-        <div className="workers-grid">
-          {filteredWorkers.map(worker => {
-            const approvalStatus = getApprovalStatus(worker);
-            const isPending = approvalStatus === 'PENDING';
-            
-            return (
-              <div key={worker.id} className={`worker-card ${isPending ? 'pending' : ''}`}>
-                <div className="worker-header">
-                  <div className="worker-avatar">
-                    {worker.name?.split(' ').map(n => n[0]).join('') || '?'}
-                  </div>
-                  <div className="worker-info">
-                    <h3>{worker.name}</h3>
-                    <span className={`status-badge ${isPending ? 'pending' : approvalStatus === 'APPROVED' && worker.isActive ? 'active' : 'inactive'}`}>
-                      {isPending ? 'Pending' : approvalStatus === 'APPROVED' && worker.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div className="worker-actions">
-                    {isPending ? (
-                      <>
-                        <button className="action-btn approve" onClick={() => handleApprove(worker.id)} title="Approve">
-                          {Icons.userCheck}
-                        </button>
-                        <button className="action-btn danger" onClick={() => handleDecline(worker.id)} title="Decline">
-                          {Icons.userX}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
-                          {Icons.edit}
-                        </button>
-                        <button className="action-btn danger" onClick={() => openDeactivateModal(worker)} title="Deactivate">
-                          {Icons.trash}
-                        </button>
-                      </>
-                    )}
-                  </div>
+      <div className="workers-grid">
+        {filteredWorkers.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">{Icons.users}</div>
+            <h3>No workers found</h3>
+            <p>{searchTerm || statusFilter !== 'all' ? 'Try adjusting your filters' : 'Add your first worker to get started'}</p>
+          </div>
+        ) : (
+          filteredWorkers.map(worker => (
+            <div key={worker.id} className={`worker-card ${!worker.isActive ? 'inactive' : ''}`}>
+              <div className="worker-card-header">
+                <div className="worker-avatar">
+                  {worker.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??'}
                 </div>
-                <div className="worker-details">
-                  <div className="detail-row">
-                    <span className="detail-icon">{Icons.mail}</span>
-                    <span>{worker.email || 'No email'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-icon">{Icons.phone}</span>
-                    <span>{worker.phone || 'No phone'}</span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-icon">{Icons.shield}</span>
-                    <span className="role-badge">{worker.role || 'Worker'}</span>
-                  </div>
-                  {worker.hourlyRate && (
-                    <div className="detail-row">
-                      <span className="detail-icon">{Icons.dollarSign}</span>
-                      <span className="rate">${worker.hourlyRate}/hr</span>
-                    </div>
-                  )}
-                  {worker.tradeClassification && (
-                    <div className="detail-row">
-                      <span className="detail-icon">{Icons.briefcase}</span>
-                      <span>{worker.tradeClassification}</span>
-                    </div>
+                <div className="worker-info">
+                  <h3>{worker.name}</h3>
+                  <span className={`role-badge ${worker.role?.toLowerCase()}`}>{worker.role}</span>
+                </div>
+                <div className="worker-status">
+                  {worker.isActive ? (
+                    <span className="status-badge active">{Icons.checkCircle} Active</span>
+                  ) : (
+                    <span className="status-badge inactive">{Icons.xCircle} Inactive</span>
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="worker-card-body">
+                {worker.phone && (
+                  <div className="worker-detail">
+                    {Icons.phone}
+                    <span>{worker.phone}</span>
+                  </div>
+                )}
+                {worker.email && (
+                  <div className="worker-detail">
+                    {Icons.mail}
+                    <span>{worker.email}</span>
+                  </div>
+                )}
+                {worker.hourlyRate && (
+                  <div className="worker-detail">
+                    {Icons.dollarSign}
+                    <span>${Number(worker.hourlyRate).toFixed(2)}/hr</span>
+                  </div>
+                )}
+                {worker.tradeClassification && (
+                  <div className="worker-detail">
+                    {Icons.briefcase}
+                    <span>{worker.tradeClassification}</span>
+                  </div>
+                )}
+              </div>
+              <div className="worker-card-footer">
+                <button className="btn-icon" onClick={() => handleEdit(worker)} title="Edit">
+                  {Icons.edit}
+                </button>
+                {worker.isActive ? (
+                  <button className="btn-icon danger" onClick={() => handleDeactivate(worker)} title="Deactivate">
+                    {Icons.userX}
+                  </button>
+                ) : (
+                  <button className="btn-icon success" onClick={() => handleReactivate(worker)} title="Reactivate">
+                    {Icons.userCheck}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
 
-      {/* Add/Edit Modal */}
+      {/* Add/Edit Worker Modal */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
@@ -546,34 +724,19 @@ function WorkersPage() {
                 {/* Basic Info Section */}
                 <div className="form-section">
                   <h3 className="form-section-title">Basic Information</h3>
+                  
                   <div className="form-group">
                     <label><span className="label-icon">{Icons.user}</span>Full Name *</label>
-                    <input 
-                      type="text" 
-                      value={formData.name} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} 
-                      placeholder="John Smith" 
-                      required 
-                    />
+                    <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} required placeholder="John Smith" />
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label><span className="label-icon">{Icons.mail}</span>Email</label>
-                      <input 
-                        type="email" 
-                        value={formData.email} 
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} 
-                        placeholder="john@example.com (optional)" 
-                      />
+                      <label><span className="label-icon">{Icons.phone}</span>Phone</label>
+                      <input type="tel" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="(555) 123-4567" />
                     </div>
                     <div className="form-group">
-                      <label><span className="label-icon">{Icons.phone}</span>Phone</label>
-                      <input 
-                        type="tel" 
-                        value={formData.phone} 
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} 
-                        placeholder="(555) 123-4567" 
-                      />
+                      <label><span className="label-icon">{Icons.mail}</span>Email</label>
+                      <input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="john@example.com" />
                     </div>
                   </div>
                   <div className="form-row">
@@ -740,6 +903,175 @@ function WorkersPage() {
               >
                 {deactivateModal.loading ? 'Deactivating...' : 'Deactivate Worker'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import CSV Modal */}
+      {importModal.open && (
+        <div className="modal-overlay" onClick={() => importModal.step !== 'importing' && resetImportModal()}>
+          <div className="modal modal-medium" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span className="modal-icon">{Icons.upload}</span>
+                <h2>Import Workers from CSV</h2>
+              </div>
+              {importModal.step !== 'importing' && (
+                <button className="modal-close" onClick={resetImportModal}>{Icons.x}</button>
+              )}
+            </div>
+            <div className="modal-body">
+              
+              {/* Step 1: Upload */}
+              {importModal.step === 'upload' && (
+                <div className="import-upload-step">
+                  <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
+                    <div className="upload-icon">{Icons.fileText}</div>
+                    <h3>Click to select CSV file</h3>
+                    <p>or drag and drop</p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelect}
+                    style={{ display: 'none' }}
+                  />
+                  <div className="import-help">
+                    <h4>CSV Format</h4>
+                    <p>Required columns: <strong>name</strong>, <strong>phone</strong></p>
+                    <p>Optional columns: email, role, hourlyrate, trade</p>
+                    <button className="btn-link" onClick={downloadTemplate}>
+                      {Icons.download} Download template
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Preview */}
+              {importModal.step === 'preview' && (
+                <div className="import-preview-step">
+                  <div className="import-summary">
+                    <div className="import-stat success">
+                      <span className="import-stat-value">{importModal.parsedData.length}</span>
+                      <span className="import-stat-label">Workers to import</span>
+                    </div>
+                    {importModal.errors.length > 0 && (
+                      <div className="import-stat error">
+                        <span className="import-stat-value">{importModal.errors.length}</span>
+                        <span className="import-stat-label">Rows with errors</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {importModal.errors.length > 0 && (
+                    <div className="import-errors">
+                      <h4>Errors (these rows will be skipped):</h4>
+                      <ul>
+                        {importModal.errors.slice(0, 5).map((error, i) => (
+                          <li key={i}>{error}</li>
+                        ))}
+                        {importModal.errors.length > 5 && (
+                          <li>...and {importModal.errors.length - 5} more errors</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                  {importModal.parsedData.length > 0 && (
+                    <div className="import-preview-table">
+                      <h4>Preview:</h4>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importModal.parsedData.slice(0, 5).map((row, i) => (
+                            <tr key={i}>
+                              <td>{row.name}</td>
+                              <td>{row.phone}</td>
+                              <td>{row.email || '-'}</td>
+                              <td>{row.role}</td>
+                              <td>{row.hourlyRate ? `$${row.hourlyRate}` : '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {importModal.parsedData.length > 5 && (
+                        <p className="preview-more">...and {importModal.parsedData.length - 5} more workers</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Importing */}
+              {importModal.step === 'importing' && (
+                <div className="import-loading-step">
+                  <div className="spinner"></div>
+                  <p>Importing workers...</p>
+                </div>
+              )}
+
+              {/* Step 4: Results */}
+              {importModal.step === 'results' && (
+                <div className="import-results-step">
+                  <div className="import-summary">
+                    <div className="import-stat success">
+                      <span className="import-stat-icon">{Icons.checkCircle}</span>
+                      <span className="import-stat-value">{importModal.results.success}</span>
+                      <span className="import-stat-label">Successfully imported</span>
+                    </div>
+                    {importModal.results.failed > 0 && (
+                      <div className="import-stat error">
+                        <span className="import-stat-icon">{Icons.xCircle}</span>
+                        <span className="import-stat-value">{importModal.results.failed}</span>
+                        <span className="import-stat-label">Failed</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {importModal.results.errors.length > 0 && (
+                    <div className="import-errors">
+                      <h4>Errors:</h4>
+                      <ul>
+                        {importModal.results.errors.map((error, i) => (
+                          <li key={i}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              {importModal.step === 'upload' && (
+                <button className="btn-secondary" onClick={resetImportModal}>Cancel</button>
+              )}
+              {importModal.step === 'preview' && (
+                <>
+                  <button className="btn-secondary" onClick={() => setImportModal(prev => ({ ...prev, step: 'upload', file: null, parsedData: [], errors: [] }))}>
+                    Back
+                  </button>
+                  <button 
+                    className="btn-primary" 
+                    onClick={handleImport}
+                    disabled={importModal.parsedData.length === 0}
+                  >
+                    {Icons.upload} Import {importModal.parsedData.length} Workers
+                  </button>
+                </>
+              )}
+              {importModal.step === 'results' && (
+                <button className="btn-primary" onClick={resetImportModal}>Done</button>
+              )}
             </div>
           </div>
         </div>
