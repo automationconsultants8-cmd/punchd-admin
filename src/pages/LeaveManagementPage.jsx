@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { leaveApi, usersApi } from '../services/api';
+import { leaveApi } from '../services/api';
 import './LeaveManagementPage.css';
 
 // SVG Icons
@@ -45,15 +45,19 @@ const Icons = {
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
   ),
-  refresh: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-    </svg>
-  ),
   search: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  ),
+  zap: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  ),
+  shield: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
   ),
 };
@@ -64,8 +68,54 @@ const LEAVE_TYPES = [
   { value: 'PTO', label: 'PTO', color: '#9B59B6' },
   { value: 'BEREAVEMENT', label: 'Bereavement', color: '#34495E' },
   { value: 'JURY_DUTY', label: 'Jury Duty', color: '#1ABC9C' },
-  { value: 'UNPAID', label: 'Unpaid', color: '#95A5A6' },
+  { value: 'CUSTOM', label: 'Custom', color: '#95A5A6' },
 ];
+
+// California-compliant defaults
+const CA_DEFAULTS = {
+  SICK: {
+    name: 'Sick Leave',
+    annualHours: 40,
+    accrualRate: 0.0333, // 1hr per 30hrs worked
+    maxCarryover: 80,
+    description: 'CA requires 40 hrs/year (or 24 hrs minimum with accrual)'
+  },
+  VACATION: {
+    name: 'Vacation',
+    annualHours: 80,
+    accrualRate: null,
+    maxCarryover: 120,
+    description: 'Standard 2 weeks vacation'
+  },
+  PTO: {
+    name: 'Paid Time Off',
+    annualHours: 120,
+    accrualRate: null,
+    maxCarryover: 160,
+    description: 'Combined sick + vacation (3 weeks)'
+  },
+  BEREAVEMENT: {
+    name: 'Bereavement Leave',
+    annualHours: 24,
+    accrualRate: null,
+    maxCarryover: null,
+    description: 'CA requires up to 5 days for close family'
+  },
+  JURY_DUTY: {
+    name: 'Jury Duty',
+    annualHours: 40,
+    accrualRate: null,
+    maxCarryover: null,
+    description: 'As needed for jury service'
+  },
+  CUSTOM: {
+    name: '',
+    annualHours: 0,
+    accrualRate: null,
+    maxCarryover: null,
+    description: 'Custom leave type'
+  },
+};
 
 function LeaveManagementPage() {
   const [activeTab, setActiveTab] = useState('policies');
@@ -76,23 +126,30 @@ function LeaveManagementPage() {
   
   // Modal states
   const [policyModal, setPolicyModal] = useState({ open: false, editing: null });
-  const [balanceModal, setBalanceModal] = useState({ open: false, worker: null, leaveType: null });
+  const [balanceModal, setBalanceModal] = useState({ open: false, worker: null, balanceId: null });
+  const [quickSetupModal, setQuickSetupModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
   // Form states
   const [policyForm, setPolicyForm] = useState({
-    leaveType: 'SICK',
+    type: 'SICK',
     name: 'Sick Leave',
-    hoursPerYear: 24,
-    accrualRate: '',
-    maxCarryover: '',
-    maxBalance: '',
+    annualHours: 40,
+    accrualRate: 0.0333,
+    maxCarryover: 80,
+    useDefaults: true,
   });
 
   const [balanceForm, setBalanceForm] = useState({
     totalHours: 0,
     usedHours: 0,
-    notes: '',
+  });
+
+  // Quick setup selections
+  const [quickSetupSelections, setQuickSetupSelections] = useState({
+    SICK: true,
+    VACATION: true,
+    PTO: false,
   });
 
   useEffect(() => {
@@ -102,16 +159,50 @@ function LeaveManagementPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [policiesRes, workersRes] = await Promise.all([
+      const [policiesRes, summaryRes] = await Promise.all([
         leaveApi.getPolicies(),
-        leaveApi.getWorkersSummary(),
+        leaveApi.getSummary(),
       ]);
       setPolicies(policiesRes.data || []);
-      setWorkers(workersRes.data || []);
+      setWorkers(summaryRes.data || []);
     } catch (err) {
       console.error('Failed to load leave data:', err);
     }
     setLoading(false);
+  };
+
+  // Auto-fill when leave type changes
+  const handleTypeChange = (type) => {
+    const defaults = CA_DEFAULTS[type];
+    if (policyForm.useDefaults && defaults) {
+      setPolicyForm({
+        ...policyForm,
+        type,
+        name: defaults.name,
+        annualHours: defaults.annualHours,
+        accrualRate: defaults.accrualRate || '',
+        maxCarryover: defaults.maxCarryover || '',
+      });
+    } else {
+      setPolicyForm({ ...policyForm, type });
+    }
+  };
+
+  // Toggle defaults
+  const handleToggleDefaults = (useDefaults) => {
+    if (useDefaults) {
+      const defaults = CA_DEFAULTS[policyForm.type];
+      setPolicyForm({
+        ...policyForm,
+        useDefaults: true,
+        name: defaults.name,
+        annualHours: defaults.annualHours,
+        accrualRate: defaults.accrualRate || '',
+        maxCarryover: defaults.maxCarryover || '',
+      });
+    } else {
+      setPolicyForm({ ...policyForm, useDefaults: false });
+    }
   };
 
   // Policy handlers
@@ -119,23 +210,18 @@ function LeaveManagementPage() {
     e.preventDefault();
     setActionLoading('policy');
     try {
+      const payload = {
+        name: policyForm.name,
+        type: policyForm.type,
+        annualHours: parseFloat(policyForm.annualHours),
+        accrualRate: policyForm.accrualRate ? parseFloat(policyForm.accrualRate) : null,
+        maxCarryover: policyForm.maxCarryover ? parseFloat(policyForm.maxCarryover) : null,
+      };
+
       if (policyModal.editing) {
-        await leaveApi.updatePolicy(policyModal.editing.id, {
-          name: policyForm.name,
-          hoursPerYear: parseFloat(policyForm.hoursPerYear),
-          accrualRate: policyForm.accrualRate ? parseFloat(policyForm.accrualRate) : null,
-          maxCarryover: policyForm.maxCarryover ? parseFloat(policyForm.maxCarryover) : null,
-          maxBalance: policyForm.maxBalance ? parseFloat(policyForm.maxBalance) : null,
-        });
+        await leaveApi.updatePolicy(policyModal.editing.id, payload);
       } else {
-        await leaveApi.createPolicy({
-          leaveType: policyForm.leaveType,
-          name: policyForm.name,
-          hoursPerYear: parseFloat(policyForm.hoursPerYear),
-          accrualRate: policyForm.accrualRate ? parseFloat(policyForm.accrualRate) : null,
-          maxCarryover: policyForm.maxCarryover ? parseFloat(policyForm.maxCarryover) : null,
-          maxBalance: policyForm.maxBalance ? parseFloat(policyForm.maxBalance) : null,
-        });
+        await leaveApi.createPolicy(payload);
       }
       setPolicyModal({ open: false, editing: null });
       loadData();
@@ -147,7 +233,7 @@ function LeaveManagementPage() {
   };
 
   const handleDeletePolicy = async (policyId) => {
-    if (!confirm('Are you sure you want to delete this policy?')) return;
+    if (!confirm('Are you sure you want to delete this policy? This will also delete all worker balances for this policy.')) return;
     
     try {
       await leaveApi.deletePolicy(policyId);
@@ -159,12 +245,12 @@ function LeaveManagementPage() {
   };
 
   const handleApplyPolicyToAll = async (policyId) => {
-    if (!confirm('This will apply this leave allocation to ALL active workers. Continue?')) return;
+    if (!confirm('This will give ALL active workers this leave allocation. Workers who already have this leave type will have their total hours updated. Continue?')) return;
     
     setActionLoading(policyId);
     try {
       const result = await leaveApi.applyPolicyToAll(policyId);
-      alert(`Applied to ${result.data.created} workers`);
+      alert(`Success! Created: ${result.data.created}, Updated: ${result.data.updated}`);
       loadData();
     } catch (err) {
       console.error('Failed to apply policy:', err);
@@ -173,44 +259,85 @@ function LeaveManagementPage() {
     setActionLoading(null);
   };
 
-  const handleApplyAllPolicies = async () => {
-    if (!confirm('This will apply ALL policies to ALL active workers. Continue?')) return;
-    
-    setActionLoading('apply-all');
-    try {
-      const result = await leaveApi.applyAllToAll();
-      alert(`Created ${result.data.created} balances for ${result.data.workers} workers`);
-      loadData();
-    } catch (err) {
-      console.error('Failed to apply policies:', err);
-      alert(err.response?.data?.message || 'Failed to apply policies');
+  // Quick Setup - create multiple policies at once
+  const handleQuickSetup = async () => {
+    const selectedTypes = Object.entries(quickSetupSelections)
+      .filter(([_, selected]) => selected)
+      .map(([type]) => type);
+
+    if (selectedTypes.length === 0) {
+      alert('Please select at least one leave type');
+      return;
     }
+
+    setActionLoading('quick-setup');
+    let created = 0;
+    let errors = [];
+
+    for (const type of selectedTypes) {
+      const defaults = CA_DEFAULTS[type];
+      try {
+        await leaveApi.createPolicy({
+          name: defaults.name,
+          type: type,
+          annualHours: defaults.annualHours,
+          accrualRate: defaults.accrualRate,
+          maxCarryover: defaults.maxCarryover,
+        });
+        created++;
+      } catch (err) {
+        // Skip if already exists
+        if (err.response?.status === 409 || err.response?.data?.message?.includes('exists')) {
+          errors.push(`${defaults.name} already exists`);
+        } else {
+          errors.push(`Failed to create ${defaults.name}`);
+        }
+      }
+    }
+
+    setQuickSetupModal(false);
     setActionLoading(null);
+    
+    if (created > 0) {
+      alert(`Created ${created} policies!${errors.length ? '\n\nNotes:\n' + errors.join('\n') : ''}`);
+    } else if (errors.length) {
+      alert('Notes:\n' + errors.join('\n'));
+    }
+    
+    loadData();
   };
 
   // Balance handlers
-  const openBalanceModal = (worker, leaveType) => {
-    const balance = worker.balances[leaveType] || { total: 0, used: 0 };
+  const openBalanceModal = (worker, policyType) => {
+    const balance = worker.balances?.[policyType];
     setBalanceForm({
-      totalHours: balance.total,
-      usedHours: balance.used,
-      notes: '',
+      totalHours: balance?.total || 0,
+      usedHours: balance?.used || 0,
     });
-    setBalanceModal({ open: true, worker, leaveType });
+    
+    // Find the balance ID from the worker's balances
+    const policy = policies.find(p => p.type === policyType);
+    
+    setBalanceModal({ 
+      open: true, 
+      worker, 
+      policyType,
+      policyId: policy?.id,
+      balanceId: balance?.id 
+    });
   };
 
   const handleBalanceSubmit = async (e) => {
     e.preventDefault();
     setActionLoading('balance');
     try {
-      await leaveApi.setBalance({
-        userId: balanceModal.worker.id,
-        leaveType: balanceModal.leaveType,
-        totalHours: parseFloat(balanceForm.totalHours),
-        usedHours: parseFloat(balanceForm.usedHours),
-        notes: balanceForm.notes || undefined,
-      });
-      setBalanceModal({ open: false, worker: null, leaveType: null });
+      if (balanceModal.balanceId) {
+        await leaveApi.updateBalance(balanceModal.balanceId, {
+          totalHours: parseFloat(balanceForm.totalHours),
+          usedHours: parseFloat(balanceForm.usedHours),
+        });
+      }
+      setBalanceModal({ open: false, worker: null, policyType: null, balanceId: null });
       loadData();
     } catch (err) {
       console.error('Failed to save balance:', err);
@@ -222,21 +349,22 @@ function LeaveManagementPage() {
   const openPolicyModal = (policy = null) => {
     if (policy) {
       setPolicyForm({
-        leaveType: policy.leaveType,
+        type: policy.type,
         name: policy.name,
-        hoursPerYear: Number(policy.hoursPerYear),
-        accrualRate: policy.accrualRate ? Number(policy.accrualRate) : '',
-        maxCarryover: policy.maxCarryover ? Number(policy.maxCarryover) : '',
-        maxBalance: policy.maxBalance ? Number(policy.maxBalance) : '',
+        annualHours: policy.annualHours,
+        accrualRate: policy.accrualRate || '',
+        maxCarryover: policy.maxCarryover || '',
+        useDefaults: false,
       });
     } else {
+      const defaults = CA_DEFAULTS['SICK'];
       setPolicyForm({
-        leaveType: 'SICK',
-        name: 'Sick Leave',
-        hoursPerYear: 24,
-        accrualRate: '',
-        maxCarryover: '',
-        maxBalance: '',
+        type: 'SICK',
+        name: defaults.name,
+        annualHours: defaults.annualHours,
+        accrualRate: defaults.accrualRate || '',
+        maxCarryover: defaults.maxCarryover || '',
+        useDefaults: true,
       });
     }
     setPolicyModal({ open: true, editing: policy });
@@ -272,6 +400,23 @@ function LeaveManagementPage() {
         </div>
       </div>
 
+      {/* Quick Setup Banner - show only if no policies */}
+      {policies.length === 0 && (
+        <div className="quick-setup-banner">
+          <div className="quick-setup-content">
+            <div className="quick-setup-icon">{Icons.zap}</div>
+            <div className="quick-setup-text">
+              <h3>Quick Setup</h3>
+              <p>Set up California-compliant leave policies in one click</p>
+            </div>
+          </div>
+          <button className="btn-primary" onClick={() => setQuickSetupModal(true)}>
+            {Icons.zap}
+            <span>Quick Setup</span>
+          </button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="tabs">
         <button 
@@ -294,14 +439,15 @@ function LeaveManagementPage() {
           <div className="section-header">
             <h2>Leave Policies</h2>
             <div className="section-actions">
-              <button 
-                className="btn-secondary"
-                onClick={handleApplyAllPolicies}
-                disabled={policies.length === 0 || actionLoading === 'apply-all'}
-              >
-                {Icons.users}
-                <span>{actionLoading === 'apply-all' ? 'Applying...' : 'Apply All to All Workers'}</span>
-              </button>
+              {policies.length > 0 && (
+                <button 
+                  className="btn-secondary"
+                  onClick={() => setQuickSetupModal(true)}
+                >
+                  {Icons.zap}
+                  <span>Quick Setup</span>
+                </button>
+              )}
               <button className="btn-primary" onClick={() => openPolicyModal()}>
                 {Icons.plus}
                 <span>Add Policy</span>
@@ -314,15 +460,21 @@ function LeaveManagementPage() {
               <div className="empty-icon">{Icons.calendar}</div>
               <h3>No leave policies yet</h3>
               <p>Create your first leave policy to start tracking leave balances</p>
-              <button className="btn-primary" onClick={() => openPolicyModal()}>
-                {Icons.plus}
-                <span>Add Policy</span>
-              </button>
+              <div className="empty-actions">
+                <button className="btn-primary" onClick={() => setQuickSetupModal(true)}>
+                  {Icons.zap}
+                  <span>Quick Setup (Recommended)</span>
+                </button>
+                <button className="btn-secondary" onClick={() => openPolicyModal()}>
+                  {Icons.plus}
+                  <span>Add Custom Policy</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="policies-grid">
               {policies.map(policy => {
-                const typeInfo = getLeaveTypeInfo(policy.leaveType);
+                const typeInfo = getLeaveTypeInfo(policy.type);
                 return (
                   <div key={policy.id} className="policy-card">
                     <div className="policy-header">
@@ -341,19 +493,22 @@ function LeaveManagementPage() {
                     <div className="policy-body">
                       <h3>{policy.name}</h3>
                       <div className="policy-stat">
-                        <span className="stat-value">{Number(policy.hoursPerYear)}</span>
+                        <span className="stat-value">{policy.annualHours}</span>
                         <span className="stat-label">hours/year</span>
                       </div>
                       {policy.accrualRate && (
                         <div className="policy-detail">
-                          Accrual: {Number(policy.accrualRate)} hrs/hr worked
+                          Accrual: {policy.accrualRate} hrs/hr worked
                         </div>
                       )}
                       {policy.maxCarryover && (
                         <div className="policy-detail">
-                          Max Carryover: {Number(policy.maxCarryover)} hrs
+                          Max Carryover: {policy.maxCarryover} hrs
                         </div>
                       )}
+                      <div className="policy-detail muted">
+                        {policy._count?.balances || 0} workers assigned
+                      </div>
                     </div>
                     <div className="policy-footer">
                       <button 
@@ -389,7 +544,17 @@ function LeaveManagementPage() {
             </div>
           </div>
 
-          {filteredWorkers.length === 0 ? (
+          {policies.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">{Icons.calendar}</div>
+              <h3>No policies created yet</h3>
+              <p>Create leave policies first, then apply them to workers</p>
+              <button className="btn-primary" onClick={() => { setActiveTab('policies'); setQuickSetupModal(true); }}>
+                {Icons.zap}
+                <span>Quick Setup Policies</span>
+              </button>
+            </div>
+          ) : filteredWorkers.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">{Icons.users}</div>
               <h3>No workers found</h3>
@@ -403,7 +568,7 @@ function LeaveManagementPage() {
                     <th>Worker</th>
                     {policies.map(policy => (
                       <th key={policy.id}>
-                        <span className="th-label" style={{ color: getLeaveTypeInfo(policy.leaveType).color }}>
+                        <span className="th-label" style={{ color: getLeaveTypeInfo(policy.type).color }}>
                           {policy.name}
                         </span>
                       </th>
@@ -423,23 +588,27 @@ function LeaveManagementPage() {
                         </div>
                       </td>
                       {policies.map(policy => {
-                        const balance = worker.balances[policy.leaveType];
-                        const available = balance ? balance.available : 0;
-                        const total = balance ? balance.total : 0;
+                        const balance = worker.balances?.[policy.type];
+                        const available = balance ? balance.available : null;
+                        const total = balance ? balance.total : null;
                         const used = balance ? balance.used : 0;
                         
                         return (
                           <td key={policy.id} className="balance-cell">
-                            <button 
-                              className="balance-button"
-                              onClick={() => openBalanceModal(worker, policy.leaveType)}
-                            >
-                              <span className="balance-available" style={{ color: available > 0 ? '#2D7A4A' : '#B54B4B' }}>
-                                {available.toFixed(1)}
-                              </span>
-                              <span className="balance-total">/ {total.toFixed(1)} hrs</span>
-                              {used > 0 && <span className="balance-used">({used.toFixed(1)} used)</span>}
-                            </button>
+                            {balance ? (
+                              <button 
+                                className="balance-button"
+                                onClick={() => openBalanceModal(worker, policy.type)}
+                              >
+                                <span className="balance-available" style={{ color: available > 0 ? '#2D7A4A' : '#B54B4B' }}>
+                                  {available.toFixed(1)}
+                                </span>
+                                <span className="balance-total">/ {total.toFixed(1)} hrs</span>
+                                {used > 0 && <span className="balance-used">({used.toFixed(1)} used)</span>}
+                              </button>
+                            ) : (
+                              <span className="no-balance">—</span>
+                            )}
                           </td>
                         );
                       })}
@@ -449,6 +618,76 @@ function LeaveManagementPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Quick Setup Modal */}
+      {quickSetupModal && (
+        <div className="modal-overlay" onClick={() => setQuickSetupModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{Icons.zap} Quick Setup</h2>
+              <button className="modal-close" onClick={() => setQuickSetupModal(false)}>
+                {Icons.x}
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="quick-setup-info">
+                <div className="info-badge">
+                  {Icons.shield}
+                  <span>California Compliant</span>
+                </div>
+                <p>Select the leave policies you want to create. All values are pre-configured for California compliance.</p>
+              </div>
+
+              <div className="quick-setup-options">
+                {['SICK', 'VACATION', 'PTO'].map(type => {
+                  const defaults = CA_DEFAULTS[type];
+                  const typeInfo = getLeaveTypeInfo(type);
+                  const alreadyExists = policies.some(p => p.type === type);
+                  
+                  return (
+                    <label 
+                      key={type} 
+                      className={`quick-setup-option ${quickSetupSelections[type] ? 'selected' : ''} ${alreadyExists ? 'disabled' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={quickSetupSelections[type]}
+                        disabled={alreadyExists}
+                        onChange={(e) => setQuickSetupSelections(prev => ({ ...prev, [type]: e.target.checked }))}
+                      />
+                      <div className="option-content">
+                        <div className="option-header">
+                          <span className="option-type" style={{ backgroundColor: typeInfo.color }}>{typeInfo.label}</span>
+                          {alreadyExists && <span className="exists-badge">Already exists</span>}
+                        </div>
+                        <div className="option-details">
+                          <strong>{defaults.annualHours} hrs/year</strong>
+                          {defaults.accrualRate && <span> • Accrues {(defaults.accrualRate * 30).toFixed(1)} hr per 30 hrs worked</span>}
+                          {defaults.maxCarryover && <span> • Max {defaults.maxCarryover} hrs carryover</span>}
+                        </div>
+                        <p className="option-description">{defaults.description}</p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={() => setQuickSetupModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={handleQuickSetup}
+                disabled={actionLoading === 'quick-setup' || !Object.values(quickSetupSelections).some(v => v)}
+              >
+                {Icons.check}
+                <span>{actionLoading === 'quick-setup' ? 'Creating...' : 'Create Policies'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -465,25 +704,38 @@ function LeaveManagementPage() {
             <form onSubmit={handlePolicySubmit}>
               <div className="modal-body">
                 {!policyModal.editing && (
-                  <div className="form-group">
-                    <label>Leave Type</label>
-                    <select 
-                      value={policyForm.leaveType}
-                      onChange={(e) => {
-                        const type = LEAVE_TYPES.find(t => t.value === e.target.value);
-                        setPolicyForm(prev => ({ 
-                          ...prev, 
-                          leaveType: e.target.value,
-                          name: type?.label || e.target.value
-                        }));
-                      }}
-                    >
-                      {LEAVE_TYPES.map(type => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="form-group">
+                      <label>Leave Type</label>
+                      <select 
+                        value={policyForm.type}
+                        onChange={(e) => handleTypeChange(e.target.value)}
+                      >
+                        {LEAVE_TYPES.map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="defaults-toggle">
+                      <label className="toggle-label">
+                        <input
+                          type="checkbox"
+                          checked={policyForm.useDefaults}
+                          onChange={(e) => handleToggleDefaults(e.target.checked)}
+                        />
+                        <span className="toggle-text">
+                          {Icons.shield}
+                          Use California defaults
+                        </span>
+                      </label>
+                      {policyForm.useDefaults && CA_DEFAULTS[policyForm.type]?.description && (
+                        <p className="defaults-hint">{CA_DEFAULTS[policyForm.type].description}</p>
+                      )}
+                    </div>
+                  </>
                 )}
+
                 <div className="form-group">
                   <label>Policy Name</label>
                   <input
@@ -494,18 +746,22 @@ function LeaveManagementPage() {
                     required
                   />
                 </div>
+
                 <div className="form-group">
                   <label>Hours Per Year *</label>
                   <input
                     type="number"
                     step="0.5"
-                    value={policyForm.hoursPerYear}
-                    onChange={(e) => setPolicyForm(prev => ({ ...prev, hoursPerYear: e.target.value }))}
-                    placeholder="24"
+                    value={policyForm.annualHours}
+                    onChange={(e) => setPolicyForm(prev => ({ ...prev, annualHours: e.target.value }))}
+                    placeholder="40"
                     required
                   />
-                  <span className="form-hint">California minimum for sick leave is 24 hours</span>
+                  {policyForm.type === 'SICK' && (
+                    <span className="form-hint">California minimum is 24 hours (40 recommended)</span>
+                  )}
                 </div>
+
                 <div className="form-row">
                   <div className="form-group">
                     <label>Accrual Rate (optional)</label>
@@ -516,7 +772,7 @@ function LeaveManagementPage() {
                       onChange={(e) => setPolicyForm(prev => ({ ...prev, accrualRate: e.target.value }))}
                       placeholder="0.0333"
                     />
-                    <span className="form-hint">Hours earned per hour worked</span>
+                    <span className="form-hint">Hrs earned per hr worked (0.0333 = 1hr/30hrs)</span>
                   </div>
                   <div className="form-group">
                     <label>Max Carryover (optional)</label>
@@ -525,9 +781,9 @@ function LeaveManagementPage() {
                       step="0.5"
                       value={policyForm.maxCarryover}
                       onChange={(e) => setPolicyForm(prev => ({ ...prev, maxCarryover: e.target.value }))}
-                      placeholder="48"
+                      placeholder="80"
                     />
-                    <span className="form-hint">Max hours to roll over</span>
+                    <span className="form-hint">Max hours to roll over yearly</span>
                   </div>
                 </div>
               </div>
@@ -547,11 +803,11 @@ function LeaveManagementPage() {
 
       {/* Balance Modal */}
       {balanceModal.open && balanceModal.worker && (
-        <div className="modal-overlay" onClick={() => setBalanceModal({ open: false, worker: null, leaveType: null })}>
+        <div className="modal-overlay" onClick={() => setBalanceModal({ open: false, worker: null, policyType: null, balanceId: null })}>
           <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Edit Balance</h2>
-              <button className="modal-close" onClick={() => setBalanceModal({ open: false, worker: null, leaveType: null })}>
+              <button className="modal-close" onClick={() => setBalanceModal({ open: false, worker: null, policyType: null, balanceId: null })}>
                 {Icons.x}
               </button>
             </div>
@@ -563,8 +819,8 @@ function LeaveManagementPage() {
                   </div>
                   <div>
                     <strong>{balanceModal.worker.name}</strong>
-                    <span className="leave-type-badge" style={{ backgroundColor: getLeaveTypeInfo(balanceModal.leaveType).color }}>
-                      {getLeaveTypeInfo(balanceModal.leaveType).label}
+                    <span className="leave-type-badge" style={{ backgroundColor: getLeaveTypeInfo(balanceModal.policyType).color }}>
+                      {getLeaveTypeInfo(balanceModal.policyType).label}
                     </span>
                   </div>
                 </div>
@@ -592,20 +848,11 @@ function LeaveManagementPage() {
                 </div>
                 <div className="balance-summary">
                   <span>Available:</span>
-                  <strong>{(parseFloat(balanceForm.totalHours) - parseFloat(balanceForm.usedHours)).toFixed(1)} hours</strong>
-                </div>
-                <div className="form-group">
-                  <label>Notes (optional)</label>
-                  <textarea
-                    value={balanceForm.notes}
-                    onChange={(e) => setBalanceForm(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Reason for adjustment..."
-                    rows={2}
-                  />
+                  <strong>{(parseFloat(balanceForm.totalHours || 0) - parseFloat(balanceForm.usedHours || 0)).toFixed(1)} hours</strong>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setBalanceModal({ open: false, worker: null, leaveType: null })}>
+                <button type="button" className="btn-secondary" onClick={() => setBalanceModal({ open: false, worker: null, policyType: null, balanceId: null })}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary" disabled={actionLoading === 'balance'}>
