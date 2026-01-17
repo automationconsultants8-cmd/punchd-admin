@@ -524,7 +524,6 @@ function WorkersPage() {
           role: worker.role,
           hourlyRate: worker.hourlyRate || undefined,
           tradeClassification: worker.tradeClassification || undefined,
-          isActive: true,
         });
         results.success++;
       } catch (error) {
