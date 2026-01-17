@@ -130,6 +130,14 @@ const Icons = {
       <polyline points="9 18 15 12 9 6"/>
     </svg>
   ),
+  leave: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18"/>
+      <path d="M8 6c0 0-3 2-3 6s3 6 3 6"/>
+      <path d="M16 6c0 0 3 2 3 6s-3 6-3 6"/>
+      <path d="M7 3c0 3 2 5 5 5s5-2 5-5"/>
+    </svg>
+  ),
 };
 
 // Shield + Clock Logo
@@ -201,6 +209,7 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     { path: '/workers', icon: 'users', label: 'Team', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/locations', icon: 'mapPin', label: 'Locations', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canCreateShifts' },
+    { path: '/leave', icon: 'leave', label: 'Leave', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
   ];
 
   const requestsNavItems = [
