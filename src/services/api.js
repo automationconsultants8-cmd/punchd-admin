@@ -85,6 +85,7 @@ export const timeEntriesApi = {
   exportAdp: (params) => api.get('/time-entries/export/adp', { params, responseType: 'blob' }),
   exportGusto: (params) => api.get('/time-entries/export/gusto', { params, responseType: 'blob' }),
   exportPaychex: (params) => api.get('/time-entries/export/paychex', { params, responseType: 'blob' }),
+  update: (id, data) => api.patch(`/time-entries/${id}`, data),
 };
 
 // Shifts endpoints

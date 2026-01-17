@@ -42,6 +42,17 @@ function TimeTrackingPage() {
 
   const [rejectModal, setRejectModal] = useState({ open: false, entryId: null, reason: '' });
   const [viewModal, setViewModal] = useState({ open: false, entry: null });
+  const [editModal, setEditModal] = useState({ 
+    open: false, 
+    entry: null,
+    clockInDate: '',
+    clockInTime: '',
+    clockOutDate: '',
+    clockOutTime: '',
+    breakMinutes: 0,
+    jobId: '',
+    notes: ''
+  });
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [unlockModal, setUnlockModal] = useState({ open: false, reason: '' });
   const [settingsModal, setSettingsModal] = useState({ open: false });
@@ -226,6 +237,86 @@ function TimeTrackingPage() {
       alert(err.response?.data?.message || 'Failed to unlock pay period.');
     }
     setPayPeriodLoading(false);
+  };
+
+  // Format short ID for display (first 8 chars of UUID)
+  const formatShortId = (id) => {
+    if (!id) return '—';
+    return id.substring(0, 8).toUpperCase();
+  };
+
+  // Open edit modal with entry data
+  const openEditModal = (entry) => {
+    // Check if pay period is locked
+    if (selectedPayPeriod?.status === 'LOCKED') {
+      alert('This pay period is locked. Unlock it first to edit entries.');
+      return;
+    }
+
+    const clockIn = new Date(entry.clockInTime);
+    const clockOut = entry.clockOutTime ? new Date(entry.clockOutTime) : null;
+    
+    setEditModal({
+      open: true,
+      entry,
+      clockInDate: clockIn.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }),
+      clockInTime: clockIn.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' }),
+      clockOutDate: clockOut ? clockOut.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) : '',
+      clockOutTime: clockOut ? clockOut.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' }) : '',
+      breakMinutes: entry.breakMinutes || 0,
+      jobId: entry.jobId || '',
+      notes: entry.notes || ''
+    });
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editModal.entry) return;
+
+    setActionLoading(editModal.entry.id);
+    try {
+      // Build clock in datetime
+      const clockInDateTime = new Date(`${editModal.clockInDate}T${editModal.clockInTime}:00`);
+      
+      // Build clock out datetime (if provided)
+      let clockOutDateTime = null;
+      if (editModal.clockOutDate && editModal.clockOutTime) {
+        clockOutDateTime = new Date(`${editModal.clockOutDate}T${editModal.clockOutTime}:00`);
+      }
+
+      // Validate clock out is after clock in
+      if (clockOutDateTime && clockOutDateTime <= clockInDateTime) {
+        alert('Clock out must be after clock in');
+        setActionLoading(null);
+        return;
+      }
+
+      // Validate not more than 24 hours
+      if (clockOutDateTime) {
+        const diffHours = (clockOutDateTime - clockInDateTime) / (1000 * 60 * 60);
+        if (diffHours > 24) {
+          alert('Time entry cannot exceed 24 hours');
+          setActionLoading(null);
+          return;
+        }
+      }
+
+      await timeEntriesApi.update(editModal.entry.id, {
+        clockInTime: clockInDateTime.toISOString(),
+        clockOutTime: clockOutDateTime ? clockOutDateTime.toISOString() : null,
+        breakMinutes: parseInt(editModal.breakMinutes) || 0,
+        jobId: editModal.jobId || null,
+        notes: editModal.notes || null
+      });
+
+      setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' });
+      await loadData();
+    } catch (err) {
+      console.error('Failed to update entry:', err);
+      alert(err.response?.data?.message || 'Failed to update entry');
+    }
+    setActionLoading(null);
   };
 
   const formatPayPeriodLabel = (period, index) => {
@@ -728,6 +819,7 @@ return (
                 <table className="table">
                   <thead>
                     <tr>
+                      <th>ID</th>
                       <th>Worker</th>
                       <th>Location</th>
                       <th>Date</th>
@@ -742,10 +834,11 @@ return (
                   </thead>
                   <tbody>
                     {getFilteredEntries().length === 0 ? (
-                      <tr><td colSpan="10"><div className="empty-state"><p>No time entries found</p></div></td></tr>
+                      <tr><td colSpan="11"><div className="empty-state"><p>No time entries found</p></div></td></tr>
                     ) : (
                       getFilteredEntries().map(entry => (
-                        <tr key={entry.id} className={entry.approvalStatus === 'REJECTED' ? 'row-rejected' : ''}>
+                        <tr key={entry.id} className={`${entry.approvalStatus === 'REJECTED' ? 'row-rejected' : ''} ${entry.amendedAfterExport ? 'row-amended' : ''}`}>
+                          <td><span className="entry-id">{formatShortId(entry.id)}</span></td>
                           <td><div className="worker-cell"><div className="avatar avatar-sm">{entry.user?.name?.split(' ').map(n => n[0]).join('') || '??'}</div><span>{entry.user?.name || 'Unknown'}</span></div></td>
                           <td>{entry.job?.name || 'Unassigned'}</td>
                           <td>{formatDate(entry.clockInTime)}</td>
@@ -759,7 +852,10 @@ return (
                             </div>
                           </td>
                           <td className="cost-cell">{formatCurrency(entry.laborCost)}</td>
-                          <td>{getApprovalBadge(entry.approvalStatus)}</td>
+                          <td>
+                            {getApprovalBadge(entry.approvalStatus)}
+                            {entry.amendedAfterExport && <span className="badge badge-warning amended-badge">Amended</span>}
+                          </td>
                           <td>
                             <div className="action-buttons">
                               {entry.approvalStatus === 'PENDING' && entry.clockOutTime && (
@@ -780,6 +876,7 @@ return (
                                   </button>
                                 </>
                               )}
+                              <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(entry)} disabled={entry.isLocked}>Edit</button>
                               <button className="btn btn-ghost btn-sm" onClick={() => setViewModal({ open: true, entry })}>View</button>
                             </div>
                           </td>
@@ -996,6 +1093,15 @@ return (
               <button className="modal-close" onClick={() => setViewModal({ open: false, entry: null })}>×</button>
             </div>
             <div className="modal-body">
+              <div className="view-entry-header">
+                <div className="view-entry-id">
+                  <span>Entry ID</span>
+                  <strong>{formatShortId(viewModal.entry.id)}</strong>
+                </div>
+                {viewModal.entry.amendedAfterExport && (
+                  <span className="badge badge-warning">Amended After Export</span>
+                )}
+              </div>
               <div className="detail-grid">
                 <div className="detail-item"><span>Worker</span><strong>{viewModal.entry.user?.name || 'Unknown'}</strong></div>
                 <div className="detail-item"><span>Location</span><strong>{viewModal.entry.job?.name || 'Unassigned'}</strong></div>
@@ -1008,13 +1114,15 @@ return (
                 {viewModal.entry.regularMinutes > 0 && <div className="detail-item"><span>Regular Hours</span><strong>{(viewModal.entry.regularMinutes / 60).toFixed(2)}h</strong></div>}
                 {viewModal.entry.overtimeMinutes > 0 && <div className="detail-item"><span>Overtime (1.5x)</span><strong>{(viewModal.entry.overtimeMinutes / 60).toFixed(2)}h</strong></div>}
                 {viewModal.entry.doubleTimeMinutes > 0 && <div className="detail-item"><span>Double Time (2x)</span><strong>{(viewModal.entry.doubleTimeMinutes / 60).toFixed(2)}h</strong></div>}
-                {viewModal.entry.effectiveRate && <div className="detail-item"><span>Rate</span><strong>${Number(viewModal.entry.effectiveRate).toFixed(2)}/hr</strong></div>}
+                {(viewModal.entry.hourlyRate || viewModal.entry.effectiveRate) && <div className="detail-item"><span>Rate</span><strong>${Number(viewModal.entry.hourlyRate || viewModal.entry.effectiveRate).toFixed(2)}/hr</strong></div>}
                 {viewModal.entry.laborCost && <div className="detail-item"><span>Total Cost</span><strong className="cost-highlight">${Number(viewModal.entry.laborCost).toFixed(2)}</strong></div>}
+                {viewModal.entry.notes && <div className="detail-item full-width"><span>Notes</span><strong>{viewModal.entry.notes}</strong></div>}
                 {viewModal.entry.rejectionReason && <div className="detail-item full-width"><span>Rejection Reason</span><strong className="rejection-text">{viewModal.entry.rejectionReason}</strong></div>}
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setViewModal({ open: false, entry: null })}>Close</button>
+              <button className="btn btn-secondary" onClick={() => { setViewModal({ open: false, entry: null }); openEditModal(viewModal.entry); }}>Edit</button>
             </div>
           </div>
         </div>
@@ -1113,6 +1221,130 @@ return (
                 {settingsLoading ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Entry Modal */}
+      {editModal.open && editModal.entry && (
+        <div className="modal-overlay" onClick={() => setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' })}>
+          <div className="modal modal-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Time Entry</h3>
+              <button className="modal-close" onClick={() => setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' })}>×</button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div className="modal-body">
+                <div className="edit-entry-id">
+                  <span>Entry ID</span>
+                  <strong>{formatShortId(editModal.entry.id)}</strong>
+                </div>
+                
+                <div className="edit-worker-info">
+                  <div className="avatar">{editModal.entry.user?.name?.split(' ').map(n => n[0]).join('') || '??'}</div>
+                  <div>
+                    <strong>{editModal.entry.user?.name || 'Unknown'}</strong>
+                    <span>{editModal.entry.job?.name || 'Unassigned'}</span>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Clock In Date</label>
+                    <input 
+                      type="date" 
+                      className="form-input"
+                      value={editModal.clockInDate}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, clockInDate: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Clock In Time</label>
+                    <input 
+                      type="time" 
+                      className="form-input"
+                      value={editModal.clockInTime}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, clockInTime: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Clock Out Date</label>
+                    <input 
+                      type="date" 
+                      className="form-input"
+                      value={editModal.clockOutDate}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, clockOutDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Clock Out Time</label>
+                    <input 
+                      type="time" 
+                      className="form-input"
+                      value={editModal.clockOutTime}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, clockOutTime: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Break (minutes)</label>
+                    <input 
+                      type="number" 
+                      className="form-input"
+                      min="0"
+                      max="480"
+                      value={editModal.breakMinutes}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, breakMinutes: e.target.value }))}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Location</label>
+                    <select 
+                      className="form-select"
+                      value={editModal.jobId}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, jobId: e.target.value }))}
+                    >
+                      <option value="">Unassigned</option>
+                      {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Notes</label>
+                  <textarea 
+                    className="form-textarea"
+                    rows="2"
+                    value={editModal.notes}
+                    onChange={(e) => setEditModal(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Optional notes about this edit..."
+                  />
+                </div>
+
+                {selectedPayPeriod?.status === 'EXPORTED' && (
+                  <div className="edit-warning">
+                    <strong>Warning:</strong> This entry is in an exported pay period. Editing will flag it as amended for payroll reconciliation.
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' })}>Cancel</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={actionLoading === editModal.entry.id}
+                >
+                  {actionLoading === editModal.entry.id ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
