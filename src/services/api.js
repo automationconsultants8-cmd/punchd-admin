@@ -215,4 +215,18 @@ export const payPeriodsApi = {
   export: (id, format = 'CSV') => api.get(`/pay-periods/${id}/export`, { params: { format } }),
 };
 
+// Leave Management API
+export const leaveApi = {
+  // Policies
+  getPolicies: () => api.get('/leave/policies'),
+  createPolicy: (data) => api.post('/leave/policies', data),
+  updatePolicy: (id, data) => api.patch(`/leave/policies/${id}`, data),
+  deletePolicy: (id) => api.delete(`/leave/policies/${id}`),
+  applyPolicyToAll: (policyId) => api.post(`/leave/policies/${policyId}/apply-to-all`),
+  
+  // Balances
+  getBalances: (params) => api.get('/leave/balances', { params }),
+  updateBalance: (id, data) => api.patch(`/leave/balances/${id}`, data),
+  getWorkerBalances: (userId) => api.get(`/leave/balances/worker/${userId}`),
+};
 export default api;

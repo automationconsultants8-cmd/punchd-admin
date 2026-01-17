@@ -32,7 +32,7 @@ import ShiftRequestsPage from './pages/ShiftRequestsPage';
 import MessagesPage from './pages/MessagesPage';
 import { FeaturesProvider } from './hooks/useFeatures';
 import RoleManagementPage from './pages/RoleManagementPage';
-
+import LeaveManagementPage from './pages/LeaveManagementPage';
 
 
 const pageTitles = {
@@ -98,6 +98,7 @@ function AppContent({ user, onLogout, subscription }) {
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
             <Route path="/certified-payroll" element={<Navigate to="/compliance-reports" replace />} />
+            <Route path="/leave" element={<LeaveManagementPage />} />
             
             {/* Phase 1: Requests */}
             <Route path="/requests/shifts" element={<ShiftRequestsPage />} />
