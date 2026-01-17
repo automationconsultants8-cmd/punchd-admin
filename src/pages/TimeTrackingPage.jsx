@@ -466,6 +466,28 @@ const formatTime = (dateString) => {
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate clock out is after clock in and not more than 24 hours
+    const clockIn = new Date(`${manualEntry.date}T${manualEntry.clockIn}:00`);
+    const clockOut = new Date(`${manualEntry.date}T${manualEntry.clockOut}:00`);
+    
+    // Handle overnight shifts
+    if (clockOut <= clockIn) {
+      clockOut.setDate(clockOut.getDate() + 1);
+    }
+    
+    const diffHours = (clockOut - clockIn) / (1000 * 60 * 60);
+    
+    if (diffHours > 24) {
+      alert('Time entry cannot exceed 24 hours');
+      return;
+    }
+    
+    if (diffHours <= 0) {
+      alert('Clock out must be after clock in');
+      return;
+    }
+    
     setActionLoading('manual');
     try {
       await timeEntriesApi.createManual({
