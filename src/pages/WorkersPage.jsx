@@ -217,6 +217,7 @@ function WorkersPage() {
     email: '',
     phone: '',
     role: 'worker',
+    workerType: 'HOURLY',
     hourlyRate: '',
     status: 'active',
     address: '',
@@ -265,6 +266,7 @@ function WorkersPage() {
         email: formData.email || undefined,
         phone: formData.phone || undefined,
         role: formData.role?.toUpperCase() || 'WORKER',
+        workerType: formData.workerType || 'HOURLY',
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
         isActive: formData.status === 'active',
         address: formData.address || undefined,
@@ -296,6 +298,7 @@ function WorkersPage() {
       email: '',
       phone: '',
       role: 'worker',
+      workerType: 'HOURLY',
       hourlyRate: '',
       status: 'active',
       address: '',
@@ -314,6 +317,7 @@ function WorkersPage() {
       email: worker.email || '',
       phone: worker.phone || '',
       role: worker.role?.toLowerCase() || 'worker',
+      workerType: worker.workerType || 'HOURLY',
       hourlyRate: worker.hourlyRate || '',
       status: worker.isActive ? 'active' : 'inactive',
       address: worker.address || '',
@@ -582,6 +586,11 @@ function WorkersPage() {
     pending: workers.filter(w => w.approvalStatus === 'PENDING').length,
   };
 
+  const formatWorkerType = (type) => {
+    if (!type) return '';
+    return type.charAt(0) + type.slice(1).toLowerCase();
+  };
+
   if (loading) {
     return (
       <div className="workers-page">
@@ -688,7 +697,12 @@ function WorkersPage() {
                 </div>
                 <div className="worker-info">
                   <h3>{worker.name}</h3>
-                  <span className="role-badge">{worker.role}</span>
+                  <div className="worker-badges">
+                    <span className="role-badge">{worker.role}</span>
+                    {worker.workerType && worker.workerType !== 'HOURLY' && (
+                      <span className={`type-badge ${worker.workerType.toLowerCase()}`}>{formatWorkerType(worker.workerType)}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="worker-actions">
                   <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
@@ -782,6 +796,17 @@ function WorkersPage() {
                         <option value="admin">Admin</option>
                       </select>
                     </div>
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.briefcase}</span>Worker Type</label>
+                      <select value={formData.workerType} onChange={(e) => setFormData(prev => ({ ...prev, workerType: e.target.value }))}>
+                        <option value="HOURLY">Hourly</option>
+                        <option value="SALARIED">Salaried</option>
+                        <option value="CONTRACTOR">Contractor</option>
+                        <option value="VOLUNTEER">Volunteer</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
                     <div className="form-group">
                       <label><span className="label-icon">{Icons.dollarSign}</span>Hourly Rate</label>
                       <input 
