@@ -123,7 +123,7 @@ function OnboardingPage() {
         }
       }
 
-      navigate('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error('Onboarding error:', err);
       setError(err.response?.data?.message || 'Failed to save. Please try again.');
@@ -138,7 +138,7 @@ function OnboardingPage() {
           onboardingSkippedAt: new Date().toISOString(),
         },
       });
-      navigate('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       navigate('/dashboard');
     }
