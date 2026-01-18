@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { companyApi, jobsApi, usersApi } from '../services/api';
 import './OnboardingPage.css';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 
 function OnboardingPage() {
   const navigate = useNavigate();
@@ -11,24 +11,21 @@ function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   
-  // Form data across all steps
   const [data, setData] = useState({
-    // Step 1: Company name
-    companyName: '',
-    // Step 2: Address
+    // Step 1: Address
     address: '',
     city: '',
     state: '',
     zip: '',
-    // Step 3: Job-based tracking
+    // Step 2: Job-based tracking
     jobBasedTracking: true,
-    // Step 4: Shift scheduling
+    // Step 3: Shift scheduling
     shiftScheduling: false,
-    // Step 5: Verification mode
+    // Step 4: Verification mode
     verificationMode: 'balanced',
-    // Step 6: Pay rate
+    // Step 5: Pay rate
     defaultHourlyRate: '',
-    // Step 7: First job or worker
+    // Step 6: First job or worker
     firstJobName: '',
     firstJobAddress: '',
     firstWorkerName: '',
@@ -61,16 +58,11 @@ function OnboardingPage() {
     setError('');
 
     try {
-      // Determine toggles based on selections
       const facialRecognition = data.verificationMode === 'relaxed' ? 'off' : data.verificationMode === 'balanced' ? 'soft' : 'strict';
       const gpsGeofencing = data.verificationMode === 'relaxed' ? 'off' : data.verificationMode === 'balanced' ? 'soft' : 'strict';
-      
-      // Auto-enable CA rules if state is CA
       const isCA = data.state.toUpperCase() === 'CA';
 
-      // Save company data with all settings
       await companyApi.update({
-        name: data.companyName,
         address: data.address,
         city: data.city,
         state: data.state,
@@ -106,13 +98,12 @@ function OnboardingPage() {
         },
       });
 
-      // Create first job if provided
       if (data.jobBasedTracking && data.firstJobName) {
         try {
           await jobsApi.create({
             name: data.firstJobName,
             address: data.firstJobAddress || data.address,
-            geofenceCenter: '37.3382,-121.8863', // Default, they can update later
+            geofenceCenter: '37.3382,-121.8863',
             geofenceRadiusMeters: 100,
           });
         } catch (e) {
@@ -120,7 +111,6 @@ function OnboardingPage() {
         }
       }
 
-      // Create first worker if provided
       if (data.firstWorkerName && data.firstWorkerPhone) {
         try {
           await usersApi.create({
@@ -133,7 +123,6 @@ function OnboardingPage() {
         }
       }
 
-      // Navigate to dashboard
       navigate('/dashboard');
     } catch (err) {
       console.error('Onboarding error:', err);
@@ -156,24 +145,7 @@ function OnboardingPage() {
   };
 
   const canProceed = () => {
-    switch (currentStep) {
-      case 1:
-        return data.companyName.trim().length > 0;
-      case 2:
-        return true; // Optional
-      case 3:
-        return true; // Always valid (radio selection)
-      case 4:
-        return true; // Always valid (radio selection)
-      case 5:
-        return true; // Always valid (radio selection)
-      case 6:
-        return true; // Optional
-      case 7:
-        return true; // Optional
-      default:
-        return true;
-    }
+    return true;
   };
 
   return (
@@ -183,8 +155,9 @@ function OnboardingPage() {
         <div className="onboarding-header">
           <div className="onboarding-logo">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="6" fill="#C9A227"/>
-              <path d="M12 6V12L16 14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M12 2L3 7V12C3 17.5 7.5 22 12 22C16.5 22 21 17.5 21 12V7L12 2Z" fill="#C9A227"/>
+              <circle cx="12" cy="12" r="5" stroke="white" strokeWidth="1.5" fill="none"/>
+              <path d="M12 9V12L14 14" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <span>Punch'd</span>
           </div>
@@ -216,32 +189,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 1: Company Name */}
+          {/* Step 1: Address */}
           {currentStep === 1 && (
-            <div className="step-content">
-              <div className="step-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 21H21M5 21V7L13 3V21M13 21V7L19 10V21" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <h1>Welcome to Punch'd!</h1>
-              <p>Let's get your account set up in just a few minutes.</p>
-              
-              <div className="form-field">
-                <label>What's your company name?</label>
-                <input
-                  type="text"
-                  value={data.companyName}
-                  onChange={(e) => updateData('companyName', e.target.value)}
-                  placeholder="Acme Staffing Agency"
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Address */}
-          {currentStep === 2 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -249,8 +198,8 @@ function OnboardingPage() {
                   <path d="M12 22C16 18 20 14.4183 20 10C20 5.58172 16.4183 2 12 2C7.58172 2 4 5.58172 4 10C4 14.4183 8 18 12 22Z" stroke="#C9A227" strokeWidth="2"/>
                 </svg>
               </div>
-              <h1>Where are you located?</h1>
-              <p>This helps us apply the right labor laws and appears on reports.</p>
+              <h1>Welcome to Punch'd!</h1>
+              <p>Let's get your account set up. First, where are you located? This helps us apply the right labor laws.</p>
               
               <div className="form-field">
                 <label>Street Address</label>
@@ -259,6 +208,7 @@ function OnboardingPage() {
                   value={data.address}
                   onChange={(e) => updateData('address', e.target.value)}
                   placeholder="123 Main Street"
+                  autoFocus
                 />
               </div>
               
@@ -306,8 +256,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Job-based tracking */}
-          {currentStep === 3 && (
+          {/* Step 2: Job-based tracking */}
+          {currentStep === 2 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -361,8 +311,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 4: Shift scheduling */}
-          {currentStep === 4 && (
+          {/* Step 3: Shift scheduling */}
+          {currentStep === 3 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -418,8 +368,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 5: Verification mode */}
-          {currentStep === 5 && (
+          {/* Step 4: Verification mode */}
+          {currentStep === 4 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -483,8 +433,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 6: Pay rate */}
-          {currentStep === 6 && (
+          {/* Step 5: Pay rate */}
+          {currentStep === 5 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -513,8 +463,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 7: First job or worker */}
-          {currentStep === 7 && (
+          {/* Step 6: First job or worker */}
+          {currentStep === 6 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -586,7 +536,7 @@ function OnboardingPage() {
           )}
           
           <div className="footer-right">
-            {[2, 6, 7].includes(currentStep) && (
+            {[1, 5, 6].includes(currentStep) && (
               <button className="btn-skip" onClick={skipStep}>
                 Skip
               </button>
