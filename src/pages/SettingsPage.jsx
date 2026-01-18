@@ -14,11 +14,28 @@ function SettingsPage() {
     zip: '',
     defaultHourlyRate: '',
   });
-  const [settings, setSettings] = useState({
+  
+  // Feature toggles
+  const [toggles, setToggles] = useState({
+    verificationMode: 'balanced',
+    facialRecognition: 'soft',
+    gpsGeofencing: 'soft',
+    earlyClockInRestriction: 'off',
+    workerSelfServiceEdits: 'soft',
+    photoCapture: true,
+    breakTracking: true,
+    breakCompliancePenalties: false,
+    overtimeCalculations: true,
+    seventhDayOtRule: false,
+    autoClockOut: true,
+    jobBasedTracking: true,
+    shiftScheduling: false,
+    leaveManagement: false,
+    buddyPunchAlerts: true,
     maxShiftHours: 16,
     earlyClockInMinutes: 15,
-    autoClockOutEnabled: true,
   });
+
   const [overtimeSettings, setOvertimeSettings] = useState({
     dailyOtThreshold: 8,
     dailyDtThreshold: 12,
@@ -26,8 +43,8 @@ function SettingsPage() {
     otMultiplier: 1.5,
     dtMultiplier: 2.0,
   });
+
   const [breakSettings, setBreakSettings] = useState({
-    enabled: true,
     state: 'CA',
     mealBreakThreshold: 5,
     mealBreakDuration: 30,
@@ -50,17 +67,31 @@ function SettingsPage() {
         defaultHourlyRate: res.data.defaultHourlyRate || '',
       });
       
-      // Load settings from company.settings JSON
+      // Load feature toggles from company.settings
       if (res.data.settings) {
         const s = res.data.settings;
-        setSettings({
+        setToggles(prev => ({
+          ...prev,
+          verificationMode: s.verificationMode ?? 'balanced',
+          facialRecognition: s.facialRecognition ?? 'soft',
+          gpsGeofencing: s.gpsGeofencing ?? 'soft',
+          earlyClockInRestriction: s.earlyClockInRestriction ?? 'off',
+          workerSelfServiceEdits: s.workerSelfServiceEdits ?? 'soft',
+          photoCapture: s.photoCapture ?? true,
+          breakTracking: s.breakTracking ?? true,
+          breakCompliancePenalties: s.breakCompliancePenalties ?? false,
+          overtimeCalculations: s.overtimeCalculations ?? true,
+          seventhDayOtRule: s.seventhDayOtRule ?? false,
+          autoClockOut: s.autoClockOut ?? true,
+          jobBasedTracking: s.jobBasedTracking ?? true,
+          shiftScheduling: s.shiftScheduling ?? false,
+          leaveManagement: s.leaveManagement ?? false,
+          buddyPunchAlerts: s.buddyPunchAlerts ?? true,
           maxShiftHours: s.maxShiftHours ?? 16,
           earlyClockInMinutes: s.earlyClockInMinutes ?? 15,
-          autoClockOutEnabled: s.autoClockOutEnabled ?? true,
-        });
+        }));
       }
       
-      // Load overtime settings
       if (res.data.overtimeSettings) {
         const ot = res.data.overtimeSettings;
         setOvertimeSettings({
@@ -72,11 +103,9 @@ function SettingsPage() {
         });
       }
       
-      // Load break compliance settings
       if (res.data.breakComplianceSettings) {
         const bc = res.data.breakComplianceSettings;
         setBreakSettings({
-          enabled: bc.enabled ?? true,
           state: bc.state ?? 'CA',
           mealBreakThreshold: (bc.mealBreakThreshold ?? 300) / 60,
           mealBreakDuration: bc.mealBreakDuration ?? 30,
@@ -87,6 +116,33 @@ function SettingsPage() {
       console.error('Failed to load company data:', err);
     }
     setLoading(false);
+  };
+
+  // Handle verification mode change - updates all 3 related toggles
+  const handleVerificationModeChange = (mode) => {
+    let facial, gps, earlyClock;
+    
+    if (mode === 'relaxed') {
+      facial = 'off';
+      gps = 'off';
+      earlyClock = 'off';
+    } else if (mode === 'balanced') {
+      facial = 'soft';
+      gps = 'soft';
+      earlyClock = 'off';
+    } else {
+      facial = 'strict';
+      gps = 'strict';
+      earlyClock = 'strict';
+    }
+    
+    setToggles(prev => ({
+      ...prev,
+      verificationMode: mode,
+      facialRecognition: facial,
+      gpsGeofencing: gps,
+      earlyClockInRestriction: earlyClock,
+    }));
   };
 
   const handleSave = async () => {
@@ -100,9 +156,9 @@ function SettingsPage() {
           ? parseFloat(companyData.defaultHourlyRate) 
           : null,
         settings: {
-          maxShiftHours: parseFloat(settings.maxShiftHours) || 16,
-          earlyClockInMinutes: parseInt(settings.earlyClockInMinutes) || 15,
-          autoClockOutEnabled: settings.autoClockOutEnabled,
+          ...toggles,
+          maxShiftHours: parseFloat(toggles.maxShiftHours) || 16,
+          earlyClockInMinutes: parseInt(toggles.earlyClockInMinutes) || 15,
         },
         overtimeSettings: {
           dailyOtThreshold: parseFloat(overtimeSettings.dailyOtThreshold) * 60,
@@ -112,7 +168,7 @@ function SettingsPage() {
           dtMultiplier: parseFloat(overtimeSettings.dtMultiplier),
         },
         breakComplianceSettings: {
-          enabled: breakSettings.enabled,
+          enabled: toggles.breakTracking,
           state: breakSettings.state,
           mealBreakThreshold: parseFloat(breakSettings.mealBreakThreshold) * 60,
           mealBreakDuration: parseInt(breakSettings.mealBreakDuration),
@@ -156,6 +212,294 @@ function SettingsPage() {
           {message.type === 'success' ? '✓' : '⚠️'} {message.text}
         </div>
       )}
+
+      {/* Verification Mode - Master Toggle */}
+      <div className="settings-card verification-mode-card">
+        <div className="card-header">
+          <span className="card-icon">🛡️</span>
+          <div>
+            <h2>Verification Mode</h2>
+            <p>Control how strictly the system verifies clock-ins</p>
+          </div>
+        </div>
+
+        <div className="verification-options">
+          <label className={`verification-option ${toggles.verificationMode === 'relaxed' ? 'selected' : ''}`}>
+            <input
+              type="radio"
+              name="verificationMode"
+              value="relaxed"
+              checked={toggles.verificationMode === 'relaxed'}
+              onChange={() => handleVerificationModeChange('relaxed')}
+            />
+            <div className="option-content">
+              <strong>Relaxed</strong>
+              <span>No verification - just track time</span>
+            </div>
+          </label>
+          
+          <label className={`verification-option ${toggles.verificationMode === 'balanced' ? 'selected' : ''}`}>
+            <input
+              type="radio"
+              name="verificationMode"
+              value="balanced"
+              checked={toggles.verificationMode === 'balanced'}
+              onChange={() => handleVerificationModeChange('balanced')}
+            />
+            <div className="option-content">
+              <strong>Balanced</strong>
+              <span>Verify and flag issues for review</span>
+            </div>
+          </label>
+          
+          <label className={`verification-option ${toggles.verificationMode === 'strict' ? 'selected' : ''}`}>
+            <input
+              type="radio"
+              name="verificationMode"
+              value="strict"
+              checked={toggles.verificationMode === 'strict'}
+              onChange={() => handleVerificationModeChange('strict')}
+            />
+            <div className="option-content">
+              <strong>Strict</strong>
+              <span>Block workers if verification fails</span>
+            </div>
+          </label>
+        </div>
+
+        <div className="info-box">
+          <strong>Current mode:</strong> {toggles.verificationMode === 'relaxed' ? 'Workers can clock in without verification.' : toggles.verificationMode === 'balanced' ? 'Failed verifications are flagged but workers can still clock in.' : 'Workers are blocked if GPS or facial recognition fails.'}
+        </div>
+      </div>
+
+      {/* Feature Toggles */}
+      <div className="settings-card">
+        <div className="card-header">
+          <span className="card-icon">⚙️</span>
+          <div>
+            <h2>Feature Toggles</h2>
+            <p>Enable or disable specific features</p>
+          </div>
+        </div>
+
+        <div className="toggles-grid">
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Photo Capture</strong>
+              <span>Require photo on clock-in/out</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.photoCapture}
+                onChange={(e) => setToggles(prev => ({ ...prev, photoCapture: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Facial Recognition</strong>
+              <span>Verify worker identity with face match</span>
+            </div>
+            <select
+              value={toggles.facialRecognition}
+              onChange={(e) => setToggles(prev => ({ ...prev, facialRecognition: e.target.value }))}
+              className="toggle-select"
+            >
+              <option value="off">Off</option>
+              <option value="soft">Soft (flag only)</option>
+              <option value="strict">Strict (block)</option>
+            </select>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>GPS Geofencing</strong>
+              <span>Verify worker is at job site</span>
+            </div>
+            <select
+              value={toggles.gpsGeofencing}
+              onChange={(e) => setToggles(prev => ({ ...prev, gpsGeofencing: e.target.value }))}
+              className="toggle-select"
+            >
+              <option value="off">Off</option>
+              <option value="soft">Soft (flag only)</option>
+              <option value="strict">Strict (block)</option>
+            </select>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Job-Based Tracking</strong>
+              <span>Assign time entries to specific jobs</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.jobBasedTracking}
+                onChange={(e) => setToggles(prev => ({ ...prev, jobBasedTracking: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Shift Scheduling</strong>
+              <span>Create and manage worker schedules</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.shiftScheduling}
+                onChange={(e) => setToggles(prev => ({ ...prev, shiftScheduling: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Early Clock-In Restriction</strong>
+              <span>Prevent clocking in too early before shift</span>
+            </div>
+            <select
+              value={toggles.earlyClockInRestriction}
+              onChange={(e) => setToggles(prev => ({ ...prev, earlyClockInRestriction: e.target.value }))}
+              className="toggle-select"
+              disabled={!toggles.shiftScheduling}
+            >
+              <option value="off">Off</option>
+              <option value="soft">Soft (flag only)</option>
+              <option value="strict">Strict (block)</option>
+            </select>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Auto Clock-Out</strong>
+              <span>Automatically clock out after max hours</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.autoClockOut}
+                onChange={(e) => setToggles(prev => ({ ...prev, autoClockOut: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Break Tracking</strong>
+              <span>Track meal and rest breaks</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.breakTracking}
+                onChange={(e) => setToggles(prev => ({ ...prev, breakTracking: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Break Compliance Penalties</strong>
+              <span>Calculate penalty pay for missed breaks</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.breakCompliancePenalties}
+                onChange={(e) => setToggles(prev => ({ ...prev, breakCompliancePenalties: e.target.checked }))}
+                disabled={!toggles.breakTracking}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Overtime Calculations</strong>
+              <span>Auto-calculate OT and double time</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.overtimeCalculations}
+                onChange={(e) => setToggles(prev => ({ ...prev, overtimeCalculations: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>7th Day OT Rule (CA)</strong>
+              <span>Apply California 7th consecutive day rule</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.seventhDayOtRule}
+                onChange={(e) => setToggles(prev => ({ ...prev, seventhDayOtRule: e.target.checked }))}
+                disabled={!toggles.overtimeCalculations}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Leave Management</strong>
+              <span>Track PTO, sick leave, and time off</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.leaveManagement}
+                onChange={(e) => setToggles(prev => ({ ...prev, leaveManagement: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Worker Self-Service Edits</strong>
+              <span>Allow workers to request time edits</span>
+            </div>
+            <select
+              value={toggles.workerSelfServiceEdits}
+              onChange={(e) => setToggles(prev => ({ ...prev, workerSelfServiceEdits: e.target.value }))}
+              className="toggle-select"
+            >
+              <option value="strict">Off (admin only)</option>
+              <option value="soft">On (requires approval)</option>
+            </select>
+          </div>
+
+          <div className="toggle-row">
+            <div className="toggle-info">
+              <strong>Buddy Punch Alerts</strong>
+              <span>Email admins on failed face verification</span>
+            </div>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={toggles.buddyPunchAlerts}
+                onChange={(e) => setToggles(prev => ({ ...prev, buddyPunchAlerts: e.target.checked }))}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
 
       {/* Company Information */}
       <div className="settings-card">
@@ -229,7 +573,7 @@ function SettingsPage() {
           <span className="card-icon">💰</span>
           <div>
             <h2>Default Pay Rate</h2>
-            <p>Default hourly rate for new workers (can be overridden per worker or job)</p>
+            <p>Default hourly rate for new workers</p>
           </div>
         </div>
 
@@ -244,29 +588,18 @@ function SettingsPage() {
               onChange={(e) => handleChange('defaultHourlyRate', e.target.value)}
               placeholder="25.00"
             />
-            <small>Applied to workers without a specific rate set</small>
           </div>
         </div>
       </div>
 
-      {/* Time & Attendance Rules - NEW */}
+      {/* Time & Attendance Config */}
       <div className="settings-card">
         <div className="card-header">
-          <span className="card-icon">🛡️</span>
+          <span className="card-icon">⏱️</span>
           <div>
-            <h2>Time & Attendance Rules</h2>
-            <p>Automatic clock-out and clock-in restrictions</p>
+            <h2>Time & Attendance Config</h2>
+            <p>Configure time tracking parameters</p>
           </div>
-        </div>
-
-        <div className="checkbox-row">
-          <input 
-            type="checkbox" 
-            id="autoClockOutEnabled" 
-            checked={settings.autoClockOutEnabled}
-            onChange={(e) => setSettings(prev => ({ ...prev, autoClockOutEnabled: e.target.checked }))}
-          />
-          <label htmlFor="autoClockOutEnabled">Enable automatic clock-out for forgotten punches</label>
         </div>
 
         <div className="form-grid">
@@ -277,10 +610,10 @@ function SettingsPage() {
               step="0.5"
               min="1"
               max="24"
-              value={settings.maxShiftHours}
-              onChange={(e) => setSettings(prev => ({ ...prev, maxShiftHours: e.target.value }))}
+              value={toggles.maxShiftHours}
+              onChange={(e) => setToggles(prev => ({ ...prev, maxShiftHours: e.target.value }))}
             />
-            <small>Auto clock-out workers after this many hours (flags entry for review)</small>
+            <small>Auto clock-out after this many hours</small>
           </div>
           <div className="form-group">
             <label>Early Clock-In Window (minutes)</label>
@@ -288,139 +621,126 @@ function SettingsPage() {
               type="number"
               min="0"
               max="60"
-              value={settings.earlyClockInMinutes}
-              onChange={(e) => setSettings(prev => ({ ...prev, earlyClockInMinutes: e.target.value }))}
+              value={toggles.earlyClockInMinutes}
+              onChange={(e) => setToggles(prev => ({ ...prev, earlyClockInMinutes: e.target.value }))}
             />
-            <small>How early workers can clock in before scheduled shift</small>
+            <small>How early workers can clock in</small>
           </div>
-        </div>
-
-        <div className="info-box">
-          <strong>How it works:</strong> If a worker forgets to clock out, the system will automatically clock them out after {settings.maxShiftHours} hours, flag the entry for your review, and add a note explaining the auto clock-out.
         </div>
       </div>
 
       {/* Overtime Rules */}
-      <div className="settings-card">
-        <div className="card-header">
-          <span className="card-icon">⏰</span>
-          <div>
-            <h2>Overtime Rules</h2>
-            <p>Configure overtime calculation thresholds</p>
+      {toggles.overtimeCalculations && (
+        <div className="settings-card">
+          <div className="card-header">
+            <span className="card-icon">⏰</span>
+            <div>
+              <h2>Overtime Rules</h2>
+              <p>Configure overtime calculation thresholds</p>
+            </div>
           </div>
-        </div>
 
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Daily OT After (hours)</label>
-            <input 
-              type="number" 
-              value={overtimeSettings.dailyOtThreshold}
-              onChange={(e) => setOvertimeSettings(prev => ({ ...prev, dailyOtThreshold: e.target.value }))}
-            />
-            <small>Hours before overtime kicks in daily</small>
-          </div>
-          <div className="form-group">
-            <label>Daily Double Time After (hours)</label>
-            <input 
-              type="number" 
-              value={overtimeSettings.dailyDtThreshold}
-              onChange={(e) => setOvertimeSettings(prev => ({ ...prev, dailyDtThreshold: e.target.value }))}
-            />
-            <small>Hours before double time kicks in</small>
-          </div>
-          <div className="form-group">
-            <label>Weekly OT After (hours)</label>
-            <input 
-              type="number" 
-              value={overtimeSettings.weeklyOtThreshold}
-              onChange={(e) => setOvertimeSettings(prev => ({ ...prev, weeklyOtThreshold: e.target.value }))}
-            />
-            <small>Weekly hours threshold for OT</small>
-          </div>
-          <div className="form-group">
-            <label>OT Multiplier</label>
-            <input 
-              type="number" 
-              step="0.1" 
-              value={overtimeSettings.otMultiplier}
-              onChange={(e) => setOvertimeSettings(prev => ({ ...prev, otMultiplier: e.target.value }))}
-            />
-            <small>e.g., 1.5 = time and a half</small>
-          </div>
-          <div className="form-group">
-            <label>DT Multiplier</label>
-            <input 
-              type="number" 
-              step="0.1" 
-              value={overtimeSettings.dtMultiplier}
-              onChange={(e) => setOvertimeSettings(prev => ({ ...prev, dtMultiplier: e.target.value }))}
-            />
-            <small>e.g., 2.0 = double time</small>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Daily OT After (hours)</label>
+              <input 
+                type="number" 
+                value={overtimeSettings.dailyOtThreshold}
+                onChange={(e) => setOvertimeSettings(prev => ({ ...prev, dailyOtThreshold: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Daily Double Time After (hours)</label>
+              <input 
+                type="number" 
+                value={overtimeSettings.dailyDtThreshold}
+                onChange={(e) => setOvertimeSettings(prev => ({ ...prev, dailyDtThreshold: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Weekly OT After (hours)</label>
+              <input 
+                type="number" 
+                value={overtimeSettings.weeklyOtThreshold}
+                onChange={(e) => setOvertimeSettings(prev => ({ ...prev, weeklyOtThreshold: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>OT Multiplier</label>
+              <input 
+                type="number" 
+                step="0.1" 
+                value={overtimeSettings.otMultiplier}
+                onChange={(e) => setOvertimeSettings(prev => ({ ...prev, otMultiplier: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>DT Multiplier</label>
+              <input 
+                type="number" 
+                step="0.1" 
+                value={overtimeSettings.dtMultiplier}
+                onChange={(e) => setOvertimeSettings(prev => ({ ...prev, dtMultiplier: e.target.value }))}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Break Compliance */}
-      <div className="settings-card">
-        <div className="card-header">
-          <span className="card-icon">☕</span>
-          <div>
-            <h2>Break Compliance</h2>
-            <p>Meal and rest break requirements</p>
+      {toggles.breakTracking && (
+        <div className="settings-card">
+          <div className="card-header">
+            <span className="card-icon">☕</span>
+            <div>
+              <h2>Break Compliance</h2>
+              <p>Meal and rest break requirements</p>
+            </div>
           </div>
-        </div>
 
-        <div className="checkbox-row">
-          <input 
-            type="checkbox" 
-            id="breakEnabled" 
-            checked={breakSettings.enabled}
-            onChange={(e) => setBreakSettings(prev => ({ ...prev, enabled: e.target.checked }))}
-          />
-          <label htmlFor="breakEnabled">Enable break compliance tracking</label>
-        </div>
-
-        <div className="form-grid">
-          <div className="form-group">
-            <label>State Regulations</label>
-            <select 
-              value={breakSettings.state}
-              onChange={(e) => setBreakSettings(prev => ({ ...prev, state: e.target.value }))}
-            >
-              <option value="CA">California</option>
-              <option value="WA">Washington</option>
-              <option value="OR">Oregon</option>
-              <option value="OTHER">Federal (Other States)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Meal Break After (hours)</label>
-            <input 
-              type="number" 
-              value={breakSettings.mealBreakThreshold}
-              onChange={(e) => setBreakSettings(prev => ({ ...prev, mealBreakThreshold: e.target.value }))}
-            />
-          </div>
-          <div className="form-group">
-            <label>Meal Break Duration (min)</label>
-            <input 
-              type="number" 
-              value={breakSettings.mealBreakDuration}
-              onChange={(e) => setBreakSettings(prev => ({ ...prev, mealBreakDuration: e.target.value }))}
-            />
-          </div>
-          <div className="form-group">
-            <label>Violation Penalty (hours pay)</label>
-            <input 
-              type="number" 
-              step="0.5" 
-              value={breakSettings.penaltyRate}
-              onChange={(e) => setBreakSettings(prev => ({ ...prev, penaltyRate: e.target.value }))}
-            />
+          <div className="form-grid">
+            <div className="form-group">
+              <label>State Regulations</label>
+              <select 
+                value={breakSettings.state}
+                onChange={(e) => setBreakSettings(prev => ({ ...prev, state: e.target.value }))}
+              >
+                <option value="CA">California</option>
+                <option value="WA">Washington</option>
+                <option value="OR">Oregon</option>
+                <option value="OTHER">Federal (Other States)</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Meal Break After (hours)</label>
+              <input 
+                type="number" 
+                value={breakSettings.mealBreakThreshold}
+                onChange={(e) => setBreakSettings(prev => ({ ...prev, mealBreakThreshold: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Meal Break Duration (min)</label>
+              <input 
+                type="number" 
+                value={breakSettings.mealBreakDuration}
+                onChange={(e) => setBreakSettings(prev => ({ ...prev, mealBreakDuration: e.target.value }))}
+              />
+            </div>
+            {toggles.breakCompliancePenalties && (
+              <div className="form-group">
+                <label>Violation Penalty (hours pay)</label>
+                <input 
+                  type="number" 
+                  step="0.5" 
+                  value={breakSettings.penaltyRate}
+                  onChange={(e) => setBreakSettings(prev => ({ ...prev, penaltyRate: e.target.value }))}
+                />
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Save Button */}
       <button 
