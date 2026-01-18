@@ -1,8 +1,3 @@
-// ============================================
-// FILE: src/App.jsx (ADMIN DASHBOARD)
-// ACTION: REPLACE ENTIRE FILE
-// ============================================
-
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
@@ -21,7 +16,8 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import { authApi } from './services/api';
+import OnboardingPage from './pages/OnboardingPage';
+import { authApi, companyApi } from './services/api';
 import './styles/design-system.css';
 import './styles/theme-override.css';
 import ProfilePage from './pages/ProfilePage';
@@ -33,7 +29,6 @@ import MessagesPage from './pages/MessagesPage';
 import { FeaturesProvider } from './hooks/useFeatures';
 import RoleManagementPage from './pages/RoleManagementPage';
 import LeaveManagementPage from './pages/LeaveManagementPage';
-
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -52,7 +47,7 @@ const pageTitles = {
   '/requests/messages': 'Messages',
 };
 
-function AppContent({ user, onLogout, subscription }) {
+function AppContent({ user, onLogout, subscription, needsOnboarding }) {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
@@ -77,6 +72,13 @@ function AppContent({ user, onLogout, subscription }) {
         {showWarningBanner && (
           <TrialWarningBanner daysRemaining={subscription.daysRemaining} />
         )}
+
+        {needsOnboarding && location.pathname !== '/onboarding' && (
+          <div className="onboarding-reminder-banner">
+            <span>👋 Complete your setup to get the most out of Punch'd</span>
+            <a href="/onboarding">Finish Setup →</a>
+          </div>
+        )}
         
         <div className="app-content">
           <Routes>
@@ -95,10 +97,12 @@ function AppContent({ user, onLogout, subscription }) {
             <Route path="/compliance" element={<CompliancePage />} />
             <Route path="/compliance-reports" element={<CertifiedPayrollPage />} />
             <Route path="/team-management" element={<RoleManagementPage />} />
+            <Route path="/leave" element={<LeaveManagementPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
             <Route path="/certified-payroll" element={<Navigate to="/compliance-reports" replace />} />
-            <Route path="/leave" element={<LeaveManagementPage />} />
             
             {/* Phase 1: Requests */}
             <Route path="/requests/shifts" element={<ShiftRequestsPage />} />
@@ -119,6 +123,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
@@ -135,11 +141,31 @@ function App() {
     setLoading(false);
   }, []);
 
+  // Check if onboarding is needed
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await companyApi.get();
+        const settings = response.data.settings || {};
+        
+        // Needs onboarding if never completed AND never skipped
+        const needsIt = !settings.onboardingCompletedAt && !settings.onboardingSkippedAt;
+        setNeedsOnboarding(needsIt);
+      } catch (err) {
+        console.error('Failed to check onboarding status:', err);
+      }
+      setOnboardingChecked(true);
+    };
+
+    checkOnboarding();
+  }, [user]);
+
   useEffect(() => {
     const checkSubscription = async () => {
       if (!user) return;
       
-      // Always check fresh - don't cache expired state
       setSubscriptionLoading(true);
       try {
         const response = await authApi.getSubscriptionStatus();
@@ -156,7 +182,6 @@ function App() {
 
     checkSubscription();
     
-    // Recheck every 5 minutes in case trial expires while using app
     const interval = setInterval(checkSubscription, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [user]);
@@ -164,6 +189,7 @@ function App() {
   const handleLogin = (userData) => {
     setUser(userData);
     sessionStorage.removeItem('subscription');
+    setOnboardingChecked(false); // Re-check onboarding on new login
   };
 
   const handleLogout = () => {
@@ -172,6 +198,8 @@ function App() {
     sessionStorage.removeItem('subscription');
     setUser(null);
     setSubscription(null);
+    setNeedsOnboarding(false);
+    setOnboardingChecked(false);
   };
 
   if (loading) {
@@ -198,8 +226,12 @@ function App() {
           <div className="spinner"></div>
           <p>Checking subscription...</p>
         </div>
+      ) : !onboardingChecked ? (
+        <div className="app-loading">
+          <div className="spinner"></div>
+          <p>Loading...</p>
+        </div>
       ) : subscription?.trialExpired ? (
-        // Trial expired - admin can only access billing page
         <Routes>
           <Route path="/billing" element={
             <FeaturesProvider>
@@ -210,10 +242,23 @@ function App() {
             <TrialExpiredPaywall onLogout={handleLogout} />
           } />
         </Routes>
-      ) : (
-        // Normal access (trial active or paid)
+      ) : needsOnboarding && !sessionStorage.getItem('skipOnboardingRedirect') ? (
+        // First time user - show onboarding
         <FeaturesProvider>
-          <AppContent user={user} onLogout={handleLogout} subscription={subscription} />
+          <Routes>
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="*" element={<Navigate to="/onboarding" replace />} />
+          </Routes>
+        </FeaturesProvider>
+      ) : (
+        // Normal access
+        <FeaturesProvider>
+          <AppContent 
+            user={user} 
+            onLogout={handleLogout} 
+            subscription={subscription}
+            needsOnboarding={needsOnboarding}
+          />
         </FeaturesProvider>
       )}
     </BrowserRouter>

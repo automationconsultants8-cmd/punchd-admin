@@ -3678,3 +3678,24 @@ html,
   border-radius: 4px !important;
   letter-spacing: 1px !important;
 }
+/* Onboarding Reminder Banner */
+.onboarding-reminder-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: linear-gradient(90deg, #FFF9E6, #FFF3D6);
+  border-bottom: 1px solid #F0E6C8;
+  font-size: 14px;
+  color: #666;
+}
+
+.onboarding-reminder-banner a {
+  color: #C9A227;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.onboarding-reminder-banner a:hover {
+  text-decoration: underline;
+}
