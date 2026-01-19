@@ -138,6 +138,31 @@ const Icons = {
       <path d="M7 3c0 3 2 5 5 5s5-2 5-5"/>
     </svg>
   ),
+  hourly: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  salary: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+  ),
+  contractor: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  ),
+  volunteer: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+    </svg>
+  ),
 };
 
 // Shield + Clock Logo
@@ -168,7 +193,6 @@ function Sidebar({ collapsed, onToggle, userRole }) {
   
   const permissions = getPermissions();
 
-  // Fetch pending counts on mount
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -193,7 +217,6 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Check if user has permission (for managers)
   const hasPermission = (permKey) => {
     if (userRole === 'OWNER' || userRole === 'ADMIN') return true;
     if (userRole === 'MANAGER' && permissions) {
@@ -202,7 +225,6 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     return false;
   };
 
-  // Navigation items with role AND permission requirements
   const mainNavItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/time', icon: 'clock', label: 'Time Tracking' },
@@ -225,6 +247,13 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     { path: '/compliance-reports', icon: 'fileText', label: 'Compliance Reports', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canGenerateReports' },
   ];
 
+  const workerManagementNavItems = [
+    { path: '/workers/hourly', icon: 'hourly', label: 'Hourly Workers', roles: ['ADMIN', 'OWNER'] },
+    { path: '/workers/salaried', icon: 'salary', label: 'Salaried Workers', roles: ['ADMIN', 'OWNER'] },
+    { path: '/workers/contractors', icon: 'contractor', label: 'Contractors', roles: ['ADMIN', 'OWNER'] },
+    { path: '/workers/volunteers', icon: 'volunteer', label: 'Volunteers', roles: ['ADMIN', 'OWNER'] },
+  ];
+
   const adminNavItems = [
     { path: '/team-management', icon: 'userPlus', label: 'Role Management', roles: ['ADMIN', 'OWNER'] },
   ];
@@ -234,7 +263,6 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     { path: '/settings', icon: 'settings', label: 'Settings', roles: ['ADMIN', 'OWNER'] },
   ];
 
-  // Filter items by role and permissions
   const filterByRoleAndPermission = (items) => {
     return items.filter(item => {
       if (item.roles && !item.roles.includes(userRole)) {
@@ -304,6 +332,15 @@ function Sidebar({ collapsed, onToggle, userRole }) {
           <div className="sidebar-section">
             {!collapsed && <div className="sidebar-section-title">Reports</div>}
             {filterByRoleAndPermission(reportsNavItems).map(item => (
+              <NavItem key={item.path} item={item} />
+            ))}
+          </div>
+        )}
+
+        {filterByRoleAndPermission(workerManagementNavItems).length > 0 && (
+          <div className="sidebar-section">
+            {!collapsed && <div className="sidebar-section-title">Worker Management</div>}
+            {filterByRoleAndPermission(workerManagementNavItems).map(item => (
               <NavItem key={item.path} item={item} />
             ))}
           </div>
