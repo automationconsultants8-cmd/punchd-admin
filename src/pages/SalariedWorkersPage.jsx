@@ -13,7 +13,7 @@ function SalariedWorkersPage() {
   const loadWorkers = async () => {
     try {
       const res = await usersApi.getAll();
-      const salariedWorkers = res.data.filter(w => w.workerType === 'SALARIED');
+      const salariedWorkers = res.data.filter(w => w.workerTypes?.includes('SALARIED'));
       setWorkers(salariedWorkers);
       setStats({ total: salariedWorkers.length, tracking: salariedWorkers.filter(w => w.isTrackingTime).length, totalHoursLogged: 0 });
     } catch (err) { console.error('Failed to load workers:', err); }

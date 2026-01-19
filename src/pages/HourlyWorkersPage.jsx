@@ -15,7 +15,7 @@ function HourlyWorkersPage() {
   const loadWorkers = async () => {
     try {
       const res = await usersApi.getAll();
-      const hourlyWorkers = res.data.filter(w => !w.workerType || w.workerType === 'HOURLY');
+      const hourlyWorkers = res.data.filter(w => !w.workerTypes?.length || w.workerTypes.includes('HOURLY'));
       
       const clockedIn = hourlyWorkers.filter(w => w.isClockedIn).length;
       

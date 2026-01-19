@@ -13,7 +13,7 @@ function VolunteersPage() {
   const loadVolunteers = async () => {
     try {
       const res = await usersApi.getAll();
-      const volunteerWorkers = res.data.filter(w => w.workerType === 'VOLUNTEER');
+      const volunteerWorkers = res.data.filter(w => w.workerTypes?.includes('VOLUNTEER'));
       setVolunteers(volunteerWorkers);
       setStats({ total: volunteerWorkers.length, activeThisMonth: volunteerWorkers.filter(v => v.hoursThisMonth > 0).length, totalHoursAllTime: volunteerWorkers.reduce((sum, v) => sum + (v.totalHoursAllTime || 0), 0), pendingSignoffs: 0 });
     } catch (err) { console.error('Failed to load volunteers:', err); }

@@ -13,7 +13,7 @@ function ContractorsPage() {
   const loadContractors = async () => {
     try {
       const res = await usersApi.getAll();
-      const contractorWorkers = res.data.filter(w => w.workerType === 'CONTRACTOR');
+      const contractorWorkers = res.data.filter(w => w.workerTypes?.includes('CONTRACTOR'));
       setContractors(contractorWorkers);
       setStats({ total: contractorWorkers.length, activeContracts: contractorWorkers.filter(c => c.contractStatus === 'ACTIVE').length, pendingTimesheets: 0, pendingInvoices: 0, totalBilled: 0 });
     } catch (err) { console.error('Failed to load contractors:', err); }
