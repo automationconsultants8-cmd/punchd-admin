@@ -55,6 +55,12 @@ function MyTimePage() {
     monthHours: 0,
   });
 
+  // Get current user ID from localStorage
+  const getCurrentUserId = () => {
+    const user = JSON.parse(localStorage.getItem('adminUser') || '{}');
+    return user.id;
+  };
+
   useEffect(() => {
     loadEntries();
   }, []);
@@ -130,13 +136,25 @@ function MyTimePage() {
     if (!trackingStart) return;
 
     const endTime = new Date();
-    const durationMinutes = Math.round((endTime.getTime() - trackingStart.getTime()) / 1000 / 60);
+    const userId = getCurrentUserId();
+    
+    if (!userId) {
+      alert('User not found. Please log in again.');
+      return;
+    }
+
+    // Format for the API: date as YYYY-MM-DD, times as HH:MM
+    const date = trackingStart.toISOString().split('T')[0];
+    const clockIn = trackingStart.toTimeString().slice(0, 5); // "HH:MM"
+    const clockOut = endTime.toTimeString().slice(0, 5); // "HH:MM"
 
     try {
       await timeEntriesApi.createManual({
-        clockInTime: trackingStart.toISOString(),
-        clockOutTime: endTime.toISOString(),
-        durationMinutes,
+        userId,
+        date,
+        clockIn,
+        clockOut,
+        breakMinutes: 0,
         notes: 'Logged via My Time tracker',
       });
       
@@ -146,28 +164,34 @@ function MyTimePage() {
       loadEntries();
     } catch (err) {
       console.error('Failed to save time entry:', err);
-      alert('Failed to save time entry');
+      alert('Failed to save time entry: ' + (err.response?.data?.message || err.message));
     }
   };
 
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     
-    const clockInTime = new Date(`${manualEntry.date}T${manualEntry.startTime}`);
-    const clockOutTime = new Date(`${manualEntry.date}T${manualEntry.endTime}`);
-    const durationMinutes = Math.round((clockOutTime.getTime() - clockInTime.getTime()) / 1000 / 60);
+    const userId = getCurrentUserId();
+    
+    if (!userId) {
+      alert('User not found. Please log in again.');
+      return;
+    }
 
-    if (durationMinutes <= 0) {
+    // Validate times
+    if (manualEntry.endTime <= manualEntry.startTime) {
       alert('End time must be after start time');
       return;
     }
 
     try {
       await timeEntriesApi.createManual({
-        clockInTime: clockInTime.toISOString(),
-        clockOutTime: clockOutTime.toISOString(),
-        durationMinutes,
-        notes: manualEntry.notes,
+        userId,
+        date: manualEntry.date,
+        clockIn: manualEntry.startTime,
+        clockOut: manualEntry.endTime,
+        breakMinutes: 0,
+        notes: manualEntry.notes || undefined,
       });
       
       setShowManualEntry(false);
@@ -180,7 +204,7 @@ function MyTimePage() {
       loadEntries();
     } catch (err) {
       console.error('Failed to create entry:', err);
-      alert('Failed to create time entry');
+      alert('Failed to create time entry: ' + (err.response?.data?.message || err.message));
     }
   };
 
