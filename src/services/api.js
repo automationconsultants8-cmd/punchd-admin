@@ -67,6 +67,7 @@ export const jobsApi = {
 // Time entries endpoints
 export const timeEntriesApi = {
   getAll: (params) => api.get('/time-entries', { params }),
+  getMine: (params) => api.get('/time-entries/mine', { params }),
   getStatus: () => api.get('/time-entries/status'),
   clockIn: (data) => api.post('/time-entries/clock-in', data),
   clockOut: (data) => api.post('/time-entries/clock-out', data),

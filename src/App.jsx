@@ -33,6 +33,7 @@ import HourlyWorkersPage from './pages/HourlyWorkersPage';
 import SalariedWorkersPage from './pages/SalariedWorkersPage';
 import ContractorsPage from './pages/ContractorsPage';
 import VolunteersPage from './pages/VolunteersPage';
+import MyTimePage from './pages/MyTimePage';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -53,6 +54,7 @@ const pageTitles = {
   '/workers/salaried': 'Salaried Workers',
   '/workers/contractors': 'Contractors',
   '/workers/volunteers': 'Volunteers',
+  '/my-time': 'My Time',
 };
 
 function AppContent({ user, onLogout, subscription, needsOnboarding }) {
@@ -111,6 +113,7 @@ function AppContent({ user, onLogout, subscription, needsOnboarding }) {
             <Route path="/workers/salaried" element={<SalariedWorkersPage />} />
             <Route path="/workers/contractors" element={<ContractorsPage />} />
             <Route path="/workers/volunteers" element={<VolunteersPage />} />
+            <Route path="/my-time" element={<MyTimePage />} />
             
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
