@@ -29,6 +29,10 @@ import MessagesPage from './pages/MessagesPage';
 import { FeaturesProvider } from './hooks/useFeatures';
 import RoleManagementPage from './pages/RoleManagementPage';
 import LeaveManagementPage from './pages/LeaveManagementPage';
+import HourlyWorkersPage from './pages/HourlyWorkersPage';
+import SalariedWorkersPage from './pages/SalariedWorkersPage';
+import ContractorsPage from './pages/ContractorsPage';
+import VolunteersPage from './pages/VolunteersPage';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -45,6 +49,10 @@ const pageTitles = {
   '/requests/shifts': 'Shift Requests',
   '/requests/time-off': 'Time Off Requests',
   '/requests/messages': 'Messages',
+  '/workers/hourly': 'Hourly Workers',
+  '/workers/salaried': 'Salaried Workers',
+  '/workers/contractors': 'Contractors',
+  '/workers/volunteers': 'Volunteers',
 };
 
 function AppContent({ user, onLogout, subscription, needsOnboarding }) {
@@ -99,6 +107,10 @@ function AppContent({ user, onLogout, subscription, needsOnboarding }) {
             <Route path="/team-management" element={<RoleManagementPage />} />
             <Route path="/leave" element={<LeaveManagementPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/workers/hourly" element={<HourlyWorkersPage />} />
+            <Route path="/workers/salaried" element={<SalariedWorkersPage />} />
+            <Route path="/workers/contractors" element={<ContractorsPage />} />
+            <Route path="/workers/volunteers" element={<VolunteersPage />} />
             
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
