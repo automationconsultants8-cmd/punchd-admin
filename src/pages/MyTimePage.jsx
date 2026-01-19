@@ -133,9 +133,16 @@ function MyTimePage() {
   };
 
   const stopTracking = async () => {
-    if (!trackingStart) return;
+  if (!trackingStart) return;
 
-    const endTime = new Date();
+  const endTime = new Date();
+  const durationMs = endTime.getTime() - trackingStart.getTime();
+  
+  // Must track at least 1 minute
+  if (durationMs < 60000) {
+    alert('Please track for at least 1 minute before stopping.');
+    return;
+  }
     const userId = getCurrentUserId();
     
     if (!userId) {
