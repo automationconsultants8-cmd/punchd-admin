@@ -207,16 +207,17 @@ function Header({ user, pageTitle, onLogout }) {
                   <div className="profile-menu-email">{user?.email}</div>
                 </div>
               </div>
-              <div className="dropdown-divider"></div>
-              <a href="/profile" className="dropdown-item">
-                {Icons.user} My Profile
-              </a>
-              <a href="/settings" className="dropdown-item">
-                {Icons.settings} Settings
-              </a>
-              <a href="/billing" className="dropdown-item">
-                {Icons.creditCard} Billing
-              </a>
+             <a href="/profile" className="dropdown-item">
+  {Icons.user} My Profile
+</a>
+<a href="/settings" className="dropdown-item">
+  {Icons.settings} Settings
+</a>
+{(user?.role === 'OWNER' || user?.role === 'ADMIN') && (
+  <a href="/billing" className="dropdown-item">
+    {Icons.creditCard} Billing
+  </a>
+)}
               <div className="dropdown-divider"></div>
               <button className="dropdown-item text-danger" onClick={onLogout}>
                 {Icons.logOut} Sign Out
