@@ -1216,3 +1216,45 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.type-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.type-badge.salaried {
+  background: #EBF5FF;
+  color: #2563EB;
+}
+
+.type-badge.contractor {
+  background: #F3E8FF;
+  color: #9333EA;
+}
+
+.type-badge.volunteer {
+  background: #FDF2F8;
+  color: #EC4899;
+}

@@ -193,6 +193,8 @@ const TRADE_CLASSIFICATIONS = [
   'Other',
 ];
 
+const WORKER_TYPES = ['HOURLY', 'SALARIED', 'CONTRACTOR', 'VOLUNTEER'];
+
 // Smart column name mapping
 const COLUMN_MAPPINGS = {
   name: ['name', 'full name', 'fullname', 'employee name', 'employeename', 'worker name', 'workername', 'first name', 'firstname', 'employee'],
@@ -217,7 +219,7 @@ function WorkersPage() {
     email: '',
     phone: '',
     role: 'worker',
-    workerType: 'HOURLY',
+    workerTypes: ['HOURLY'],
     hourlyRate: '',
     status: 'active',
     address: '',
@@ -266,7 +268,7 @@ function WorkersPage() {
         email: formData.email || undefined,
         phone: formData.phone || undefined,
         role: formData.role?.toUpperCase() || 'WORKER',
-        workerType: formData.workerType || 'HOURLY',
+        workerTypes: formData.workerTypes?.length ? formData.workerTypes : ['HOURLY'],
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
         isActive: formData.status === 'active',
         address: formData.address || undefined,
@@ -298,7 +300,7 @@ function WorkersPage() {
       email: '',
       phone: '',
       role: 'worker',
-      workerType: 'HOURLY',
+      workerTypes: ['HOURLY'],
       hourlyRate: '',
       status: 'active',
       address: '',
@@ -317,7 +319,7 @@ function WorkersPage() {
       email: worker.email || '',
       phone: worker.phone || '',
       role: worker.role?.toLowerCase() || 'worker',
-      workerType: worker.workerType || 'HOURLY',
+      workerTypes: worker.workerTypes?.length ? worker.workerTypes : ['HOURLY'],
       hourlyRate: worker.hourlyRate || '',
       status: worker.isActive ? 'active' : 'inactive',
       address: worker.address || '',
@@ -367,6 +369,19 @@ function WorkersPage() {
       console.error('Error reactivating worker:', error);
       alert(error.response?.data?.message || 'Failed to reactivate worker');
     }
+  };
+
+  const toggleWorkerType = (type) => {
+    setFormData(prev => {
+      const current = prev.workerTypes || [];
+      if (current.includes(type)) {
+        // Don't allow removing the last type
+        if (current.length === 1) return prev;
+        return { ...prev, workerTypes: current.filter(t => t !== type) };
+      } else {
+        return { ...prev, workerTypes: [...current, type] };
+      }
+    });
   };
 
   // ============================================
@@ -699,9 +714,9 @@ function WorkersPage() {
                   <h3>{worker.name}</h3>
                   <div className="worker-badges">
                     <span className="role-badge">{worker.role}</span>
-                    {worker.workerType && worker.workerType !== 'HOURLY' && (
-                      <span className={`type-badge ${worker.workerType.toLowerCase()}`}>{formatWorkerType(worker.workerType)}</span>
-                    )}
+                    {worker.workerTypes?.filter(t => t !== 'HOURLY').map(type => (
+                      <span key={type} className={`type-badge ${type.toLowerCase()}`}>{formatWorkerType(type)}</span>
+                    ))}
                   </div>
                 </div>
                 <div className="worker-actions">
@@ -797,17 +812,6 @@ function WorkersPage() {
                       </select>
                     </div>
                     <div className="form-group">
-                      <label><span className="label-icon">{Icons.briefcase}</span>Worker Type</label>
-                      <select value={formData.workerType} onChange={(e) => setFormData(prev => ({ ...prev, workerType: e.target.value }))}>
-                        <option value="HOURLY">Hourly</option>
-                        <option value="SALARIED">Salaried</option>
-                        <option value="CONTRACTOR">Contractor</option>
-                        <option value="VOLUNTEER">Volunteer</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
                       <label><span className="label-icon">{Icons.dollarSign}</span>Hourly Rate</label>
                       <input 
                         type="number" 
@@ -817,13 +821,31 @@ function WorkersPage() {
                         placeholder="25.00" 
                       />
                     </div>
-                    <div className="form-group">
-                      <label><span className="label-icon">{Icons.checkCircle}</span>Status</label>
-                      <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label><span className="label-icon">{Icons.briefcase}</span>Worker Types</label>
+                    <div className="checkbox-group">
+                      {WORKER_TYPES.map(type => (
+                        <label key={type} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={formData.workerTypes?.includes(type)}
+                            onChange={() => toggleWorkerType(type)}
+                          />
+                          <span>{formatWorkerType(type)}</span>
+                        </label>
+                      ))}
                     </div>
+                    <p className="form-hint">Select all that apply. Workers can have multiple types.</p>
+                  </div>
+
+                  <div className="form-group">
+                    <label><span className="label-icon">{Icons.checkCircle}</span>Status</label>
+                    <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
                   </div>
                 </div>
 
