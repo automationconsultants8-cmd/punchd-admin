@@ -322,7 +322,7 @@ function Sidebar({ collapsed, onToggle, userRole }) {
   };
 
   // Check if My Time should be shown
-  const showMyTime = (userRole === 'MANAGER' || userRole === 'ADMIN') && isSalariedOrContractor();
+  const showMyTime = userRole === 'MANAGER' || userRole === 'ADMIN';
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
