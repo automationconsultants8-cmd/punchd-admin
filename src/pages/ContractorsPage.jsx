@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../services/api';
 import './WorkerTypePage.css';
 
 function ContractorsPage() {
+  const navigate = useNavigate();
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedContractors, setSelectedContractors] = useState([]);
   const [stats, setStats] = useState({ total: 0, activeContracts: 0, pendingTimesheets: 0, pendingInvoices: 0, totalBilled: 0 });
+  const [editModal, setEditModal] = useState({ open: false, contractor: null });
+  const [formData, setFormData] = useState({
+    name: '', email: '', phone: '', password: '', hourlyRate: '', 
+    contractStartDate: '', contractEndDate: ''
+  });
 
   useEffect(() => { loadContractors(); }, []);
 
@@ -15,7 +22,13 @@ function ContractorsPage() {
       const res = await usersApi.getAll();
       const contractorWorkers = res.data.filter(w => w.workerTypes?.includes('CONTRACTOR'));
       setContractors(contractorWorkers);
-      setStats({ total: contractorWorkers.length, activeContracts: contractorWorkers.filter(c => c.contractStatus === 'ACTIVE').length, pendingTimesheets: 0, pendingInvoices: 0, totalBilled: 0 });
+      setStats({ 
+        total: contractorWorkers.length, 
+        activeContracts: contractorWorkers.filter(c => c.contractStartDate && (!c.contractEndDate || new Date(c.contractEndDate) > new Date())).length, 
+        pendingTimesheets: 0, 
+        pendingInvoices: 0, 
+        totalBilled: 0 
+      });
     } catch (err) { console.error('Failed to load contractors:', err); }
     setLoading(false);
   };
@@ -24,6 +37,42 @@ function ContractorsPage() {
   const toggleSelectAll = () => setSelectedContractors(selectedContractors.length === contractors.length ? [] : contractors.map(c => c.id));
   const formatCurrency = (amount) => amount ? `$${Number(amount).toLocaleString()}` : '-';
   const formatHours = (minutes) => { if (!minutes) return '0h'; const h = Math.floor(minutes / 60); const m = minutes % 60; return m > 0 ? `${h}h ${m}m` : `${h}h`; };
+
+  const handleEdit = (contractor) => {
+    setFormData({
+      name: contractor.name || '',
+      email: contractor.email || '',
+      phone: contractor.phone || '',
+      password: '',
+      hourlyRate: contractor.hourlyRate || '',
+      contractStartDate: contractor.contractStartDate ? contractor.contractStartDate.split('T')[0] : '',
+      contractEndDate: contractor.contractEndDate ? contractor.contractEndDate.split('T')[0] : '',
+    });
+    setEditModal({ open: true, contractor });
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+        contractStartDate: formData.contractStartDate || undefined,
+        contractEndDate: formData.contractEndDate || undefined,
+      };
+      if (formData.password) {
+        payload.password = formData.password;
+      }
+      await usersApi.update(editModal.contractor.id, payload);
+      setEditModal({ open: false, contractor: null });
+      loadContractors();
+    } catch (err) {
+      console.error('Failed to save:', err);
+      alert(err.response?.data?.message || 'Failed to save contractor');
+    }
+  };
 
   const getInvoiceStatusBadge = (status) => {
     const statusMap = { 'NONE': { label: 'No Invoice', class: 'neutral' }, 'PENDING': { label: 'Pending', class: 'warning' }, 'SUBMITTED': { label: 'Submitted', class: 'info' }, 'APPROVED': { label: 'Approved', class: 'success' }, 'PAID': { label: 'Paid', class: 'success' } };
@@ -50,7 +99,7 @@ function ContractorsPage() {
         </div>
         <div className="page-header-right">
           <button className="btn btn-secondary" disabled={selectedContractors.length === 0}>Export ({selectedContractors.length})</button>
-          <button className="btn btn-primary">+ Add Contractor</button>
+          <button className="btn btn-primary" onClick={() => navigate('/workers')}>+ Add Contractor</button>
         </div>
       </div>
 
@@ -77,13 +126,69 @@ function ContractorsPage() {
                   <td>{formatHours(contractor.hoursThisPeriod || 0)}</td>
                   <td>{getInvoiceStatusBadge(contractor.invoiceStatus)}</td>
                   <td>{formatCurrency(contractor.totalBilled)}</td>
-                  <td><div className="action-buttons"><button className="btn btn-sm btn-ghost">Edit</button><button className="btn btn-sm btn-ghost">Timesheets</button><button className="btn btn-sm btn-ghost">Contract</button></div></td>
+                  <td><div className="action-buttons">
+                    <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(contractor)}>Edit</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => navigate(`/time-tracking?userId=${contractor.id}`)}>Timesheets</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(contractor)}>Contract</button>
+                  </div></td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Edit Modal */}
+      {editModal.open && (
+        <div className="modal-overlay" onClick={() => setEditModal({ open: false, contractor: null })}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Contractor</h2>
+              <button className="modal-close" onClick={() => setEditModal({ open: false, contractor: null })}>×</button>
+            </div>
+            <form onSubmit={handleSave}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Name</label>
+                  <input type="text" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} required />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input type="tel" value={formData.phone} onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input type="email" value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Password (leave blank to keep current)</label>
+                  <input type="password" value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))} placeholder="••••••••" />
+                </div>
+                <div className="form-group">
+                  <label>Hourly Rate</label>
+                  <input type="number" step="0.01" value={formData.hourlyRate} onChange={e => setFormData(p => ({ ...p, hourlyRate: e.target.value }))} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Contract Start Date</label>
+                    <input type="date" value={formData.contractStartDate} onChange={e => setFormData(p => ({ ...p, contractStartDate: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label>Contract End Date</label>
+                    <input type="date" value={formData.contractEndDate} onChange={e => setFormData(p => ({ ...p, contractEndDate: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setEditModal({ open: false, contractor: null })}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -87,6 +87,12 @@ const Icons = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
   ),
+  lock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  ),
   clock: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
@@ -218,6 +224,7 @@ function WorkersPage() {
     name: '',
     email: '',
     phone: '',
+    password: '',
     role: 'worker',
     workerTypes: ['HOURLY'],
     hourlyRate: '',
@@ -279,6 +286,11 @@ function WorkersPage() {
         tradeClassification: formData.tradeClassification || undefined,
       };
 
+      // Only include password if it's set (for new users or password change)
+      if (formData.password) {
+        payload.password = formData.password;
+      }
+
       if (editingWorker) {
         await usersApi.update(editingWorker.id, payload);
       } else {
@@ -299,6 +311,7 @@ function WorkersPage() {
       name: '',
       email: '',
       phone: '',
+      password: '',
       role: 'worker',
       workerTypes: ['HOURLY'],
       hourlyRate: '',
@@ -318,6 +331,7 @@ function WorkersPage() {
       name: worker.name || '',
       email: worker.email || '',
       phone: worker.phone || '',
+      password: '', // Don't pre-fill password
       role: worker.role?.toLowerCase() || 'worker',
       workerTypes: worker.workerTypes?.length ? worker.workerTypes : ['HOURLY'],
       hourlyRate: worker.hourlyRate || '',
@@ -801,6 +815,11 @@ function WorkersPage() {
                       <label><span className="label-icon">{Icons.mail}</span>Email</label>
                       <input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="john@example.com" />
                     </div>
+                  </div>
+                  <div className="form-group">
+                    <label><span className="label-icon">{Icons.lock}</span>Password {editingWorker ? '(leave blank to keep current)' : ''}</label>
+                    <input type="password" value={formData.password} onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} placeholder={editingWorker ? '••••••••' : 'Set password for portal access'} />
+                    <p className="form-hint">Required for contractor portal and mobile app login</p>
                   </div>
                   <div className="form-row">
                     <div className="form-group">
