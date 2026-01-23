@@ -53,9 +53,27 @@ function TimeTrackingPage() {
     jobId: '',
     notes: ''
   });
+  const [archiveModal, setArchiveModal] = useState({ open: false, entry: null, reason: '' });
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [unlockModal, setUnlockModal] = useState({ open: false, reason: '' });
+  const [deletePayPeriodModal, setDeletePayPeriodModal] = useState({ open: false, period: null });
   const [settingsModal, setSettingsModal] = useState({ open: false });
+  const [manualEntryModal, setManualEntryModal] = useState({ open: false });
+  
+  // Copy Entry Modal state
+  const [copyModal, setCopyModal] = useState({ 
+    open: false, 
+    entry: null,
+    copyMode: 'single', // 'single', 'multiple', 'weekdays'
+    targetDate: '',
+    targetDates: [],
+    targetPayPeriod: '',
+    copyToNextWeek: false,
+    weekdaysOnly: false,
+    numberOfWeeks: 1,
+  });
+  const [copyLoading, setCopyLoading] = useState(false);
+
   const [payPeriodSettings, setPayPeriodSettings] = useState({
     payPeriodType: 'BIWEEKLY',
     payPeriodStartDay: 1,
@@ -79,11 +97,9 @@ function TimeTrackingPage() {
       const periods = res.data || [];
       setPayPeriods(periods);
       
-      // Auto-select current open period if exists
       const currentPeriod = periods.find(p => p.status === 'OPEN');
       if (currentPeriod) {
         setSelectedPayPeriod(currentPeriod);
-        // Update date range to match pay period
         setDateRange({
           start: new Date(currentPeriod.startDate).toISOString().split('T')[0],
           end: new Date(currentPeriod.endDate).toISOString().split('T')[0],
@@ -124,7 +140,7 @@ function TimeTrackingPage() {
           : undefined,
       });
       setSettingsModal({ open: false });
-      await loadPayPeriods(); // Reload periods after settings change
+      await loadPayPeriods();
     } catch (err) {
       console.error('Failed to save pay period settings:', err);
       alert(err.response?.data?.message || 'Failed to save settings. Please try again.');
@@ -178,7 +194,6 @@ function TimeTrackingPage() {
   const handlePayPeriodChange = (periodId) => {
     if (!periodId) {
       setSelectedPayPeriod(null);
-      // Reset to default 7 day range
       setDateRange({
         start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0],
@@ -203,7 +218,6 @@ function TimeTrackingPage() {
     try {
       await payPeriodsApi.lock(selectedPayPeriod.id);
       await loadPayPeriods();
-      // Re-select the same period to get updated status
       const updatedPeriods = await payPeriodsApi.getAll();
       const updatedPeriod = (updatedPeriods.data || []).find(p => p.id === selectedPayPeriod.id);
       if (updatedPeriod) {
@@ -239,144 +253,64 @@ function TimeTrackingPage() {
     setPayPeriodLoading(false);
   };
 
-  // Format short ID for display (first 8 chars of UUID)
-  const formatShortId = (id) => {
-    if (!id) return '—';
-    return id.substring(0, 8).toUpperCase();
-  };
-
-  // Open edit modal with entry data
-  const openEditModal = (entry) => {
-    // Check if pay period is locked
-    if (selectedPayPeriod?.status === 'LOCKED') {
-      alert('This pay period is locked. Unlock it first to edit entries.');
-      return;
-    }
-
-    const clockIn = new Date(entry.clockInTime);
-    const clockOut = entry.clockOutTime ? new Date(entry.clockOutTime) : null;
-    
-    setEditModal({
-      open: true,
-      entry,
-      clockInDate: clockIn.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }),
-      clockInTime: clockIn.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' }),
-      clockOutDate: clockOut ? clockOut.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) : '',
-      clockOutTime: clockOut ? clockOut.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' }) : '',
-      breakMinutes: entry.breakMinutes || 0,
-      jobId: entry.jobId || '',
-      notes: entry.notes || ''
-    });
-  };
-
-  // Handle edit form submission
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editModal.entry) return;
-
-    setActionLoading(editModal.entry.id);
-    try {
-      // Build clock in datetime - Pacific time (UTC-8)
-      const clockInDateTime = new Date(`${editModal.clockInDate}T${editModal.clockInTime}:00-08:00`);
-      
-      // Build clock out datetime (if provided) - Pacific time (UTC-8)
-      let clockOutDateTime = null;
-      if (editModal.clockOutDate && editModal.clockOutTime) {
-        clockOutDateTime = new Date(`${editModal.clockOutDate}T${editModal.clockOutTime}:00-08:00`);
-      }
-
-      // Validate clock out is after clock in
-      if (clockOutDateTime && clockOutDateTime <= clockInDateTime) {
-        alert('Clock out must be after clock in');
-        setActionLoading(null);
-        return;
-      }
-
-      // Validate not more than 24 hours
-      if (clockOutDateTime) {
-        const diffHours = (clockOutDateTime - clockInDateTime) / (1000 * 60 * 60);
-        if (diffHours > 24) {
-          alert('Time entry cannot exceed 24 hours');
-          setActionLoading(null);
-          return;
-        }
-      }
-
-      await timeEntriesApi.update(editModal.entry.id, {
-        clockInTime: clockInDateTime.toISOString(),
-        clockOutTime: clockOutDateTime ? clockOutDateTime.toISOString() : null,
-        breakMinutes: parseInt(editModal.breakMinutes) || 0,
-        jobId: editModal.jobId || null,
-        notes: editModal.notes || null
-      });
-
-      setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' });
-      await loadData();
-    } catch (err) {
-      console.error('Failed to update entry:', err);
-      alert(err.response?.data?.message || 'Failed to update entry');
-    }
-    setActionLoading(null);
-  };
-
   const formatPayPeriodLabel = (period, index) => {
-    const statusIcon = period.status === 'LOCKED' ? ' 🔒' : period.status === 'EXPORTED' ? ' ✓' : '';
-    return `Pay Period ${index + 1}${statusIcon}`;
+    const start = new Date(period.startDate);
+    const end = new Date(period.endDate);
+    return `Pay Period ${payPeriods.length - index}`;
+  };
+
+const handleDeletePayPeriod = async () => {
+    if (!deletePayPeriodModal.period) return;
+
+    setPayPeriodLoading(true);
+    try {
+      await payPeriodsApi.delete(deletePayPeriodModal.period.id);
+      setDeletePayPeriodModal({ open: false, period: null });
+      setSelectedPayPeriod(null);
+      await loadPayPeriods();
+    } catch (err) {
+      console.error('Failed to delete pay period:', err);
+      alert(err.response?.data?.message || 'Failed to delete pay period.');
+    }
+    setPayPeriodLoading(false);
   };
 
   const formatPayPeriodDateRange = (period) => {
     if (!period) return '';
-    const start = new Date(period.startDate).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      timeZone: 'America/Los_Angeles'
-    });
-    const end = new Date(period.endDate).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      timeZone: 'America/Los_Angeles'
-    });
-    return `${start} – ${end}`;
+    const start = new Date(period.startDate);
+    const end = new Date(period.endDate);
+    const options = { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' };
+    return `${start.toLocaleDateString('en-US', options)} – ${end.toLocaleDateString('en-US', options)}`;
   };
 
-  // Settings icon SVG
   const SettingsIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
-      <circle cx="12" cy="12" r="3"/>
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
   );
 
-// Format date in local timezone
-const formatDate = (dateString) => {
-  if (!dateString) return '--';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: 'numeric',
-    timeZone: 'America/Los_Angeles'
-  });
-};
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '--';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
-// Format time in local timezone
-const formatTime = (dateString) => {
-  if (!dateString) return '--';
-  const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
-    minute: '2-digit', 
-    hour12: true,
-    timeZone: 'America/Los_Angeles'
-  });
-};
+  const formatTime = (dateStr) => {
+    if (!dateStr) return '--';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
 
   const formatDuration = (minutes) => {
-    if (!minutes) return '--';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+    if (!minutes) return '0m';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  };
+
+  const formatShortId = (id) => {
+    if (!id) return '--';
+    return id.slice(-6).toUpperCase();
   };
 
   const formatCurrency = (amount) => {
@@ -392,6 +326,7 @@ const formatTime = (dateString) => {
       if (filters.status === 'active' && entry.clockOutTime) return false;
       if (filters.status === 'completed' && !entry.clockOutTime) return false;
       if (filters.approvalStatus && entry.approvalStatus !== filters.approvalStatus) return false;
+      if (entry.isArchived) return false;
       return true;
     });
   };
@@ -415,7 +350,7 @@ const formatTime = (dateString) => {
       alert('Please provide a reason for rejection');
       return;
     }
-    
+
     setActionLoading(rejectModal.entryId);
     try {
       await timeEntriesApi.reject(rejectModal.entryId, rejectModal.reason);
@@ -435,7 +370,7 @@ const formatTime = (dateString) => {
       alert('Please select entries to approve');
       return;
     }
-    
+
     setActionLoading('bulk');
     try {
       await timeEntriesApi.bulkApprove(selectedEntries);
@@ -449,8 +384,8 @@ const formatTime = (dateString) => {
   };
 
   const toggleSelectEntry = (entryId) => {
-    setSelectedEntries(prev => 
-      prev.includes(entryId) 
+    setSelectedEntries(prev =>
+      prev.includes(entryId)
         ? prev.filter(id => id !== entryId)
         : [...prev, entryId]
     );
@@ -464,30 +399,38 @@ const formatTime = (dateString) => {
     }
   };
 
+  const getPacificOffset = () => {
+    const now = new Date();
+    const jan = new Date(now.getFullYear(), 0, 1);
+    const jul = new Date(now.getFullYear(), 6, 1);
+    const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+    const isDST = now.getTimezoneOffset() < stdOffset;
+    return isDST ? '-07:00' : '-08:00';
+  };
+
   const handleManualSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate clock out is after clock in and not more than 24 hours
-    const clockIn = new Date(`${manualEntry.date}T${manualEntry.clockIn}:00`);
-    const clockOut = new Date(`${manualEntry.date}T${manualEntry.clockOut}:00`);
-    
-    // Handle overnight shifts
+
+    const tzOffset = getPacificOffset();
+    const clockIn = new Date(`${manualEntry.date}T${manualEntry.clockIn}:00${tzOffset}`);
+    let clockOut = new Date(`${manualEntry.date}T${manualEntry.clockOut}:00${tzOffset}`);
+
     if (clockOut <= clockIn) {
-      clockOut.setDate(clockOut.getDate() + 1);
+      clockOut = new Date(clockOut.getTime() + 24 * 60 * 60 * 1000);
     }
-    
+
     const diffHours = (clockOut - clockIn) / (1000 * 60 * 60);
-    
+
     if (diffHours > 24) {
       alert('Time entry cannot exceed 24 hours');
       return;
     }
-    
+
     if (diffHours <= 0) {
       alert('Clock out must be after clock in');
       return;
     }
-    
+
     setActionLoading('manual');
     try {
       await timeEntriesApi.createManual({
@@ -498,6 +441,7 @@ const formatTime = (dateString) => {
         clockOut: manualEntry.clockOut,
         breakMinutes: parseInt(manualEntry.breakMinutes) || 0,
         notes: manualEntry.notes,
+        timezone: 'America/Los_Angeles',
       });
       alert('Manual time entry created successfully');
       setManualEntry({
@@ -509,13 +453,114 @@ const formatTime = (dateString) => {
         breakMinutes: 30,
         notes: '',
       });
-      setActiveTab('entries');
+      setManualEntryModal({ open: false });
       loadData();
     } catch (err) {
       console.error('Failed to create manual entry:', err);
       alert(err.response?.data?.message || 'Failed to create entry. Please try again.');
     }
     setActionLoading(null);
+  };
+
+  // Copy Entry Functions
+  const openCopyModal = (entry) => {
+    const entryDate = new Date(entry.clockInTime);
+    const nextDay = new Date(entryDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    setCopyModal({
+      open: true,
+      entry,
+      copyMode: 'single',
+      targetDate: nextDay.toISOString().split('T')[0],
+      targetDates: [],
+      targetPayPeriod: '',
+      copyToNextWeek: false,
+      weekdaysOnly: true,
+      numberOfWeeks: 1,
+    });
+  };
+
+  const getWeekdaysBetween = (startDate, endDate) => {
+    const dates = [];
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+    
+    while (current <= end) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
+        dates.push(new Date(current).toISOString().split('T')[0]);
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
+  };
+
+  const handleCopyEntry = async () => {
+    if (!copyModal.entry) return;
+    
+    setCopyLoading(true);
+    
+    try {
+      const entry = copyModal.entry;
+      const clockInTime = new Date(entry.clockInTime);
+      const clockOutTime = entry.clockOutTime ? new Date(entry.clockOutTime) : null;
+      
+      // Get time parts from original entry
+      const clockInHours = clockInTime.getHours().toString().padStart(2, '0');
+      const clockInMins = clockInTime.getMinutes().toString().padStart(2, '0');
+      const clockOutHours = clockOutTime ? clockOutTime.getHours().toString().padStart(2, '0') : '17';
+      const clockOutMins = clockOutTime ? clockOutTime.getMinutes().toString().padStart(2, '0') : '00';
+      
+      let datesToCopy = [];
+      
+      if (copyModal.copyMode === 'single') {
+        datesToCopy = [copyModal.targetDate];
+      } else if (copyModal.copyMode === 'multiple') {
+        datesToCopy = copyModal.targetDates;
+      } else if (copyModal.copyMode === 'weekdays') {
+        // Copy to weekdays for specified number of weeks
+        const originalDate = new Date(entry.clockInTime);
+        for (let week = 1; week <= copyModal.numberOfWeeks; week++) {
+          const weekStart = new Date(originalDate);
+          weekStart.setDate(weekStart.getDate() + (week * 7) - weekStart.getDay() + 1); // Next Monday
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 4); // Friday
+          
+          const weekdayDates = getWeekdaysBetween(weekStart, weekEnd);
+          datesToCopy = [...datesToCopy, ...weekdayDates];
+        }
+      }
+      
+      // Create entries for each date
+      let successCount = 0;
+      for (const targetDate of datesToCopy) {
+        try {
+          await timeEntriesApi.createManual({
+            userId: entry.userId,
+            jobId: entry.jobId || undefined,
+            date: targetDate,
+            clockIn: `${clockInHours}:${clockInMins}`,
+            clockOut: `${clockOutHours}:${clockOutMins}`,
+            breakMinutes: entry.breakMinutes || 0,
+            notes: `Copied from ${formatDate(entry.clockInTime)}`,
+            timezone: 'America/Los_Angeles',
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to copy entry to ${targetDate}:`, err);
+        }
+      }
+      
+      alert(`Successfully copied entry to ${successCount} day${successCount !== 1 ? 's' : ''}`);
+      setCopyModal({ open: false, entry: null, copyMode: 'single', targetDate: '', targetDates: [], targetPayPeriod: '', copyToNextWeek: false, weekdaysOnly: true, numberOfWeeks: 1 });
+      loadData();
+    } catch (err) {
+      console.error('Failed to copy entry:', err);
+      alert('Failed to copy entry. Please try again.');
+    }
+    
+    setCopyLoading(false);
   };
 
   const handleExport = async (format) => {
@@ -583,27 +628,26 @@ const formatTime = (dateString) => {
   };
 
   const getOvertimeBadge = (entry) => {
-  const otMins = entry.overtimeMinutes || 0;
-  const dtMins = entry.doubleTimeMinutes || 0;
-  
-  if (otMins === 0 && dtMins === 0) return null;
-  
-  return (
-    <>
-      {otMins > 0 && <span className="badge badge-overtime">⚡ {(otMins / 60).toFixed(1)}h OT</span>}
-      {dtMins > 0 && <span className="badge badge-doubletime">🔥 {(dtMins / 60).toFixed(1)}h DT</span>}
-    </>
-  );
-};
+    const otMins = entry.overtimeMinutes || 0;
+    const dtMins = entry.doubleTimeMinutes || 0;
 
-  // Calculate stats for selected pay period
+    if (otMins === 0 && dtMins === 0) return null;
+
+    return (
+      <>
+        {otMins > 0 && <span className="badge badge-overtime">⚡ {(otMins / 60).toFixed(1)}h OT</span>}
+        {dtMins > 0 && <span className="badge badge-doubletime">🔥 {(dtMins / 60).toFixed(1)}h DT</span>}
+      </>
+    );
+  };
+
   const getPayPeriodStats = () => {
     if (!selectedPayPeriod) return null;
-    
+
     const periodEntries = timeEntries;
     const pending = periodEntries.filter(e => e.approvalStatus === 'PENDING').length;
     const totalMinutes = periodEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
-    
+
     return {
       entries: periodEntries.length,
       pending,
@@ -614,66 +658,150 @@ const formatTime = (dateString) => {
 
   const payPeriodStats = getPayPeriodStats();
 
-return (
-  <div className="time-tracking-page">
-    <div className="page-header">
-      <div>
-        <h1 className="page-title">Time Tracking</h1>
-        <p className="page-subtitle">View, approve, and manage time entries</p>
-      </div>
-      <div className="page-actions">
-        <button className="btn btn-secondary" onClick={() => setActiveTab('manual')}>+ Manual Entry</button>
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => handleExport('excel')}
-          disabled={exportLoading === 'excel'}
-        >
-          {exportLoading === 'excel' ? '...' : '📊'} Excel
-        </button>
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => handleExport('pdf')}
-          disabled={exportLoading === 'pdf'}
-        >
-          {exportLoading === 'pdf' ? '...' : '📄'} PDF
-        </button>
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => handleExport('csv')}
-          disabled={exportLoading === 'csv'}
-        >
-          {exportLoading === 'csv' ? '...' : '📋'} CSV
-        </button>
-        <div className="export-dropdown">
-          <button 
-            className="btn btn-primary"
-            onClick={() => setExportMenuOpen(!exportMenuOpen)}
-          >
-            Payroll Export ▾
-          </button>
-          {exportMenuOpen && (
-            <div className="export-dropdown-menu">
-              <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
-                {exportLoading === 'quickbooks' ? '...' : '📗'} QuickBooks
-              </button>
-              <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
-                {exportLoading === 'adp' ? '...' : '📘'} ADP
-              </button>
-              <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
-                {exportLoading === 'gusto' ? '...' : '📙'} Gusto
-              </button>
-              <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
-                {exportLoading === 'paychex' ? '...' : '📕'} Paychex
-              </button>
-            </div>
-          )}
+  const openEditModal = (entry) => {
+    const clockIn = new Date(entry.clockInTime);
+    const clockOut = entry.clockOutTime ? new Date(entry.clockOutTime) : null;
+    
+    setEditModal({
+      open: true,
+      entry,
+      clockInDate: clockIn.toISOString().split('T')[0],
+      clockInTime: clockIn.toTimeString().slice(0, 5),
+      clockOutDate: clockOut ? clockOut.toISOString().split('T')[0] : '',
+      clockOutTime: clockOut ? clockOut.toTimeString().slice(0, 5) : '',
+      breakMinutes: entry.breakMinutes || 0,
+      jobId: entry.jobId || '',
+      notes: entry.notes || '',
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    
+    setActionLoading(editModal.entry.id);
+    try {
+      const tzOffset = getPacificOffset();
+      
+      const updateData = {
+        clockInTime: new Date(`${editModal.clockInDate}T${editModal.clockInTime}:00${tzOffset}`).toISOString(),
+        breakMinutes: parseInt(editModal.breakMinutes) || 0,
+        jobId: editModal.jobId || null,
+        notes: editModal.notes,
+      };
+      
+      if (editModal.clockOutDate && editModal.clockOutTime) {
+        updateData.clockOutTime = new Date(`${editModal.clockOutDate}T${editModal.clockOutTime}:00${tzOffset}`).toISOString();
+      }
+      
+      await timeEntriesApi.update(editModal.entry.id, updateData);
+      
+      setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' });
+      loadData();
+    } catch (err) {
+      console.error('Failed to update entry:', err);
+      alert(err.response?.data?.message || 'Failed to update entry. Please try again.');
+    }
+    setActionLoading(null);
+  };
+
+  const handleArchive = async () => {
+    if (!archiveModal.entry) return;
+    
+    setActionLoading(archiveModal.entry.id);
+    try {
+      await timeEntriesApi.archive(archiveModal.entry.id, archiveModal.reason);
+      setArchiveModal({ open: false, entry: null, reason: '' });
+      loadData();
+    } catch (err) {
+      console.error('Failed to archive entry:', err);
+      alert(err.response?.data?.message || 'Failed to archive entry. Please try again.');
+    }
+    setActionLoading(null);
+  };
+
+  // Manual Entry Form Component
+  const ManualEntryForm = ({ inModal = false }) => (
+    <form onSubmit={handleManualSubmit} className="manual-form">
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Worker *</label>
+          <select value={manualEntry.workerId} onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value }))} className="form-select" required>
+            <option value="">Select...</option>
+            {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Location</label>
+          <select value={manualEntry.jobId} onChange={(e) => setManualEntry(prev => ({ ...prev, jobId: e.target.value }))} className="form-select">
+            <option value="">Select...</option>
+            {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+          </select>
         </div>
       </div>
-    </div>
+      <div className="form-row">
+        <div className="form-group"><label className="form-label">Date *</label><input type="date" value={manualEntry.date} onChange={(e) => setManualEntry(prev => ({ ...prev, date: e.target.value }))} className="form-input" required /></div>
+        <div className="form-group"><label className="form-label">Clock In *</label><input type="time" value={manualEntry.clockIn} onChange={(e) => setManualEntry(prev => ({ ...prev, clockIn: e.target.value }))} className="form-input" required /></div>
+        <div className="form-group"><label className="form-label">Clock Out *</label><input type="time" value={manualEntry.clockOut} onChange={(e) => setManualEntry(prev => ({ ...prev, clockOut: e.target.value }))} className="form-input" required /></div>
+        <div className="form-group"><label className="form-label">Break (min)</label><input type="number" value={manualEntry.breakMinutes} onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} className="form-input" /></div>
+      </div>
+      <div className="form-hint" style={{ marginBottom: '16px', color: '#666', fontSize: '0.85rem' }}>
+        ⏰ Times are in Pacific Time (PT)
+      </div>
+      <div className="form-group"><label className="form-label">Notes</label><textarea value={manualEntry.notes} onChange={(e) => setManualEntry(prev => ({ ...prev, notes: e.target.value }))} className="form-textarea" rows="3"></textarea></div>
+      <div className="form-actions">
+        <button type="button" className="btn btn-ghost" onClick={() => setManualEntryModal({ open: false })}>Cancel</button>
+        <button type="submit" className="btn btn-primary" disabled={actionLoading === 'manual'}>
+          {actionLoading === 'manual' ? 'Creating...' : 'Create Entry'}
+        </button>
+      </div>
+    </form>
+  );
+
+  return (
+    <div className="time-tracking-page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Time Tracking</h1>
+          <p className="page-subtitle">View, approve, and manage time entries</p>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-secondary" onClick={() => setManualEntryModal({ open: true })}>+ Manual Entry</button>
+          <button className="btn btn-secondary" onClick={() => handleExport('excel')} disabled={exportLoading === 'excel'}>
+            {exportLoading === 'excel' ? '...' : '📊'} Excel
+          </button>
+          <button className="btn btn-secondary" onClick={() => handleExport('pdf')} disabled={exportLoading === 'pdf'}>
+            {exportLoading === 'pdf' ? '...' : '📄'} PDF
+          </button>
+          <button className="btn btn-secondary" onClick={() => handleExport('csv')} disabled={exportLoading === 'csv'}>
+            {exportLoading === 'csv' ? '...' : '📋'} CSV
+          </button>
+          <div className="export-dropdown">
+            <button className="btn btn-primary" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
+              Payroll Export ▾
+            </button>
+            {exportMenuOpen && (
+              <div className="export-dropdown-menu">
+                <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
+                  {exportLoading === 'quickbooks' ? '...' : '🔗'} QuickBooks
+                </button>
+                <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
+                  {exportLoading === 'adp' ? '...' : '📘'} ADP
+                </button>
+                <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
+                  {exportLoading === 'gusto' ? '...' : '📙'} Gusto
+                </button>
+                <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
+                  {exportLoading === 'paychex' ? '...' : '📕'} Paychex
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Approval Stats Cards */}
       <div className="stats-row">
-        <div className="stat-card stat-pending" onClick={() => { setActiveTab('approvals'); }}>
+        <div className="stat-card stat-pending" onClick={() => setActiveTab('approvals')}>
           <div className="stat-icon">⏳</div>
           <div className="stat-content">
             <div className="stat-value">{approvalStats.pending}</div>
@@ -703,12 +831,12 @@ return (
         </div>
       </div>
 
+      {/* Tabs - Manual Entry tab REMOVED */}
       <div className="tabs">
         <button className={`tab ${activeTab === 'entries' ? 'active' : ''}`} onClick={() => setActiveTab('entries')}>All Entries</button>
         <button className={`tab ${activeTab === 'approvals' ? 'active' : ''}`} onClick={() => setActiveTab('approvals')}>
           Pending Approvals {pendingApprovals.length > 0 && <span className="tab-badge">{pendingApprovals.length}</span>}
         </button>
-        <button className={`tab ${activeTab === 'manual' ? 'active' : ''}`} onClick={() => setActiveTab('manual')}>Manual Entry</button>
       </div>
 
       {activeTab === 'entries' && (
@@ -787,6 +915,17 @@ return (
                       {payPeriodLoading ? '...' : 'Unlock'}
                     </button>
                   )}
+                  {selectedPayPeriod.status === 'OPEN' && (
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => setDeletePayPeriodModal({ open: true, period: selectedPayPeriod })}
+                      disabled={payPeriodLoading}
+                      title="Delete pay period"
+                      style={{ marginLeft: '8px', background: '#dc3545', color: 'white' }}
+                    >
+                      🗑️
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -841,7 +980,6 @@ return (
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Worker</th>
                       <th>Location</th>
                       <th>Date</th>
@@ -856,11 +994,10 @@ return (
                   </thead>
                   <tbody>
                     {getFilteredEntries().length === 0 ? (
-                      <tr><td colSpan="11"><div className="empty-state"><p>No time entries found</p></div></td></tr>
+                      <tr><td colSpan="10"><div className="empty-state"><p>No time entries found</p></div></td></tr>
                     ) : (
                       getFilteredEntries().map(entry => (
                         <tr key={entry.id} className={`${entry.approvalStatus === 'REJECTED' ? 'row-rejected' : ''} ${entry.amendedAfterExport ? 'row-amended' : ''}`}>
-                          <td><span className="entry-id">{formatShortId(entry.id)}</span></td>
                           <td><div className="worker-cell"><div className="avatar avatar-sm">{entry.user?.name?.split(' ').map(n => n[0]).join('') || '??'}</div><span>{entry.user?.name || 'Unknown'}</span></div></td>
                           <td>{entry.job?.name || 'Unassigned'}</td>
                           <td>{formatDate(entry.clockInTime)}</td>
@@ -900,6 +1037,21 @@ return (
                               )}
                               <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(entry)} disabled={entry.isLocked}>Edit</button>
                               <button className="btn btn-ghost btn-sm" onClick={() => setViewModal({ open: true, entry })}>View</button>
+                              <button 
+                                className="btn btn-ghost btn-sm btn-copy" 
+                                onClick={() => openCopyModal(entry)}
+                                title="Copy entry to other days"
+                              >
+                                📋
+                              </button>
+                              <button 
+                                className="btn btn-ghost btn-sm btn-archive" 
+                                onClick={() => setArchiveModal({ open: true, entry, reason: '' })}
+                                disabled={entry.isLocked}
+                                title="Archive entry"
+                              >
+                                🗃️
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -969,24 +1121,17 @@ return (
                       )}
                       {entry.isFlagged && entry.flagReason && (
                         <div className="flag-reason">
-                          <span>⚠️ {entry.flagReason}</span>
+                          <strong>⚠️ Flag:</strong> {entry.flagReason}
                         </div>
                       )}
                       <div className="approval-actions">
-                        <button 
-                          className="btn btn-secondary" 
-                          onClick={() => setRejectModal({ open: true, entryId: entry.id, reason: '' })}
-                          disabled={actionLoading === entry.id}
-                        >
-                          Reject
+                        <button className="btn btn-success" onClick={() => handleApprove(entry.id)} disabled={actionLoading === entry.id}>
+                          {actionLoading === entry.id ? '...' : '✓ Approve'}
                         </button>
-                        <button 
-                          className="btn btn-primary" 
-                          onClick={() => handleApprove(entry.id)}
-                          disabled={actionLoading === entry.id}
-                        >
-                          {actionLoading === entry.id ? 'Approving...' : 'Approve'}
+                        <button className="btn btn-danger" onClick={() => setRejectModal({ open: true, entryId: entry.id, reason: '' })} disabled={actionLoading === entry.id}>
+                          ✗ Reject
                         </button>
+                        <button className="btn btn-ghost" onClick={() => setViewModal({ open: true, entry })}>View</button>
                       </div>
                     </div>
                   ))
@@ -994,47 +1139,10 @@ return (
               </div>
             </>
           )}
-
-          {activeTab === 'manual' && (
-            <div className="card">
-              <div className="card-header"><h3 className="card-title">Add Manual Time Entry</h3></div>
-              <form onSubmit={handleManualSubmit} className="manual-form">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Worker *</label>
-                    <select value={manualEntry.workerId} onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value }))} className="form-select" required>
-                      <option value="">Select...</option>
-                      {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Location</label>
-                    <select value={manualEntry.jobId} onChange={(e) => setManualEntry(prev => ({ ...prev, jobId: e.target.value }))} className="form-select">
-                      <option value="">Select...</option>
-                      {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group"><label className="form-label">Date *</label><input type="date" value={manualEntry.date} onChange={(e) => setManualEntry(prev => ({ ...prev, date: e.target.value }))} className="form-input" required /></div>
-                  <div className="form-group"><label className="form-label">Clock In *</label><input type="time" value={manualEntry.clockIn} onChange={(e) => setManualEntry(prev => ({ ...prev, clockIn: e.target.value }))} className="form-input" required /></div>
-                  <div className="form-group"><label className="form-label">Clock Out *</label><input type="time" value={manualEntry.clockOut} onChange={(e) => setManualEntry(prev => ({ ...prev, clockOut: e.target.value }))} className="form-input" required /></div>
-                  <div className="form-group"><label className="form-label">Break (min)</label><input type="number" value={manualEntry.breakMinutes} onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} className="form-input" /></div>
-                </div>
-                <div className="form-group"><label className="form-label">Notes</label><textarea value={manualEntry.notes} onChange={(e) => setManualEntry(prev => ({ ...prev, notes: e.target.value }))} className="form-textarea" rows="3"></textarea></div>
-                <div className="form-actions">
-                  <button type="button" className="btn btn-ghost" onClick={() => setActiveTab('entries')}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'manual'}>
-                    {actionLoading === 'manual' ? 'Creating...' : 'Create Entry'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
         </>
       )}
 
-      {/* Rejection Modal */}
+      {/* Reject Modal */}
       {rejectModal.open && (
         <div className="modal-overlay" onClick={() => setRejectModal({ open: false, entryId: null, reason: '' })}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1043,26 +1151,21 @@ return (
               <button className="modal-close" onClick={() => setRejectModal({ open: false, entryId: null, reason: '' })}>×</button>
             </div>
             <div className="modal-body">
-              <p>Please provide a reason for rejecting this time entry. The worker will be notified.</p>
               <div className="form-group">
-                <label className="form-label">Rejection Reason</label>
+                <label className="form-label">Reason for Rejection *</label>
                 <textarea 
-                  className="form-textarea" 
-                  rows="3" 
-                  placeholder="e.g., Hours don't match schedule, Missing clock-out photo..."
+                  className="form-textarea"
                   value={rejectModal.reason}
                   onChange={(e) => setRejectModal(prev => ({ ...prev, reason: e.target.value }))}
-                  autoFocus
+                  placeholder="Explain why this entry is being rejected..."
+                  rows={4}
+                  required
                 />
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setRejectModal({ open: false, entryId: null, reason: '' })}>Cancel</button>
-              <button 
-                className="btn btn-danger" 
-                onClick={handleReject}
-                disabled={actionLoading === rejectModal.entryId}
-              >
+              <button className="btn btn-danger" onClick={handleReject} disabled={actionLoading === rejectModal.entryId}>
                 {actionLoading === rejectModal.entryId ? 'Rejecting...' : 'Reject Entry'}
               </button>
             </div>
@@ -1070,7 +1173,96 @@ return (
         </div>
       )}
 
-      {/* Unlock Modal */}
+      {/* View Modal */}
+      {viewModal.open && viewModal.entry && (
+        <div className="modal-overlay" onClick={() => setViewModal({ open: false, entry: null })}>
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Time Entry Details</h3>
+              <button className="modal-close" onClick={() => setViewModal({ open: false, entry: null })}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="entry-detail-grid">
+                <div className="detail-section">
+                  <h4>Entry Information</h4>
+                  <div className="detail-row"><span>Entry ID</span><strong>{formatShortId(viewModal.entry.id)}</strong></div>
+                  <div className="detail-row"><span>Worker</span><strong>{viewModal.entry.user?.name || 'Unknown'}</strong></div>
+                  <div className="detail-row"><span>Location</span><strong>{viewModal.entry.job?.name || 'Unassigned'}</strong></div>
+                  <div className="detail-row"><span>Status</span>{getApprovalBadge(viewModal.entry.approvalStatus)}</div>
+                </div>
+                <div className="detail-section">
+                  <h4>Time Details</h4>
+                  <div className="detail-row"><span>Date</span><strong>{formatDate(viewModal.entry.clockInTime)}</strong></div>
+                  <div className="detail-row"><span>Clock In</span><strong>{formatTime(viewModal.entry.clockInTime)}</strong></div>
+                  <div className="detail-row"><span>Clock Out</span><strong>{viewModal.entry.clockOutTime ? formatTime(viewModal.entry.clockOutTime) : 'Active'}</strong></div>
+                  <div className="detail-row"><span>Break</span><strong>{viewModal.entry.breakMinutes || 0} minutes</strong></div>
+                  <div className="detail-row"><span>Total Duration</span><strong>{formatDuration(viewModal.entry.durationMinutes)}</strong></div>
+                </div>
+                <div className="detail-section">
+                  <h4>Cost Breakdown</h4>
+                  <div className="detail-row"><span>Hourly Rate</span><strong>${viewModal.entry.hourlyRate || 0}/hr</strong></div>
+                  <div className="detail-row"><span>Regular Hours</span><strong>{((viewModal.entry.regularMinutes || 0) / 60).toFixed(2)}h</strong></div>
+                  <div className="detail-row"><span>Overtime Hours</span><strong>{((viewModal.entry.overtimeMinutes || 0) / 60).toFixed(2)}h</strong></div>
+                  <div className="detail-row"><span>Double Time</span><strong>{((viewModal.entry.doubleTimeMinutes || 0) / 60).toFixed(2)}h</strong></div>
+                  <div className="detail-row total"><span>Total Cost</span><strong>{formatCurrency(viewModal.entry.laborCost)}</strong></div>
+                </div>
+              </div>
+              {viewModal.entry.notes && (
+                <div className="detail-section full-width">
+                  <h4>Notes</h4>
+                  <p>{viewModal.entry.notes}</p>
+                </div>
+              )}
+              {viewModal.entry.approvalStatus === 'REJECTED' && viewModal.entry.rejectionReason && (
+                <div className="detail-section full-width rejection-section">
+                  <h4>Rejection Reason</h4>
+                  <p>{viewModal.entry.rejectionReason}</p>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setViewModal({ open: false, entry: null })}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Modal */}
+      {archiveModal.open && archiveModal.entry && (
+        <div className="modal-overlay" onClick={() => setArchiveModal({ open: false, entry: null, reason: '' })}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🗃️ Archive Time Entry</h3>
+              <button className="modal-close" onClick={() => setArchiveModal({ open: false, entry: null, reason: '' })}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to archive this entry?</p>
+              <div className="archive-entry-summary">
+                <div><strong>{archiveModal.entry.user?.name}</strong></div>
+                <div>{formatDate(archiveModal.entry.clockInTime)} • {formatDuration(archiveModal.entry.durationMinutes)}</div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Reason (optional)</label>
+                <textarea 
+                  className="form-textarea"
+                  value={archiveModal.reason}
+                  onChange={(e) => setArchiveModal(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Why is this entry being archived?"
+                  rows={2}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setArchiveModal({ open: false, entry: null, reason: '' })}>Cancel</button>
+              <button className="btn btn-warning" onClick={handleArchive} disabled={actionLoading === archiveModal.entry.id}>
+                {actionLoading === archiveModal.entry.id ? 'Archiving...' : 'Archive Entry'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlock Pay Period Modal */}
       {unlockModal.open && (
         <div className="modal-overlay" onClick={() => setUnlockModal({ open: false, reason: '' })}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -1083,21 +1275,21 @@ return (
               <div className="form-group">
                 <label className="form-label">Reason for Unlocking *</label>
                 <textarea 
-                  className="form-textarea" 
-                  rows="3" 
-                  placeholder="e.g., Need to correct missed punch for John Smith..."
+                  className="form-textarea"
                   value={unlockModal.reason}
                   onChange={(e) => setUnlockModal(prev => ({ ...prev, reason: e.target.value }))}
-                  autoFocus
+                  placeholder="Explain why this pay period needs to be unlocked (min 10 characters)..."
+                  rows={3}
+                  required
                 />
               </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setUnlockModal({ open: false, reason: '' })}>Cancel</button>
               <button 
-                className="btn btn-primary" 
-                onClick={handleUnlockPayPeriod}
-                disabled={payPeriodLoading || unlockModal.reason.trim().length < 10}
+                className="btn btn-warning" 
+                onClick={handleUnlockPayPeriod} 
+                disabled={payPeriodLoading || unlockModal.reason.length < 10}
               >
                 {payPeriodLoading ? 'Unlocking...' : 'Unlock Period'}
               </button>
@@ -1105,51 +1297,39 @@ return (
           </div>
         </div>
       )}
-
-      {/* View Modal */}
-      {viewModal.open && viewModal.entry && (
-        <div className="modal-overlay" onClick={() => setViewModal({ open: false, entry: null })}>
+      {/* Delete Pay Period Modal */}
+      {deletePayPeriodModal.open && (
+        <div className="modal-overlay" onClick={() => setDeletePayPeriodModal({ open: false, period: null })}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Time Entry Details</h3>
-              <button className="modal-close" onClick={() => setViewModal({ open: false, entry: null })}>×</button>
+              <h2>Delete Pay Period</h2>
+              <button className="modal-close" onClick={() => setDeletePayPeriodModal({ open: false, period: null })}>×</button>
             </div>
             <div className="modal-body">
-              <div className="view-entry-header">
-                <div className="view-entry-id">
-                  <span>Entry ID</span>
-                  <strong>{formatShortId(viewModal.entry.id)}</strong>
-                </div>
-                {viewModal.entry.amendedAfterExport && (
-                  <span className="badge badge-warning">Amended After Export</span>
-                )}
-              </div>
-              <div className="detail-grid">
-                <div className="detail-item"><span>Worker</span><strong>{viewModal.entry.user?.name || 'Unknown'}</strong></div>
-                <div className="detail-item"><span>Location</span><strong>{viewModal.entry.job?.name || 'Unassigned'}</strong></div>
-                <div className="detail-item"><span>Date</span><strong>{formatDate(viewModal.entry.clockInTime)}</strong></div>
-                <div className="detail-item"><span>Clock In</span><strong>{formatTime(viewModal.entry.clockInTime)}</strong></div>
-                <div className="detail-item"><span>Clock Out</span><strong>{viewModal.entry.clockOutTime ? formatTime(viewModal.entry.clockOutTime) : 'Active'}</strong></div>
-                <div className="detail-item"><span>Break</span><strong>{viewModal.entry.breakMinutes || 0} min</strong></div>
-                <div className="detail-item"><span>Total Duration</span><strong>{formatDuration(viewModal.entry.durationMinutes)}</strong></div>
-                <div className="detail-item"><span>Status</span><strong>{viewModal.entry.approvalStatus}</strong></div>
-                {viewModal.entry.regularMinutes > 0 && <div className="detail-item"><span>Regular Hours</span><strong>{(viewModal.entry.regularMinutes / 60).toFixed(2)}h</strong></div>}
-                {viewModal.entry.overtimeMinutes > 0 && <div className="detail-item"><span>Overtime (1.5x)</span><strong>{(viewModal.entry.overtimeMinutes / 60).toFixed(2)}h</strong></div>}
-                {viewModal.entry.doubleTimeMinutes > 0 && <div className="detail-item"><span>Double Time (2x)</span><strong>{(viewModal.entry.doubleTimeMinutes / 60).toFixed(2)}h</strong></div>}
-                {(viewModal.entry.hourlyRate || viewModal.entry.effectiveRate) && <div className="detail-item"><span>Rate</span><strong>${Number(viewModal.entry.hourlyRate || viewModal.entry.effectiveRate).toFixed(2)}/hr</strong></div>}
-                {viewModal.entry.laborCost && <div className="detail-item"><span>Total Cost</span><strong className="cost-highlight">${Number(viewModal.entry.laborCost).toFixed(2)}</strong></div>}
-                {viewModal.entry.notes && <div className="detail-item full-width"><span>Notes</span><strong>{viewModal.entry.notes}</strong></div>}
-                {viewModal.entry.rejectionReason && <div className="detail-item full-width"><span>Rejection Reason</span><strong className="rejection-text">{viewModal.entry.rejectionReason}</strong></div>}
-              </div>
+              <p style={{ marginBottom: '16px' }}>
+                Are you sure you want to delete this pay period?
+              </p>
+              <p style={{ fontWeight: 'bold', marginBottom: '16px' }}>
+                {deletePayPeriodModal.period && formatPayPeriodDateRange(deletePayPeriodModal.period)}
+              </p>
+              <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                Time entries in this period will not be deleted, but will no longer be associated with this pay period.
+              </p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setViewModal({ open: false, entry: null })}>Close</button>
-              <button className="btn btn-secondary" onClick={() => { setViewModal({ open: false, entry: null }); openEditModal(viewModal.entry); }}>Edit</button>
+              <button className="btn btn-ghost" onClick={() => setDeletePayPeriodModal({ open: false, period: null })}>Cancel</button>
+              <button 
+                className="btn btn-danger" 
+                onClick={handleDeletePayPeriod}
+                disabled={payPeriodLoading}
+                style={{ background: '#dc3545', color: 'white' }}
+              >
+                {payPeriodLoading ? 'Deleting...' : 'Delete Pay Period'}
+              </button>
             </div>
           </div>
         </div>
       )}
-
       {/* Pay Period Settings Modal */}
       {settingsModal.open && (
         <div className="modal-overlay" onClick={() => setSettingsModal({ open: false })}>
@@ -1166,33 +1346,23 @@ return (
                   value={payPeriodSettings.payPeriodType}
                   onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, payPeriodType: e.target.value }))}
                 >
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="BIWEEKLY">Bi-weekly (Every 2 weeks)</option>
-                  <option value="SEMIMONTHLY">Semi-monthly (1st & 16th)</option>
+                  <option value="WEEKLY">Weekly (7 days)</option>
+                  <option value="BIWEEKLY">Bi-Weekly (14 days)</option>
+                  <option value="SEMIMONTHLY">Semi-Monthly (1st-15th, 16th-end)</option>
                   <option value="MONTHLY">Monthly</option>
                   <option value="CUSTOM">Custom</option>
                 </select>
               </div>
 
-              {(payPeriodSettings.payPeriodType === 'WEEKLY' || payPeriodSettings.payPeriodType === 'BIWEEKLY') && (
-                <div className="form-group">
-                  <label className="form-label">Start Day</label>
-                  <select 
-                    className="form-select"
-                    value={payPeriodSettings.payPeriodStartDay}
-                    onChange={(e) => setPayPeriodSettings(prev => ({ ...prev, payPeriodStartDay: e.target.value }))}
-                  >
-                    {getStartDayOptions().map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {(payPeriodSettings.payPeriodType === 'SEMIMONTHLY' || payPeriodSettings.payPeriodType === 'MONTHLY') && (
+              {(payPeriodSettings.payPeriodType === 'WEEKLY' || 
+                payPeriodSettings.payPeriodType === 'BIWEEKLY' ||
+                payPeriodSettings.payPeriodType === 'SEMIMONTHLY' ||
+                payPeriodSettings.payPeriodType === 'MONTHLY') && (
                 <div className="form-group">
                   <label className="form-label">
-                    {payPeriodSettings.payPeriodType === 'SEMIMONTHLY' ? 'First Period Starts On Day' : 'Period Starts On Day'}
+                    {payPeriodSettings.payPeriodType === 'WEEKLY' || payPeriodSettings.payPeriodType === 'BIWEEKLY' 
+                      ? 'Start Day of Week' 
+                      : 'First Period Start Day'}
                   </label>
                   <select 
                     className="form-select"
@@ -1314,6 +1484,10 @@ return (
                   </div>
                 </div>
 
+                <div className="form-hint" style={{ marginBottom: '16px', color: '#666', fontSize: '0.85rem' }}>
+                  ⏰ Times are in Pacific Time (PT)
+                </div>
+
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Break (minutes)</label>
@@ -1370,6 +1544,193 @@ return (
           </div>
         </div>
       )}
+
+      {/* Manual Entry Modal */}
+      {manualEntryModal.open && (
+        <div className="modal-overlay" onClick={() => setManualEntryModal({ open: false })}>
+          <div className="modal modal-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Manual Time Entry</h3>
+              <button className="modal-close" onClick={() => setManualEntryModal({ open: false })}>×</button>
+            </div>
+            <div className="modal-body">
+              <ManualEntryForm inModal={true} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Copy Entry Modal */}
+      {copyModal.open && copyModal.entry && (
+        <div className="modal-overlay" onClick={() => setCopyModal({ open: false, entry: null, copyMode: 'single', targetDate: '', targetDates: [], targetPayPeriod: '', copyToNextWeek: false, weekdaysOnly: true, numberOfWeeks: 1 })}>
+          <div className="modal modal-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📋 Copy Time Entry</h3>
+              <button className="modal-close" onClick={() => setCopyModal({ open: false, entry: null, copyMode: 'single', targetDate: '', targetDates: [], targetPayPeriod: '', copyToNextWeek: false, weekdaysOnly: true, numberOfWeeks: 1 })}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="copy-source-info">
+                <strong>Copying from:</strong>
+                <div className="copy-source-details">
+                  <span>{copyModal.entry.user?.name}</span>
+                  <span>{formatDate(copyModal.entry.clockInTime)}</span>
+                  <span>{formatTime(copyModal.entry.clockInTime)} - {formatTime(copyModal.entry.clockOutTime)}</span>
+                  <span>{formatDuration(copyModal.entry.durationMinutes)}</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Copy Mode</label>
+                <div className="copy-mode-options">
+                  <label className="radio-option">
+                    <input 
+                      type="radio" 
+                      name="copyMode" 
+                      value="single"
+                      checked={copyModal.copyMode === 'single'}
+                      onChange={() => setCopyModal(prev => ({ ...prev, copyMode: 'single' }))}
+                    />
+                    <span>Single Day</span>
+                  </label>
+                  <label className="radio-option">
+                    <input 
+                      type="radio" 
+                      name="copyMode" 
+                      value="weekdays"
+                      checked={copyModal.copyMode === 'weekdays'}
+                      onChange={() => setCopyModal(prev => ({ ...prev, copyMode: 'weekdays' }))}
+                    />
+                    <span>Weekdays (Mon-Fri)</span>
+                  </label>
+                </div>
+              </div>
+
+              {copyModal.copyMode === 'single' && (
+                <div className="form-group">
+                  <label className="form-label">Target Date</label>
+                  <input 
+                    type="date" 
+                    className="form-input"
+                    value={copyModal.targetDate}
+                    onChange={(e) => setCopyModal(prev => ({ ...prev, targetDate: e.target.value }))}
+                  />
+                </div>
+              )}
+
+              {copyModal.copyMode === 'weekdays' && (
+                <div className="form-group">
+                  <label className="form-label">Number of Weeks</label>
+                  <select 
+                    className="form-select"
+                    value={copyModal.numberOfWeeks}
+                    onChange={(e) => setCopyModal(prev => ({ ...prev, numberOfWeeks: parseInt(e.target.value) }))}
+                  >
+                    <option value={1}>1 week (5 entries)</option>
+                    <option value={2}>2 weeks (10 entries)</option>
+                    <option value={3}>3 weeks (15 entries)</option>
+                    <option value={4}>4 weeks (20 entries)</option>
+                  </select>
+                  <p className="form-hint">Copy to Monday-Friday starting from next week</p>
+                </div>
+              )}
+
+              {payPeriods.length > 1 && (
+                <div className="form-group">
+                  <label className="form-label">Target Pay Period (optional)</label>
+                  <select 
+                    className="form-select"
+                    value={copyModal.targetPayPeriod}
+                    onChange={(e) => setCopyModal(prev => ({ ...prev, targetPayPeriod: e.target.value }))}
+                  >
+                    <option value="">Current period</option>
+                    {payPeriods.map((period, index) => (
+                      <option key={period.id} value={period.id}>
+                        {formatPayPeriodLabel(period, index)} ({formatPayPeriodDateRange(period)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setCopyModal({ open: false, entry: null, copyMode: 'single', targetDate: '', targetDates: [], targetPayPeriod: '', copyToNextWeek: false, weekdaysOnly: true, numberOfWeeks: 1 })}>Cancel</button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleCopyEntry}
+                disabled={copyLoading || (copyModal.copyMode === 'single' && !copyModal.targetDate)}
+              >
+                {copyLoading ? 'Copying...' : `Copy Entry${copyModal.copyMode === 'weekdays' ? ` (${copyModal.numberOfWeeks * 5} days)` : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .btn-copy {
+          color: #6366f1;
+        }
+        .btn-copy:hover {
+          background: #eef2ff;
+        }
+        .copy-source-info {
+          background: #f8f9fa;
+          padding: 16px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
+        .copy-source-info strong {
+          display: block;
+          font-size: 12px;
+          color: #666;
+          margin-bottom: 8px;
+        }
+        .copy-source-details {
+          display: flex;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .copy-source-details span {
+          font-size: 14px;
+          color: #333;
+        }
+        .copy-mode-options {
+          display: flex;
+          gap: 16px;
+          margin-top: 8px;
+        }
+        .radio-option {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          padding: 8px 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          transition: all 0.2s;
+        }
+        .radio-option:has(input:checked) {
+          border-color: #C9A227;
+          background: #fefce8;
+        }
+        .radio-option input {
+          accent-color: #C9A227;
+        }
+        .archive-entry-summary {
+          background: #f8f9fa;
+          padding: 12px;
+          border-radius: 8px;
+          margin: 12px 0;
+        }
+        .btn-warning {
+          background: #f59e0b;
+          color: white;
+          border: none;
+        }
+        .btn-warning:hover {
+          background: #d97706;
+        }
+      `}</style>
     </div>
   );
 }

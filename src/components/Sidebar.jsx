@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { shiftRequestsApi, timeOffApi, messagesApi } from '../services/api';
+import { shiftRequestsApi, timeOffApi, messagesApi, companyApi } from '../services/api';
+import { useFeatures } from '../hooks/useFeatures';
 import './Sidebar.css';
 
 // SVG Icon Components
@@ -170,6 +171,11 @@ const Icons = {
       <path d="M20 12a8 8 0 0 0-8-8"/>
     </svg>
   ),
+  check: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
 };
 
 // Shield + Clock Logo
@@ -206,14 +212,37 @@ const getUserWorkerTypes = () => {
 };
 
 function Sidebar({ collapsed, onToggle, userRole }) {
+  const navigate = useNavigate();
+  const { hasFeature, getRequiredTier, getTierDisplayName } = useFeatures();
+  
   const [requestCounts, setRequestCounts] = useState({
     shiftRequests: 0,
     timeOff: 0,
     messages: 0,
   });
+  const [enabledWorkerTypes, setEnabledWorkerTypes] = useState(['hourly', 'salaried', 'contractors', 'volunteers']);
+  const [companySettings, setCompanySettings] = useState({});
   
   const permissions = getPermissions();
   const userWorkerTypes = getUserWorkerTypes();
+
+  // Fetch company settings to get enabled worker types and feature toggles
+  useEffect(() => {
+    const fetchCompanySettings = async () => {
+      try {
+        const response = await companyApi.get();
+        const settings = response.data?.settings || {};
+        setCompanySettings(settings);
+        if (settings.enabledWorkerTypes && Array.isArray(settings.enabledWorkerTypes)) {
+          setEnabledWorkerTypes(settings.enabledWorkerTypes);
+        }
+      } catch (err) {
+        console.error('Failed to fetch company settings:', err);
+      }
+    };
+
+    fetchCompanySettings();
+  }, []);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -247,41 +276,52 @@ function Sidebar({ collapsed, onToggle, userRole }) {
     return false;
   };
 
-  const isSalariedOrContractor = () => {
-    return userWorkerTypes.includes('SALARIED') || userWorkerTypes.includes('CONTRACTOR');
+  // Check if a worker type is enabled
+  const isWorkerTypeEnabled = (type) => {
+    return enabledWorkerTypes.includes(type);
   };
 
+  // Check if a company feature toggle is enabled
+  const isSettingEnabled = (settingKey) => {
+    // Default to true if setting doesn't exist
+    return companySettings[settingKey] !== false;
+  };
+
+  // Nav items with feature requirements
   const mainNavItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/time', icon: 'clock', label: 'Time Tracking' },
     { path: '/workers', icon: 'users', label: 'Team', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
     { path: '/locations', icon: 'mapPin', label: 'Locations', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
-    { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canCreateShifts' },
-    { path: '/leave', icon: 'leave', label: 'Leave', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/shift-templates', icon: 'calendar', label: 'Shift Templates', roles: ['ADMIN', 'OWNER', 'MANAGER'], feature: 'SHIFT_TEMPLATES', settingKey: 'shiftScheduling' },
+    { path: '/scheduling', icon: 'calendar', label: 'Schedule', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canCreateShifts', feature: 'SCHEDULING', settingKey: 'shiftScheduling' },
+    { path: '/leave', icon: 'leave', label: 'Leave', roles: ['ADMIN', 'OWNER', 'MANAGER'], feature: 'LEAVE_MANAGEMENT', settingKey: 'leaveManagement' },
   ];
 
   const requestsNavItems = [
-    { path: '/requests/shifts', icon: 'arrowLeftRight', label: 'Shift Requests', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canApproveShiftSwaps', badgeKey: 'shiftRequests' },
-    { path: '/requests/time-off', icon: 'calendarOff', label: 'Time Off', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canApproveTimeOff', badgeKey: 'timeOff' },
-    { path: '/requests/messages', icon: 'messageSquare', label: 'Messages', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'messages' },
+    { path: '/approvals', icon: 'check', label: 'Approvals', roles: ['ADMIN', 'OWNER', 'MANAGER'] },
+    { path: '/requests/shifts', icon: 'arrowLeftRight', label: 'Shift Requests', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canApproveShiftSwaps', badgeKey: 'shiftRequests', feature: 'SHIFT_REQUESTS', settingKey: 'shiftScheduling' },
+    { path: '/requests/time-off', icon: 'calendarOff', label: 'Time Off', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canApproveTimeOff', badgeKey: 'timeOff', feature: 'TIME_OFF', settingKey: 'leaveManagement' },
+    { path: '/requests/messages', icon: 'messageSquare', label: 'Messages', roles: ['ADMIN', 'OWNER', 'MANAGER'], badgeKey: 'messages', feature: 'MESSAGES' },
   ];
 
   const reportsNavItems = [
-    { path: '/analytics', icon: 'barChart', label: 'Analytics', roles: ['ADMIN', 'OWNER'], managerPerm: 'canViewAnalytics' },
-    { path: '/compliance', icon: 'shield', label: 'Break Compliance', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canReviewViolations' },
-    { path: '/audit', icon: 'scrollText', label: 'Audit Log', roles: ['ADMIN', 'OWNER'] },
-    { path: '/compliance-reports', icon: 'fileText', label: 'Compliance Reports', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canGenerateReports' },
+    { path: '/analytics', icon: 'barChart', label: 'Analytics', roles: ['ADMIN', 'OWNER'], managerPerm: 'canViewAnalytics', feature: 'COST_ANALYTICS' },
+    { path: '/compliance', icon: 'shield', label: 'Break Compliance', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canReviewViolations', feature: 'BREAK_COMPLIANCE', settingKey: 'breakTracking' },
+    { path: '/audit', icon: 'scrollText', label: 'Audit Log', roles: ['ADMIN', 'OWNER'], feature: 'AUDIT_LOGS' },
+    { path: '/compliance-reports', icon: 'fileText', label: 'Compliance Reports', roles: ['ADMIN', 'OWNER', 'MANAGER'], permission: 'canGenerateReports', feature: 'CERTIFIED_PAYROLL' },
   ];
 
+  // Worker management items filtered by enabled types
   const workerManagementNavItems = [
-    { path: '/workers/hourly', icon: 'hourly', label: 'Hourly Workers', roles: ['ADMIN', 'OWNER'] },
-    { path: '/workers/salaried', icon: 'salary', label: 'Salaried Workers', roles: ['ADMIN', 'OWNER'] },
-    { path: '/workers/contractors', icon: 'contractor', label: 'Contractors', roles: ['ADMIN', 'OWNER'] },
-    { path: '/workers/volunteers', icon: 'volunteer', label: 'Volunteers', roles: ['ADMIN', 'OWNER'] },
+    { path: '/workers/hourly', icon: 'hourly', label: 'Hourly Workers', roles: ['ADMIN', 'OWNER'], workerType: 'hourly' },
+    { path: '/workers/salaried', icon: 'salary', label: 'Salaried Workers', roles: ['ADMIN', 'OWNER'], workerType: 'salaried' },
+    { path: '/workers/contractors', icon: 'contractor', label: 'Contractors', roles: ['ADMIN', 'OWNER'], workerType: 'contractors' },
+    { path: '/workers/volunteers', icon: 'volunteer', label: 'Volunteers', roles: ['ADMIN', 'OWNER'], workerType: 'volunteers' },
   ];
 
   const adminNavItems = [
-    { path: '/team-management', icon: 'userPlus', label: 'Role Management', roles: ['ADMIN', 'OWNER'] },
+    { path: '/team-management', icon: 'userPlus', label: 'Role Management', roles: ['ADMIN', 'OWNER'], feature: 'ROLE_MANAGEMENT' },
   ];
 
   const settingsNavItems = [
@@ -291,9 +331,11 @@ function Sidebar({ collapsed, onToggle, userRole }) {
 
   const filterByRoleAndPermission = (items) => {
     return items.filter(item => {
+      // Check role
       if (item.roles && !item.roles.includes(userRole)) {
         return false;
       }
+      // Check manager permissions
       if (userRole === 'MANAGER') {
         if (item.managerPerm && !hasPermission(item.managerPerm)) {
           return false;
@@ -302,12 +344,47 @@ function Sidebar({ collapsed, onToggle, userRole }) {
           return false;
         }
       }
+      // Check worker type (for worker management section)
+      if (item.workerType && !isWorkerTypeEnabled(item.workerType)) {
+        return false;
+      }
+      // Check company setting toggle (hide if setting is explicitly off)
+      if (item.settingKey && !isSettingEnabled(item.settingKey)) {
+        return false;
+      }
       return true;
     });
   };
 
+  // Handle click on locked item
+  const handleLockedClick = (e, item) => {
+    e.preventDefault();
+    navigate('/billing');
+  };
+
   const NavItem = ({ item }) => {
     const badge = item.badgeKey ? requestCounts[item.badgeKey] : 0;
+    
+    // Check if feature is locked (subscription tier check)
+    const isLocked = item.feature && !hasFeature(item.feature);
+    const requiredTier = item.feature ? getRequiredTier(item.feature) : null;
+    const tierName = requiredTier ? getTierDisplayName?.(requiredTier) || requiredTier : '';
+    
+    if (isLocked) {
+      return (
+        <a
+          href="#"
+          className="sidebar-link locked"
+          onClick={(e) => handleLockedClick(e, item)}
+          data-upgrade-hint={`Requires ${tierName} plan`}
+          title={`Requires ${tierName} plan - Click to upgrade`}
+        >
+          <span className="sidebar-link-icon">{Icons[item.icon]}</span>
+          <span className="sidebar-link-text">{item.label}</span>
+          <span className="lock-icon">{Icons.lock}</span>
+        </a>
+      );
+    }
     
     return (
       <NavLink 
@@ -323,6 +400,10 @@ function Sidebar({ collapsed, onToggle, userRole }) {
 
   // Check if My Time should be shown
   const showMyTime = userRole === 'MANAGER' || userRole === 'ADMIN';
+  
+  // Check if worker management section should be shown
+  const filteredWorkerManagement = filterByRoleAndPermission(workerManagementNavItems);
+  const showWorkerManagement = filteredWorkerManagement.length > 0;
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -380,10 +461,10 @@ function Sidebar({ collapsed, onToggle, userRole }) {
           </div>
         )}
 
-        {filterByRoleAndPermission(workerManagementNavItems).length > 0 && (
+        {showWorkerManagement && (
           <div className="sidebar-section">
             {!collapsed && <div className="sidebar-section-title">Worker Management</div>}
-            {filterByRoleAndPermission(workerManagementNavItems).map(item => (
+            {filteredWorkerManagement.map(item => (
               <NavItem key={item.path} item={item} />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { usersApi, jobsApi, shiftsApi } from '../services/api';
+import { usersApi, jobsApi, shiftsApi, companyApi } from '../services/api';
 import './WorkersPage.css';
 
 // SVG Icons
@@ -177,6 +177,13 @@ const Icons = {
       <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
     </svg>
   ),
+  layers: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 17 12 22 22 17"/>
+      <polyline points="2 12 12 17 22 12"/>
+    </svg>
+  ),
 };
 
 const TRADE_CLASSIFICATIONS = [
@@ -199,14 +206,36 @@ const TRADE_CLASSIFICATIONS = [
   'Other',
 ];
 
-const WORKER_TYPES = ['HOURLY', 'SALARIED', 'CONTRACTOR', 'VOLUNTEER'];
+const ALL_WORKER_TYPES = ['HOURLY', 'SALARIED', 'CONTRACTOR', 'VOLUNTEER'];
+
+// Phone formatting helper
+const formatPhoneNumber = (value) => {
+  // Remove all non-digits
+  const digits = value.replace(/\D/g, '');
+  
+  // Format as (XXX) XXX-XXXX
+  if (digits.length <= 3) {
+    return digits;
+  } else if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  } else {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  }
+};
+
+// Validate phone has at least 10 digits
+const isValidPhone = (value) => {
+  if (!value) return true; // Phone is optional
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 10;
+};
 
 // Smart column name mapping
 const COLUMN_MAPPINGS = {
   name: ['name', 'full name', 'fullname', 'employee name', 'employeename', 'worker name', 'workername', 'first name', 'firstname', 'employee'],
   phone: ['phone', 'phone number', 'phonenumber', 'mobile', 'cell', 'cell phone', 'cellphone', 'telephone', 'tel'],
   email: ['email', 'email address', 'emailaddress', 'e-mail', 'mail'],
-  role: ['role', 'position', 'job title', 'jobtitle', 'title', 'type', 'worker type'],
+  role: ['role', 'position', 'job title', 'jobtitle', 'title'],
   hourlyrate: ['hourlyrate', 'hourly rate', 'rate', 'pay rate', 'payrate', 'wage', 'hourly', 'pay', 'salary'],
   trade: ['trade', 'tradeclassification', 'trade classification', 'classification', 'skill', 'trade type', 'job type', 'occupation'],
 };
@@ -220,6 +249,7 @@ function WorkersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingWorker, setEditingWorker] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState({ open: false, worker: null, deleteShifts: true, loading: false });
+  const [enabledWorkerTypes, setEnabledWorkerTypes] = useState(['HOURLY', 'SALARIED', 'CONTRACTOR', 'VOLUNTEER']);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -244,9 +274,14 @@ function WorkersPage() {
     file: null,
     parsedData: [],
     errors: [],
-    results: { success: 0, failed: 0, errors: [] }
+    results: { success: 0, failed: 0, errors: [], importedWorkerIds: [] }
   });
   const fileInputRef = useRef(null);
+
+  // Bulk selection state
+  const [selectedWorkers, setSelectedWorkers] = useState(new Set());
+  const [bulkTypeModal, setBulkTypeModal] = useState({ open: false, selectedTypes: ['HOURLY'], loading: false });
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -254,12 +289,19 @@ function WorkersPage() {
 
   const loadData = async () => {
     try {
-      const [workersRes, jobsRes] = await Promise.all([
+      const [workersRes, jobsRes, companyRes] = await Promise.all([
         usersApi.getAll(),
-        jobsApi.getAll()
+        jobsApi.getAll(),
+        companyApi.get()
       ]);
       setWorkers(workersRes.data || []);
       setJobs(jobsRes.data || []);
+      
+      // Get enabled worker types from company settings
+      const settings = companyRes.data?.settings || {};
+      if (settings.enabledWorkerTypes?.length) {
+        setEnabledWorkerTypes(settings.enabledWorkerTypes);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -269,15 +311,24 @@ function WorkersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate phone if provided
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      alert('Please enter a valid phone number (at least 10 digits)');
+      return;
+    }
+    
     try {
+      // Clean phone number - keep only digits for storage
+      const cleanPhone = formData.phone ? formData.phone.replace(/\D/g, '') : undefined;
+      
       const payload = {
         name: formData.name,
         email: formData.email || undefined,
-        phone: formData.phone || undefined,
+        phone: cleanPhone || undefined,
         role: formData.role?.toUpperCase() || 'WORKER',
         workerTypes: formData.workerTypes?.length ? formData.workerTypes : ['HOURLY'],
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
-        isActive: formData.status === 'active',
         address: formData.address || undefined,
         city: formData.city || undefined,
         state: formData.state || undefined,
@@ -286,16 +337,12 @@ function WorkersPage() {
         tradeClassification: formData.tradeClassification || undefined,
       };
 
-      // Only include password if it's set (for new users or password change)
-      if (formData.password) {
-        payload.password = formData.password;
-      }
-
       if (editingWorker) {
         await usersApi.update(editingWorker.id, payload);
       } else {
         await usersApi.create(payload);
       }
+      
       setShowModal(false);
       setEditingWorker(null);
       resetForm();
@@ -330,8 +377,8 @@ function WorkersPage() {
     setFormData({
       name: worker.name || '',
       email: worker.email || '',
-      phone: worker.phone || '',
-      password: '', // Don't pre-fill password
+      phone: worker.phone ? formatPhoneNumber(worker.phone) : '',
+      password: '',
       role: worker.role?.toLowerCase() || 'worker',
       workerTypes: worker.workerTypes?.length ? worker.workerTypes : ['HOURLY'],
       hourlyRate: worker.hourlyRate || '',
@@ -385,17 +432,124 @@ function WorkersPage() {
     }
   };
 
+  // Approve a pending worker
+  const handleApprove = async (worker) => {
+    try {
+      await usersApi.approve(worker.id);
+      loadData();
+    } catch (error) {
+      console.error('Error approving worker:', error);
+      alert(error.response?.data?.message || 'Failed to approve worker');
+    }
+  };
+
+  // Decline a pending worker
+  const handleDecline = async (worker) => {
+    if (!window.confirm(`Are you sure you want to decline ${worker.name}? This will remove their account.`)) {
+      return;
+    }
+    try {
+      await usersApi.decline(worker.id);
+      loadData();
+    } catch (error) {
+      console.error('Error declining worker:', error);
+      alert(error.response?.data?.message || 'Failed to decline worker');
+    }
+  };
+
   const toggleWorkerType = (type) => {
     setFormData(prev => {
       const current = prev.workerTypes || [];
       if (current.includes(type)) {
-        // Don't allow removing the last type
         if (current.length === 1) return prev;
         return { ...prev, workerTypes: current.filter(t => t !== type) };
       } else {
         return { ...prev, workerTypes: [...current, type] };
       }
     });
+  };
+
+  // Check if password field should be shown (contractor or volunteer selected)
+const shouldShowPasswordField = () => {
+  return formData.workerTypes?.some(t => 
+    t.toLowerCase().includes('contractor') || t.toLowerCase().includes('volunteer')
+  );
+};
+
+  // ============================================
+  // BULK SELECTION FUNCTIONS
+  // ============================================
+
+  const toggleWorkerSelection = (workerId) => {
+    setSelectedWorkers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(workerId)) {
+        newSet.delete(workerId);
+      } else {
+        newSet.add(workerId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedWorkers.size === filteredWorkers.length) {
+      setSelectedWorkers(new Set());
+    } else {
+      setSelectedWorkers(new Set(filteredWorkers.map(w => w.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedWorkers(new Set());
+  };
+
+  const toggleBulkType = (type) => {
+    setBulkTypeModal(prev => {
+      const current = prev.selectedTypes || [];
+      if (current.includes(type)) {
+        if (current.length === 1) return prev;
+        return { ...prev, selectedTypes: current.filter(t => t !== type) };
+      } else {
+        return { ...prev, selectedTypes: [...current, type] };
+      }
+    });
+  };
+
+  const handleBulkTypeAssign = async () => {
+    if (selectedWorkers.size === 0 || bulkTypeModal.selectedTypes.length === 0) return;
+    
+    setBulkTypeModal(prev => ({ ...prev, loading: true }));
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const workerId of selectedWorkers) {
+      try {
+        await usersApi.update(workerId, { workerTypes: bulkTypeModal.selectedTypes });
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to update worker ${workerId}:`, error);
+        failCount++;
+      }
+    }
+    
+    setBulkTypeModal({ open: false, selectedTypes: ['HOURLY'], loading: false });
+    setSelectedWorkers(new Set());
+    loadData();
+    
+    if (failCount > 0) {
+      alert(`Updated ${successCount} workers. ${failCount} failed.`);
+    }
+  };
+
+  const openBulkTypeForImported = () => {
+    const importedIds = importModal.results.importedWorkerIds || [];
+    if (importedIds.length > 0) {
+      setSelectedWorkers(new Set(importedIds));
+    }
+    resetImportModal();
+    setBulkTypeModal({ open: true, selectedTypes: ['HOURLY'], loading: false });
   };
 
   // ============================================
@@ -419,7 +573,6 @@ function WorkersPage() {
       return { data: [], errors: ['CSV file must have a header row and at least one data row'] };
     }
 
-    // Parse header and map to standard names
     const rawHeader = lines[0].split(',').map(h => h.trim().replace(/['"]/g, ''));
     const headerMap = {};
     const unmappedColumns = [];
@@ -433,7 +586,6 @@ function WorkersPage() {
       }
     });
 
-    // Check for required columns
     const mappedColumns = Object.values(headerMap);
     if (!mappedColumns.includes('name')) {
       return { data: [], errors: ['Could not find a "name" column. Please include a column like "Name", "Full Name", or "Employee Name"'] };
@@ -442,7 +594,6 @@ function WorkersPage() {
       return { data: [], errors: ['Could not find a "phone" column. Please include a column like "Phone", "Phone Number", "Mobile", or "Cell"'] };
     }
 
-    // Parse data rows
     const data = [];
     const errors = [];
 
@@ -450,7 +601,6 @@ function WorkersPage() {
       const line = lines[i];
       if (!line.trim()) continue;
 
-      // Handle CSV with quoted values
       const values = [];
       let current = '';
       let inQuotes = false;
@@ -468,13 +618,11 @@ function WorkersPage() {
       }
       values.push(current.trim());
 
-      // Map to standard object using headerMap
       const row = {};
       Object.entries(headerMap).forEach(([idx, standardName]) => {
         row[standardName] = values[parseInt(idx)]?.replace(/^["']|["']$/g, '') || '';
       });
 
-      // Validate row
       const rowErrors = [];
       if (!row.name?.trim()) rowErrors.push('Name is required');
       if (!row.phone?.trim()) rowErrors.push('Phone is required');
@@ -494,9 +642,7 @@ function WorkersPage() {
       if (rowErrors.length > 0) {
         errors.push(`Row ${i + 1} (${row.name || 'unnamed'}): ${rowErrors.join(', ')}`);
       } else {
-        // Clean phone number - keep only digits
         let cleanPhone = row.phone.replace(/\D/g, '');
-        // If 10 digits, format nicely
         if (cleanPhone.length === 10) {
           cleanPhone = `+1${cleanPhone}`;
         } else if (cleanPhone.length === 11 && cleanPhone.startsWith('1')) {
@@ -546,19 +692,23 @@ function WorkersPage() {
   const handleImport = async () => {
     setImportModal(prev => ({ ...prev, step: 'importing' }));
 
-    const results = { success: 0, failed: 0, errors: [] };
+    const results = { success: 0, failed: 0, errors: [], importedWorkerIds: [] };
 
     for (const worker of importModal.parsedData) {
       try {
-        await usersApi.create({
+        const response = await usersApi.create({
           name: worker.name,
           phone: worker.phone,
           email: worker.email || undefined,
           role: worker.role,
+          workerTypes: ['HOURLY'],
           hourlyRate: worker.hourlyRate || undefined,
           tradeClassification: worker.tradeClassification || undefined,
         });
         results.success++;
+        if (response.data?.id) {
+          results.importedWorkerIds.push(response.data.id);
+        }
       } catch (error) {
         results.failed++;
         const message = error.response?.data?.message || 'Unknown error';
@@ -577,7 +727,7 @@ function WorkersPage() {
       file: null,
       parsedData: [],
       errors: [],
-      results: { success: 0, failed: 0, errors: [] }
+      results: { success: 0, failed: 0, errors: [], importedWorkerIds: [] }
     });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -601,7 +751,7 @@ function WorkersPage() {
                           worker.phone?.includes(searchTerm);
     
     const matchesStatus = statusFilter === 'all' ||
-                          (statusFilter === 'active' && worker.isActive) ||
+                          (statusFilter === 'active' && worker.isActive && worker.approvalStatus !== 'PENDING') ||
                           (statusFilter === 'inactive' && !worker.isActive) ||
                           (statusFilter === 'pending' && worker.approvalStatus === 'PENDING');
 
@@ -610,7 +760,7 @@ function WorkersPage() {
 
   const stats = {
     total: workers.length,
-    active: workers.filter(w => w.isActive).length,
+    active: workers.filter(w => w.isActive && w.approvalStatus !== 'PENDING').length,
     inactive: workers.filter(w => !w.isActive).length,
     pending: workers.filter(w => w.approvalStatus === 'PENDING').length,
   };
@@ -643,6 +793,12 @@ function WorkersPage() {
           <p>Manage your workforce</p>
         </div>
         <div className="page-header-actions">
+          {selectedWorkers.size > 0 && (
+            <button className="btn-secondary" onClick={() => setBulkTypeModal({ open: true, selectedTypes: ['HOURLY'], loading: false })}>
+              {Icons.layers}
+              <span>Assign Types ({selectedWorkers.size})</span>
+            </button>
+          )}
           <button className="btn-secondary" onClick={() => setImportModal({ ...importModal, open: true, step: 'upload' })}>
             {Icons.upload}
             <span>Import CSV</span>
@@ -688,6 +844,22 @@ function WorkersPage() {
         )}
       </div>
 
+      {/* Bulk Selection Bar */}
+      {selectedWorkers.size > 0 && (
+        <div className="bulk-selection-bar">
+          <div className="bulk-selection-info">
+            <span className="bulk-count">{selectedWorkers.size} selected</span>
+            <button className="btn-link" onClick={clearSelection}>Clear selection</button>
+          </div>
+          <div className="bulk-actions">
+            <button className="btn-primary" onClick={() => setBulkTypeModal({ open: true, selectedTypes: ['HOURLY'], loading: false })}>
+              {Icons.layers}
+              <span>Assign Worker Types</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="filters-bar">
         <div className="search-box">
@@ -707,6 +879,11 @@ function WorkersPage() {
             <option value="pending">Pending Approval</option>
           </select>
         </div>
+        {filteredWorkers.length > 0 && (
+          <button className="btn-link select-all-btn" onClick={toggleSelectAll}>
+            {selectedWorkers.size === filteredWorkers.length ? 'Deselect All' : 'Select All'}
+          </button>
+        )}
       </div>
 
       {/* Workers List */}
@@ -719,7 +896,14 @@ function WorkersPage() {
           </div>
         ) : (
           filteredWorkers.map(worker => (
-            <div key={worker.id} className={`worker-card ${!worker.isActive ? 'inactive' : ''}`}>
+            <div key={worker.id} className={`worker-card ${!worker.isActive ? 'inactive' : ''} ${selectedWorkers.has(worker.id) ? 'selected' : ''} ${worker.approvalStatus === 'PENDING' ? 'pending' : ''}`}>
+              <div className="worker-select-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedWorkers.has(worker.id)}
+                  onChange={() => toggleWorkerSelection(worker.id)}
+                />
+              </div>
               <div className="worker-header">
                 <div className="worker-avatar">
                   {worker.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'}
@@ -728,7 +912,7 @@ function WorkersPage() {
                   <h3>{worker.name}</h3>
                   <div className="worker-badges">
                     <span className="role-badge">{worker.role}</span>
-                    {worker.workerTypes?.filter(t => t !== 'HOURLY').map(type => (
+                    {worker.workerTypes?.map(type => (
                       <span key={type} className={`type-badge ${type.toLowerCase()}`}>{formatWorkerType(type)}</span>
                     ))}
                   </div>
@@ -737,7 +921,16 @@ function WorkersPage() {
                   <button className="action-btn" onClick={() => handleEdit(worker)} title="Edit">
                     {Icons.edit}
                   </button>
-                  {worker.isActive ? (
+                  {worker.approvalStatus === 'PENDING' ? (
+                    <>
+                      <button className="action-btn success" onClick={() => handleApprove(worker)} title="Approve">
+                        {Icons.userCheck}
+                      </button>
+                      <button className="action-btn danger" onClick={() => handleDecline(worker)} title="Decline">
+                        {Icons.userX}
+                      </button>
+                    </>
+                  ) : worker.isActive ? (
                     <button className="action-btn danger" onClick={() => handleDeactivate(worker)} title="Deactivate">
                       {Icons.userX}
                     </button>
@@ -775,7 +968,9 @@ function WorkersPage() {
                 )}
               </div>
               <div className="worker-status-row">
-                {worker.isActive ? (
+                {worker.approvalStatus === 'PENDING' ? (
+                  <span className="status-badge pending">{Icons.clock} Pending Approval</span>
+                ) : worker.isActive ? (
                   <span className="status-badge active">{Icons.checkCircle} Active</span>
                 ) : (
                   <span className="status-badge inactive">{Icons.xCircle} Inactive</span>
@@ -809,18 +1004,25 @@ function WorkersPage() {
                   <div className="form-row">
                     <div className="form-group">
                       <label><span className="label-icon">{Icons.phone}</span>Phone</label>
-                      <input type="tel" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} placeholder="(555) 123-4567" />
+                      <input 
+                        type="tel" 
+                        value={formData.phone} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))} 
+                        placeholder="(555) 123-4567"
+                        maxLength={14}
+                      />
+                      {formData.phone && !isValidPhone(formData.phone) && (
+                        <span className="field-error" style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                          Phone must be at least 10 digits
+                        </span>
+                      )}
                     </div>
                     <div className="form-group">
                       <label><span className="label-icon">{Icons.mail}</span>Email</label>
                       <input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} placeholder="john@example.com" />
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label><span className="label-icon">{Icons.lock}</span>Password {editingWorker ? '(leave blank to keep current)' : ''}</label>
-                    <input type="password" value={formData.password} onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} placeholder={editingWorker ? '••••••••' : 'Set password for portal access'} />
-                    <p className="form-hint">Required for contractor portal and mobile app login</p>
-                  </div>
+                  
                   <div className="form-row">
                     <div className="form-group">
                       <label><span className="label-icon">{Icons.shield}</span>Role</label>
@@ -845,7 +1047,7 @@ function WorkersPage() {
                   <div className="form-group">
                     <label><span className="label-icon">{Icons.briefcase}</span>Worker Types</label>
                     <div className="checkbox-group">
-                      {WORKER_TYPES.map(type => (
+                      {enabledWorkerTypes.map(type => (
                         <label key={type} className="checkbox-item">
                           <input
                             type="checkbox"
@@ -858,6 +1060,29 @@ function WorkersPage() {
                     </div>
                     <p className="form-hint">Select all that apply. Workers can have multiple types.</p>
                   </div>
+
+                  {/* Only show password field for contractor/volunteer */}
+                  {shouldShowPasswordField() && (
+                    <div className="form-group">
+                      <label><span className="label-icon">{Icons.lock}</span>Portal Password {editingWorker ? '(leave blank to keep current)' : ''}</label>
+                      <div className="password-input-wrapper">
+                        <input 
+                          type={showPassword ? 'text' : 'password'} 
+                          value={formData.password} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} 
+                          placeholder={editingWorker ? '••••••••' : 'Set password for portal access'} 
+                        />
+                        <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
+                          {showPassword ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      <p className="form-hint">
+                        {formData.workerTypes?.includes('CONTRACTOR') && 'Contractor portal: https://portal.gopunchd.com'}
+                        {formData.workerTypes?.includes('CONTRACTOR') && formData.workerTypes?.includes('VOLUNTEER') && ' | '}
+                        {formData.workerTypes?.includes('VOLUNTEER') && 'Volunteer portal: https://volunteer.gopunchd.com'}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label><span className="label-icon">{Icons.checkCircle}</span>Status</label>
@@ -1080,6 +1305,10 @@ function WorkersPage() {
                     </div>
                   )}
 
+                  <div className="import-notice">
+                    <p>{Icons.briefcase} All workers will be imported as <strong>Hourly</strong> by default. You can assign different types after import.</p>
+                  </div>
+
                   {importModal.parsedData.length > 0 && (
                     <div className="import-preview-table">
                       <h4>Preview:</h4>
@@ -1149,6 +1378,16 @@ function WorkersPage() {
                       </ul>
                     </div>
                   )}
+
+                  {importModal.results.success > 0 && (
+                    <div className="import-type-assign-prompt">
+                      <p>All {importModal.results.success} workers were imported as <strong>Hourly</strong>.</p>
+                      <p>Need to assign different worker types (Salaried, Contractor, Volunteer)?</p>
+                      <button className="btn-secondary" onClick={openBulkTypeForImported}>
+                        {Icons.layers} Assign Worker Types
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1173,6 +1412,74 @@ function WorkersPage() {
               {importModal.step === 'results' && (
                 <button className="btn-primary" onClick={resetImportModal}>Done</button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Type Assignment Modal */}
+      {bulkTypeModal.open && (
+        <div className="modal-overlay" onClick={() => !bulkTypeModal.loading && setBulkTypeModal({ open: false, selectedTypes: ['HOURLY'], loading: false })}>
+          <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span className="modal-icon">{Icons.layers}</span>
+                <h2>Assign Worker Types</h2>
+              </div>
+              <button 
+                className="modal-close" 
+                onClick={() => !bulkTypeModal.loading && setBulkTypeModal({ open: false, selectedTypes: ['HOURLY'], loading: false })}
+                disabled={bulkTypeModal.loading}
+              >
+                {Icons.x}
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="bulk-assign-info">
+                Assigning types to <strong>{selectedWorkers.size} worker{selectedWorkers.size !== 1 ? 's' : ''}</strong>
+              </p>
+              
+              <div className="bulk-type-options">
+                {enabledWorkerTypes.map(type => (
+                  <label key={type} className={`bulk-type-option ${bulkTypeModal.selectedTypes.includes(type) ? 'selected' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={bulkTypeModal.selectedTypes.includes(type)}
+                      onChange={() => toggleBulkType(type)}
+                      disabled={bulkTypeModal.loading}
+                    />
+                    <span className="bulk-type-name">{formatWorkerType(type)}</span>
+                    <span className="bulk-type-desc">
+                      {type === 'HOURLY' && 'OT calculations, break tracking'}
+                      {type === 'SALARIED' && 'No OT, time logging only'}
+                      {type === 'CONTRACTOR' && '1099, separate portal'}
+                      {type === 'VOLUNTEER' && 'No pay, hour tracking'}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              <p className="bulk-type-note">
+                Workers can have multiple types. This will replace their current types.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={() => setBulkTypeModal({ open: false, selectedTypes: ['HOURLY'], loading: false })}
+                disabled={bulkTypeModal.loading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn-primary" 
+                onClick={handleBulkTypeAssign}
+                disabled={bulkTypeModal.loading || bulkTypeModal.selectedTypes.length === 0}
+              >
+                {bulkTypeModal.loading ? 'Applying...' : `Apply to ${selectedWorkers.size} Worker${selectedWorkers.size !== 1 ? 's' : ''}`}
+              </button>
             </div>
           </div>
         </div>

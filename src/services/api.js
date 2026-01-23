@@ -53,7 +53,7 @@ export const usersApi = {
   getJobRates: (id) => api.get(`/users/${id}/rates`),
   setJobRate: (id, data) => api.post(`/users/${id}/rates`, data),
   removeJobRate: (userId, jobId) => api.delete(`/users/${userId}/rates/${jobId}`),
-};
+  };
 
 // Jobs endpoints
 export const jobsApi = {
@@ -87,6 +87,7 @@ export const timeEntriesApi = {
   exportGusto: (params) => api.get('/time-entries/export/gusto', { params, responseType: 'blob' }),
   exportPaychex: (params) => api.get('/time-entries/export/paychex', { params, responseType: 'blob' }),
   update: (id, data) => api.patch(`/time-entries/${id}`, data),
+  archive: (id, reason) => api.patch(`/time-entries/${id}/archive`, { reason }),
 };
 
 // Shifts endpoints
@@ -211,6 +212,7 @@ export const payPeriodsApi = {
   unlock: (id, reason) => api.post(`/pay-periods/${id}/unlock`, { reason }),
   markExported: (id) => api.post(`/pay-periods/${id}/mark-exported`),
   export: (id, format = 'CSV') => api.get(`/pay-periods/${id}/export`, { params: { format } }),
+  delete: (id) => api.delete(`/pay-periods/${id}`),
 };
 
 // Leave Management

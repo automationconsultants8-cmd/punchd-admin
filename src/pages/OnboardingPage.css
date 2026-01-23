@@ -491,3 +491,118 @@
     flex: 1;
   }
 }
+/* Add this to OnboardingPage.css */
+
+/* Worker Type Selection Grid */
+.worker-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+@media (max-width: 600px) {
+  .worker-type-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.worker-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  background: #FFFFFF;
+  border: 2px solid #E8E6E1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: center;
+}
+
+.worker-type-card input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.worker-type-card:hover {
+  border-color: #C9A227;
+  background: #FFFDF5;
+}
+
+.worker-type-card.selected {
+  border-color: #C9A227;
+  background: linear-gradient(135deg, #FFFDF5 0%, #FFF9E6 100%);
+  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.15);
+}
+
+.worker-type-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #F5F4F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5C5C5C;
+  transition: all 0.2s ease;
+}
+
+.worker-type-card.selected .worker-type-icon {
+  background: linear-gradient(135deg, #C9A227, #D4AF37);
+  color: white;
+}
+
+.worker-type-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.worker-type-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.worker-type-text strong {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.worker-type-text span {
+  font-size: 13px;
+  color: #5C5C5C;
+  line-height: 1.4;
+}
+
+.worker-type-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #E8E6E1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+}
+
+.worker-type-card.selected .worker-type-check {
+  opacity: 1;
+  transform: scale(1);
+  background: #C9A227;
+  color: white;
+}
+
+.worker-type-check svg {
+  width: 14px;
+  height: 14px;
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { shiftsApi, usersApi, jobsApi } from '../services/api';
+import { shiftsApi, usersApi, jobsApi, payPeriodsApi } from '../services/api';
 import './SchedulingPage.css';
 import { withFeatureGate } from '../components/FeatureGate';
 
@@ -103,6 +103,19 @@ const Icons = {
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
     </svg>
   ),
+  grid: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+    </svg>
+  ),
+  list: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+      <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+      <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </svg>
+  ),
 };
 
 // Helper to format date as YYYY-MM-DD in LOCAL timezone (DO NOT TOUCH)
@@ -141,15 +154,27 @@ const addDays = (date, days) => {
   return result;
 };
 
+// Pay period colors
+const PAY_PERIOD_COLORS = [
+  { bg: '#dbeafe', border: '#3b82f6', label: 'Pay Period A' },
+  { bg: '#dcfce7', border: '#22c55e', label: 'Pay Period B' },
+];
+
 function SchedulingPage() {
   const [shifts, setShifts] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [jobSites, setJobSites] = useState([]);
+  const [payPeriods, setPayPeriods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [copying, setCopying] = useState(false);
   const [editingShift, setEditingShift] = useState(null);
+  const [viewMode, setViewMode] = useState('week');
   const [currentWeek, setCurrentWeek] = useState(getWeekStart(new Date()));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showPayPeriods, setShowPayPeriods] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [formData, setFormData] = useState({
     jobId: '',
     userId: '',
@@ -177,14 +202,16 @@ function SchedulingPage() {
 
   const loadData = async () => {
     try {
-      const [shiftsRes, workersRes, jobsRes] = await Promise.all([
+      const [shiftsRes, workersRes, jobsRes, payPeriodsRes] = await Promise.all([
         shiftsApi.getAll(),
         usersApi.getAll(),
-        jobsApi.getAll()
+        jobsApi.getAll(),
+        payPeriodsApi.getAll().catch(() => ({ data: [] }))
       ]);
       setShifts(shiftsRes.data || []);
       setWorkers((workersRes.data || []).filter(w => w.status === 'active' || w.isActive));
       setJobSites(jobsRes.data || []);
+      setPayPeriods(payPeriodsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -208,13 +235,11 @@ function SchedulingPage() {
       }
 
       if (editingShift) {
-        // Update existing shift
         await shiftsApi.update(editingShift.id, {
           ...basePayload,
           shiftDate: formData.date
         });
       } else {
-        // Create new shift(s)
         const weeksToCreate = formData.isRecurring ? formData.repeatWeeks : 1;
         const baseDate = new Date(formData.date + 'T12:00:00');
 
@@ -248,6 +273,29 @@ function SchedulingPage() {
       } catch (error) {
         console.error('Error deleting shift:', error);
       }
+    }
+  };
+
+  // Delete from modal with confirmation
+  const handleDeleteFromModal = async () => {
+    if (!editingShift) return;
+    
+    setDeleting(true);
+    try {
+      await shiftsApi.delete(editingShift.id);
+      setShowModal(false);
+      setShowDeleteConfirm(false);
+      setEditingShift(null);
+      setFormData({ 
+        jobId: '', userId: '', date: '', startTime: '07:00', endTime: '15:30', 
+        notes: '', isOpen: false, isRecurring: false, repeatWeeks: 1 
+      });
+      loadData();
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      alert('Failed to delete shift. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -334,16 +382,47 @@ function SchedulingPage() {
     return days;
   };
 
+  const getMonthDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPadding = firstDay.getDay();
+    const days = [];
+
+    for (let i = startPadding - 1; i >= 0; i--) {
+      const d = new Date(year, month, -i);
+      days.push({ date: d, isCurrentMonth: false });
+    }
+
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+    }
+
+    const endPadding = 42 - days.length;
+    for (let i = 1; i <= endPadding; i++) {
+      days.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
+    }
+
+    return days;
+  };
+
   const navigateWeek = (direction) => {
     const newWeek = new Date(currentWeek);
     newWeek.setDate(currentWeek.getDate() + (direction * 7));
     setCurrentWeek(newWeek);
   };
 
+  const navigateMonth = (direction) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(currentMonth.getMonth() + direction);
+    setCurrentMonth(newMonth);
+  };
+
   const formatDisplayDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatMonthYear = (date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const isToday = (date) => toLocalDateString(date) === toLocalDateString(new Date());
   
-  // DO NOT TOUCH THIS FUNCTION
   const getShiftsForDay = (date) => {
     const targetYear = date.getFullYear();
     const targetMonth = date.getMonth();
@@ -357,6 +436,19 @@ function SchedulingPage() {
              d.getUTCMonth() === targetMonth && 
              d.getUTCDate() === targetDay;
     });
+  };
+
+  const getPayPeriodForDate = (date) => {
+    const dateStr = toLocalDateString(date);
+    for (let i = 0; i < payPeriods.length; i++) {
+      const pp = payPeriods[i];
+      const start = pp.startDate?.split('T')[0];
+      const end = pp.endDate?.split('T')[0];
+      if (start && end && dateStr >= start && dateStr <= end) {
+        return { ...pp, colorIndex: i % 2 };
+      }
+    }
+    return null;
   };
 
   const openModal = (day = null, isOpen = false) => {
@@ -376,13 +468,40 @@ function SchedulingPage() {
     setShowModal(true);
   };
 
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingShift(null);
+    setShowDeleteConfirm(false);
+  };
+
   const weekDays = getWeekDays();
+  const monthDays = getMonthDays();
   const openShiftsCount = shifts.filter(s => s.isOpen || s.status === 'OPEN').length;
   const stats = {
     totalShifts: shifts.length,
     workers: workers.length,
     jobSites: jobSites.length,
     openShifts: openShiftsCount
+  };
+
+  const getVisiblePayPeriods = () => {
+    if (viewMode === 'week') {
+      const weekStart = toLocalDateString(weekDays[0]);
+      const weekEnd = toLocalDateString(weekDays[6]);
+      return payPeriods.filter((pp) => {
+        const start = pp.startDate?.split('T')[0];
+        const end = pp.endDate?.split('T')[0];
+        return start && end && !(end < weekStart || start > weekEnd);
+      }).map((pp) => ({ ...pp, colorIndex: payPeriods.indexOf(pp) % 2 }));
+    } else {
+      const monthStart = toLocalDateString(monthDays[0].date);
+      const monthEnd = toLocalDateString(monthDays[monthDays.length - 1].date);
+      return payPeriods.filter(pp => {
+        const start = pp.startDate?.split('T')[0];
+        const end = pp.endDate?.split('T')[0];
+        return start && end && !(end < monthStart || start > monthEnd);
+      }).map((pp) => ({ ...pp, colorIndex: payPeriods.indexOf(pp) % 2 }));
+    }
   };
 
   if (loading) {
@@ -408,9 +527,11 @@ function SchedulingPage() {
           <p>Click on any day to create a shift</p>
         </div>
         <div className="header-buttons">
-          <button className="btn-outline" onClick={handleCopyPreviousWeek} disabled={copying}>
-            {Icons.copy}<span>{copying ? 'Copying...' : 'Copy Last Week'}</span>
-          </button>
+          {viewMode === 'week' && (
+            <button className="btn-outline" onClick={handleCopyPreviousWeek} disabled={copying}>
+              {Icons.copy}<span>{copying ? 'Copying...' : 'Copy Last Week'}</span>
+            </button>
+          )}
           <button className="btn-secondary" onClick={() => openModal(null, true)}>
             {Icons.briefcase}<span>Open Shift</span>
           </button>
@@ -452,82 +573,205 @@ function SchedulingPage() {
         </div>
       </div>
 
-      {/* Week Navigation */}
-      <div className="week-navigation">
-        <button className="nav-btn" onClick={() => navigateWeek(-1)}>{Icons.chevronLeft}</button>
-        <h2>{formatDisplayDate(weekDays[0])} - {formatDisplayDate(weekDays[6])}</h2>
-        <button className="nav-btn" onClick={() => navigateWeek(1)}>{Icons.chevronRight}</button>
+      {/* View Toggle & Navigation */}
+      <div className="calendar-controls">
+        <div className="view-toggle">
+          <button 
+            className={`toggle-btn ${viewMode === 'week' ? 'active' : ''}`}
+            onClick={() => setViewMode('week')}
+          >
+            {Icons.list} Week
+          </button>
+          <button 
+            className={`toggle-btn ${viewMode === 'month' ? 'active' : ''}`}
+            onClick={() => setViewMode('month')}
+          >
+            {Icons.grid} Month
+          </button>
+        </div>
+
+        <div className="week-navigation">
+          <button className="nav-btn" onClick={() => viewMode === 'week' ? navigateWeek(-1) : navigateMonth(-1)}>
+            {Icons.chevronLeft}
+          </button>
+          <h2>
+            {viewMode === 'week' 
+              ? `${formatDisplayDate(weekDays[0])} - ${formatDisplayDate(weekDays[6])}`
+              : formatMonthYear(currentMonth)
+            }
+          </h2>
+          <button className="nav-btn" onClick={() => viewMode === 'week' ? navigateWeek(1) : navigateMonth(1)}>
+            {Icons.chevronRight}
+          </button>
+        </div>
+
+        <div className="pay-period-toggle">
+          <label className="checkbox-label-inline">
+            <input 
+              type="checkbox" 
+              checked={showPayPeriods} 
+              onChange={(e) => setShowPayPeriods(e.target.checked)}
+            />
+            Show Pay Periods
+          </label>
+        </div>
       </div>
 
-      {/* Week Grid */}
-      <div className="week-grid">
-        {weekDays.map((day, index) => {
-          const dayShifts = getShiftsForDay(day);
-          const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-          return (
-            <div 
-              key={index} 
-              className={`day-column ${isToday(day) ? 'today' : ''}`}
-              onClick={() => openModal(day, false)}
-            >
-              <div className="day-header">
-                <span className="day-name">{dayNames[day.getDay()]}</span>
-                <span className="day-number">{day.getDate()}</span>
+      {/* Pay Period Legend */}
+      {showPayPeriods && getVisiblePayPeriods().length > 0 && (
+        <div className="pay-period-legend">
+          {getVisiblePayPeriods().map((pp, index) => (
+            <div key={pp.id} className="legend-item">
+              <span 
+                className="legend-color" 
+                style={{ 
+                  backgroundColor: PAY_PERIOD_COLORS[pp.colorIndex].bg,
+                  borderColor: PAY_PERIOD_COLORS[pp.colorIndex].border
+                }}
+              ></span>
+              <span className="legend-text">
+                <strong>Pay Period {index + 1}</strong>
+                <span className="legend-dates">
+                  {new Date(pp.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(pp.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                {pp.status && <span className={`legend-status ${pp.status.toLowerCase()}`}>{pp.status}</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Week View */}
+      {viewMode === 'week' && (
+        <div className="week-grid">
+          {weekDays.map((day, index) => {
+            const dayShifts = getShiftsForDay(day);
+            const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+            const payPeriod = showPayPeriods ? getPayPeriodForDate(day) : null;
+            
+            return (
+              <div 
+                key={index} 
+                className={`day-column ${isToday(day) ? 'today' : ''}`}
+                style={payPeriod ? { 
+                  backgroundColor: PAY_PERIOD_COLORS[payPeriod.colorIndex].bg,
+                  borderColor: PAY_PERIOD_COLORS[payPeriod.colorIndex].border
+                } : {}}
+                onClick={() => openModal(day, false)}
+              >
+                <div className="day-header">
+                  <span className="day-name">{dayNames[day.getDay()]}</span>
+                  <span className="day-number">{day.getDate()}</span>
+                </div>
+                <div className="day-content">
+                  {dayShifts.length === 0 ? (
+                    <div className="no-shifts">
+                      <span>No shifts</span>
+                      <button className="add-shift-btn">{Icons.plus}</button>
+                    </div>
+                  ) : (
+                    <div className="shifts-list">
+                      {dayShifts.map(shift => {
+                        const isOpenShift = shift.isOpen || shift.status === 'OPEN';
+                        return (
+                          <div key={shift.id} className={`shift-item ${isOpenShift ? 'open-shift' : ''}`} onClick={(e) => e.stopPropagation()}>
+                            {isOpenShift && <div className="open-badge">OPEN</div>}
+                            <div className="shift-time">{formatShiftTime(shift.startTime)} - {formatShiftTime(shift.endTime)}</div>
+                            <div className="shift-worker">{isOpenShift ? 'Available' : (shift.user?.name || 'Unassigned')}</div>
+                            <div className="shift-job">{shift.job?.name || 'No site'}</div>
+                            <div className="shift-actions">
+                              <button className="shift-action-btn edit" onClick={(e) => { e.stopPropagation(); handleEdit(shift); }} title="Edit">
+                                {Icons.edit}
+                              </button>
+                              {!isOpenShift && shift.user && (
+                                <button className="shift-action-btn mark-open" onClick={(e) => { e.stopPropagation(); handleMarkAsOpen(shift.id); }} title="Mark as Open">
+                                  {Icons.briefcase}
+                                </button>
+                              )}
+                              <button className="shift-action-btn delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }} title="Delete">
+                                {Icons.trash}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="day-content">
-                {dayShifts.length === 0 ? (
-                  <div className="no-shifts">
-                    <span>No shifts</span>
-                    <button className="add-shift-btn">{Icons.plus}</button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Month View */}
+      {viewMode === 'month' && (
+        <div className="month-grid">
+          <div className="month-header-row">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="month-header-cell">{day}</div>
+            ))}
+          </div>
+          <div className="month-body">
+            {monthDays.map((dayObj, index) => {
+              const { date, isCurrentMonth } = dayObj;
+              const dayShifts = getShiftsForDay(date);
+              const payPeriod = showPayPeriods ? getPayPeriodForDate(date) : null;
+              
+              return (
+                <div 
+                  key={index} 
+                  className={`month-cell ${!isCurrentMonth ? 'other-month' : ''} ${isToday(date) ? 'today' : ''}`}
+                  style={payPeriod ? { 
+                    backgroundColor: PAY_PERIOD_COLORS[payPeriod.colorIndex].bg,
+                  } : {}}
+                  onClick={() => openModal(date, false)}
+                >
+                  <div className="month-cell-header">
+                    <span className="month-day-number">{date.getDate()}</span>
+                    {dayShifts.length > 0 && (
+                      <span className="month-shift-count">{dayShifts.length}</span>
+                    )}
                   </div>
-                ) : (
-                  <div className="shifts-list">
-                    {dayShifts.map(shift => {
+                  <div className="month-cell-content">
+                    {dayShifts.slice(0, 3).map(shift => {
                       const isOpenShift = shift.isOpen || shift.status === 'OPEN';
                       return (
-                        <div key={shift.id} className={`shift-item ${isOpenShift ? 'open-shift' : ''}`} onClick={(e) => e.stopPropagation()}>
-                          {isOpenShift && <div className="open-badge">OPEN</div>}
-                          <div className="shift-time">{formatShiftTime(shift.startTime)} - {formatShiftTime(shift.endTime)}</div>
-                          <div className="shift-worker">{isOpenShift ? 'Available' : (shift.user?.name || 'Unassigned')}</div>
-                          <div className="shift-job">{shift.job?.name || 'No site'}</div>
-                          <div className="shift-actions">
-                            <button className="shift-action-btn edit" onClick={(e) => { e.stopPropagation(); handleEdit(shift); }} title="Edit">
-                              {Icons.edit}
-                            </button>
-                            {!isOpenShift && shift.user && (
-                              <button className="shift-action-btn mark-open" onClick={(e) => { e.stopPropagation(); handleMarkAsOpen(shift.id); }} title="Mark as Open">
-                                {Icons.briefcase}
-                              </button>
-                            )}
-                            <button className="shift-action-btn delete" onClick={(e) => { e.stopPropagation(); handleDelete(shift.id); }} title="Delete">
-                              {Icons.trash}
-                            </button>
-                          </div>
+                        <div 
+                          key={shift.id} 
+                          className={`month-shift-item ${isOpenShift ? 'open' : ''}`}
+                          onClick={(e) => { e.stopPropagation(); handleEdit(shift); }}
+                          title={`${formatShiftTime(shift.startTime)} - ${formatShiftTime(shift.endTime)}\n${isOpenShift ? 'Open Shift' : (shift.user?.name || 'Unassigned')}\n${shift.job?.name || 'No site'}`}
+                        >
+                          <span className="month-shift-time">{formatShiftTime(shift.startTime)}</span>
+                          <span className="month-shift-name">{isOpenShift ? 'Open' : (shift.user?.name?.split(' ')[0] || '?')}</span>
                         </div>
                       );
                     })}
+                    {dayShifts.length > 3 && (
+                      <div className="month-more-shifts">+{dayShifts.length - 3} more</div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Shift Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => { setShowModal(false); setEditingShift(null); }}>
+        <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
                 <span className="modal-icon">{formData.isOpen ? Icons.briefcase : Icons.calendar}</span>
                 <h2>{editingShift ? 'Edit Shift' : (formData.isOpen ? 'Create Open Shift' : 'Assign Shift')}</h2>
               </div>
-              <button className="modal-close" onClick={() => { setShowModal(false); setEditingShift(null); }}>{Icons.x}</button>
+              <button className="modal-close" onClick={closeModal}>{Icons.x}</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                {/* Shift Type Toggle */}
                 <div className="shift-type-toggle">
                   <button 
                     type="button"
@@ -590,7 +834,6 @@ function SchedulingPage() {
                   </div>
                 </div>
 
-                {/* Recurring Option - only show when creating new */}
                 {!editingShift && (
                   <>
                     <div className="form-group">
@@ -632,22 +875,141 @@ function SchedulingPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingShift(null); }}>Cancel</button>
-                <button type="submit" className="btn-primary">
-                  {Icons.check}
-                  <span>
-                    {editingShift 
-                      ? 'Save Changes'
-                      : (formData.isRecurring && formData.repeatWeeks > 1 
-                          ? `Create ${formData.repeatWeeks} Shifts` 
-                          : (formData.isOpen ? 'Create Open Shift' : 'Assign Shift'))}
-                  </span>
-                </button>
+                {/* Delete button - only show when editing */}
+                {editingShift && (
+                  <button 
+                    type="button" 
+                    className="btn-danger" 
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={deleting}
+                  >
+                    {Icons.trash}
+                    <span>Delete</span>
+                  </button>
+                )}
+                <div className="modal-footer-right">
+                  <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
+                  <button type="submit" className="btn-primary">
+                    {Icons.check}
+                    <span>
+                      {editingShift 
+                        ? 'Save Changes'
+                        : (formData.isRecurring && formData.repeatWeeks > 1 
+                            ? `Create ${formData.repeatWeeks} Shifts` 
+                            : (formData.isOpen ? 'Create Open Shift' : 'Assign Shift'))}
+                    </span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon delete">
+              {Icons.trash}
+            </div>
+            <h3>Delete Shift?</h3>
+            <p>Are you sure you want to delete this shift? This action cannot be undone.</p>
+            <div className="confirm-actions">
+              <button 
+                className="btn-secondary" 
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-danger" 
+                onClick={handleDeleteFromModal}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .modal-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 24px;
+          border-top: 1px solid #e5e7eb;
+          gap: 12px;
+        }
+        .modal-footer-right {
+          display: flex;
+          gap: 12px;
+        }
+        .btn-danger {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 16px;
+          background: #fee2e2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-danger:hover {
+          background: #fecaca;
+          border-color: #f87171;
+        }
+        .btn-danger svg {
+          width: 16px;
+          height: 16px;
+        }
+        .confirm-modal {
+          max-width: 400px;
+          text-align: center;
+          padding: 32px;
+        }
+        .confirm-icon {
+          width: 64px;
+          height: 64px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+        }
+        .confirm-icon.delete {
+          background: #fee2e2;
+        }
+        .confirm-icon.delete svg {
+          width: 32px;
+          height: 32px;
+          stroke: #dc2626;
+        }
+        .confirm-modal h3 {
+          font-size: 20px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 8px;
+        }
+        .confirm-modal p {
+          color: #6b7280;
+          margin: 0 0 24px;
+        }
+        .confirm-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+        }
+        .confirm-actions button {
+          min-width: 100px;
+        }
+      `}</style>
     </div>
   );
 }

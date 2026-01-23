@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { companyApi, jobsApi, usersApi } from '../services/api';
 import './OnboardingPage.css';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 function OnboardingPage() {
   const navigate = useNavigate();
@@ -17,15 +17,22 @@ function OnboardingPage() {
     city: '',
     state: '',
     zip: '',
-    // Step 2: Job-based tracking
+    // Step 2: Worker Types (NEW)
+    workerTypes: {
+      hourly: true,
+      salaried: false,
+      contractors: false,
+      volunteers: false,
+    },
+    // Step 3: Job-based tracking
     jobBasedTracking: true,
-    // Step 3: Shift scheduling
+    // Step 4: Shift scheduling
     shiftScheduling: false,
-    // Step 4: Verification mode
+    // Step 5: Verification mode
     verificationMode: 'balanced',
-    // Step 5: Pay rate
+    // Step 6: Pay rate
     defaultHourlyRate: '',
-    // Step 6: First job or worker
+    // Step 7: First job or worker
     firstJobName: '',
     firstJobAddress: '',
     firstWorkerName: '',
@@ -37,7 +44,39 @@ function OnboardingPage() {
     setError('');
   };
 
+  const toggleWorkerType = (type) => {
+    const newTypes = {
+      ...data.workerTypes,
+      [type]: !data.workerTypes[type],
+    };
+    
+    // Prevent volunteers from being the only selected type
+    const selectedTypes = Object.entries(newTypes).filter(([, v]) => v).map(([k]) => k);
+    if (selectedTypes.length === 1 && selectedTypes[0] === 'volunteers') {
+      setError('Volunteers cannot be your only worker type. Please select at least one other type.');
+      return;
+    }
+    
+    setData(prev => ({
+      ...prev,
+      workerTypes: newTypes,
+    }));
+    setError('');
+  };
+
   const nextStep = () => {
+    // Validate worker types step
+    if (currentStep === 2) {
+      const selectedTypes = Object.entries(data.workerTypes).filter(([, v]) => v).map(([k]) => k);
+      if (selectedTypes.length === 0) {
+        setError('Please select at least one worker type');
+        return;
+      }
+      if (selectedTypes.length === 1 && selectedTypes[0] === 'volunteers') {
+        setError('Volunteers cannot be your only worker type. Please select at least one other type.');
+        return;
+      }
+    }
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
     }
@@ -61,6 +100,13 @@ function OnboardingPage() {
       const facialRecognition = data.verificationMode === 'relaxed' ? 'off' : data.verificationMode === 'balanced' ? 'soft' : 'strict';
       const gpsGeofencing = data.verificationMode === 'relaxed' ? 'off' : data.verificationMode === 'balanced' ? 'soft' : 'strict';
       const isCA = data.state.toUpperCase() === 'CA';
+
+      // Build enabled worker types array
+      const enabledWorkerTypes = [];
+      if (data.workerTypes.hourly) enabledWorkerTypes.push('hourly');
+      if (data.workerTypes.salaried) enabledWorkerTypes.push('salaried');
+      if (data.workerTypes.contractors) enabledWorkerTypes.push('contractors');
+      if (data.workerTypes.volunteers) enabledWorkerTypes.push('volunteers');
 
       await companyApi.update({
         address: data.address,
@@ -86,6 +132,7 @@ function OnboardingPage() {
           buddyPunchAlerts: true,
           maxShiftHours: 16,
           earlyClockInMinutes: 15,
+          enabledWorkerTypes: enabledWorkerTypes,
           onboardingCompletedAt: new Date().toISOString(),
           learningModeEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
@@ -136,6 +183,7 @@ function OnboardingPage() {
       await companyApi.update({
         settings: {
           onboardingSkippedAt: new Date().toISOString(),
+          enabledWorkerTypes: ['hourly'], // Default to hourly if skipped
         },
       });
       window.location.href = '/dashboard';
@@ -145,6 +193,11 @@ function OnboardingPage() {
   };
 
   const canProceed = () => {
+    if (currentStep === 2) {
+      const selectedTypes = Object.entries(data.workerTypes).filter(([, v]) => v).map(([k]) => k);
+      if (selectedTypes.length === 0) return false;
+      if (selectedTypes.length === 1 && selectedTypes[0] === 'volunteers') return false;
+    }
     return true;
   };
 
@@ -256,8 +309,127 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 2: Job-based tracking */}
+          {/* Step 2: Worker Types (NEW) */}
           {currentStep === 2 && (
+            <div className="step-content">
+              <div className="step-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="9" cy="7" r="4" stroke="#C9A227" strokeWidth="2"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h1>What types of workers do you have?</h1>
+              <p>Select all that apply. You can add more types later in Settings.</p>
+              
+              <div className="worker-type-grid">
+                <label className={`worker-type-card ${data.workerTypes.hourly ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={data.workerTypes.hourly}
+                    onChange={() => toggleWorkerType('hourly')}
+                  />
+                  <div className="worker-type-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                  </div>
+                  <div className="worker-type-text">
+                    <strong>Hourly Workers</strong>
+                    <span>Paid by the hour with overtime tracking</span>
+                  </div>
+                  <div className="worker-type-check">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                </label>
+
+                <label className={`worker-type-card ${data.workerTypes.salaried ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={data.workerTypes.salaried}
+                    onChange={() => toggleWorkerType('salaried')}
+                  />
+                  <div className="worker-type-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    </svg>
+                  </div>
+                  <div className="worker-type-text">
+                    <strong>Salaried Workers</strong>
+                    <span>Fixed salary with time tracking for records</span>
+                  </div>
+                  <div className="worker-type-check">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                </label>
+
+                <label className={`worker-type-card ${data.workerTypes.contractors ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={data.workerTypes.contractors}
+                    onChange={() => toggleWorkerType('contractors')}
+                  />
+                  <div className="worker-type-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                  </div>
+                  <div className="worker-type-text">
+                    <strong>Contractors</strong>
+                    <span>1099 contractors with separate billing</span>
+                  </div>
+                  <div className="worker-type-check">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                </label>
+
+                <label className={`worker-type-card ${data.workerTypes.volunteers ? 'selected' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={data.workerTypes.volunteers}
+                    onChange={() => toggleWorkerType('volunteers')}
+                  />
+                  <div className="worker-type-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </div>
+                  <div className="worker-type-text">
+                    <strong>Volunteers</strong>
+                    <span>Unpaid volunteers with hour tracking</span>
+                  </div>
+                  <div className="worker-type-check">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                </label>
+              </div>
+
+              <div className="info-callout">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="#C9A227" strokeWidth="2"/>
+                  <path d="M12 16V12M12 8H12.01" stroke="#C9A227" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+                <span>Volunteers require at least one other worker type to be selected.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Job-based tracking */}
+          {currentStep === 3 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -311,8 +483,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Shift scheduling */}
-          {currentStep === 3 && (
+          {/* Step 4: Shift scheduling */}
+          {currentStep === 4 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -368,12 +540,12 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 4: Verification mode */}
-          {currentStep === 4 && (
+          {/* Step 5: Verification mode */}
+          {currentStep === 5 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="#C9A227" strokeWidth="2"/>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#C9A227" strokeWidth="2"/>
                   <path d="M9 12L11 14L15 10" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
@@ -433,8 +605,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 5: Pay rate */}
-          {currentStep === 5 && (
+          {/* Step 6: Pay rate */}
+          {currentStep === 6 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -463,8 +635,8 @@ function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 6: First job or worker */}
-          {currentStep === 6 && (
+          {/* Step 7: First job or worker */}
+          {currentStep === 7 && (
             <div className="step-content">
               <div className="step-icon">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -536,7 +708,7 @@ function OnboardingPage() {
           )}
           
           <div className="footer-right">
-            {[1, 5, 6].includes(currentStep) && (
+            {[1, 6, 7].includes(currentStep) && (
               <button className="btn-skip" onClick={skipStep}>
                 Skip
               </button>

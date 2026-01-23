@@ -34,6 +34,8 @@ import SalariedWorkersPage from './pages/SalariedWorkersPage';
 import ContractorsPage from './pages/ContractorsPage';
 import VolunteersPage from './pages/VolunteersPage';
 import MyTimePage from './pages/MyTimePage';
+import ApprovalsPage from './pages/ApprovalsPage';
+import ShiftTemplatesPage from './pages/ShiftTemplatesPage';
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -55,6 +57,7 @@ const pageTitles = {
   '/workers/contractors': 'Contractors',
   '/workers/volunteers': 'Volunteers',
   '/my-time': 'My Time',
+  '/approvals': 'Approvals',
 };
 
 function AppContent({ user, onLogout, subscription, needsOnboarding }) {
@@ -114,6 +117,8 @@ function AppContent({ user, onLogout, subscription, needsOnboarding }) {
             <Route path="/workers/contractors" element={<ContractorsPage />} />
             <Route path="/workers/volunteers" element={<VolunteersPage />} />
             <Route path="/my-time" element={<MyTimePage />} />
+            <Route path="/approvals" element={<ApprovalsPage />} />
+            <Route path="/shift-templates" element={<ShiftTemplatesPage />} />
             
             {/* Legacy route redirects */}
             <Route path="/job-sites" element={<Navigate to="/locations" replace />} />
@@ -156,7 +161,7 @@ function App() {
     setLoading(false);
   }, []);
 
-  // Check if onboarding is needed
+  // Check if onboarding is needed and get company data
   useEffect(() => {
     const checkOnboarding = async () => {
       if (!user) return;
@@ -168,6 +173,11 @@ function App() {
         // Needs onboarding if never completed AND never skipped
         const needsIt = !settings.onboardingCompletedAt && !settings.onboardingSkippedAt;
         setNeedsOnboarding(needsIt);
+        
+        // Add inviteCode to user object if available
+        if (response.data.inviteCode) {
+          setUser(prev => ({ ...prev, inviteCode: response.data.inviteCode }));
+        }
       } catch (err) {
         console.error('Failed to check onboarding status:', err);
       }
@@ -175,7 +185,7 @@ function App() {
     };
 
     checkOnboarding();
-  }, [user]);
+  }, [user?.id]); // Use user.id to prevent infinite loop
 
   useEffect(() => {
     const checkSubscription = async () => {

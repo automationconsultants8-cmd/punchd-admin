@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { billingApi } from '../services/api';
+import { billingApi, usersApi } from '../services/api';
 import './BillingPage.css';
 
 const PLANS = [
@@ -9,10 +9,12 @@ const PLANS = [
     name: 'Starter',
     pricePerUser: 8,
     yearlyPricePerUser: 6,
+    volunteerPricePerUser: 3,
+    yearlyVolunteerPricePerUser: 2,
     minimumUsers: 5,
     minimumMonthly: 40,
     setupFee: 199,
-    description: 'For small crews who need reliable time tracking',
+    description: 'Essential time tracking for growing teams',
     features: [
       'Clock in/out with GPS',
       'Mobile app (iOS & Android)',
@@ -22,13 +24,7 @@ const PLANS = [
       'CSV exports',
       'Email support',
     ],
-    notIncluded: [
-      'Face verification',
-      'Geofencing alerts',
-      'Break compliance',
-      'Scheduling',
-      'Certified Payroll',
-    ],
+    notIncluded: ['Face verification', 'Geofencing alerts', 'Break compliance', 'Scheduling', 'Certified Payroll'],
     popular: false,
   },
   {
@@ -36,10 +32,12 @@ const PLANS = [
     name: 'Professional',
     pricePerUser: 12,
     yearlyPricePerUser: 10,
+    volunteerPricePerUser: 4,
+    yearlyVolunteerPricePerUser: 3,
     minimumUsers: 5,
     minimumMonthly: 60,
     setupFee: 299,
-    description: 'Eliminate buddy punching & stay compliant',
+    description: 'Advanced verification & compliance tools',
     features: [
       'Everything in Starter, plus:',
       'Face verification (AI-powered)',
@@ -48,33 +46,37 @@ const PLANS = [
       'California break compliance',
       'Overtime tracking & alerts',
       'Schedule management',
+      'Shift templates',
       'Open shifts & claiming',
       'Shift requests & time off',
+      'Leave management (PTO, sick)',
+      'Manual time entry',
+      'Pay period management',
       'Team messaging',
       'Cost analytics',
       'Excel & PDF exports',
       'Priority support',
     ],
-    notIncluded: [
-      'Certified Payroll WH-347',
-      'Audit logs',
-    ],
+    notIncluded: ['Certified Payroll WH-347', 'Audit logs', 'Role management'],
     popular: true,
   },
   {
-    id: 'contractor',
-    name: 'Contractor',
+    id: 'enterprise',
+    name: 'Enterprise',
     pricePerUser: 18,
     yearlyPricePerUser: 15,
+    volunteerPricePerUser: 5,
+    yearlyVolunteerPricePerUser: 4,
     minimumUsers: 10,
     minimumMonthly: 180,
     setupFee: 0,
-    description: 'For government jobs & prevailing wage projects',
+    description: 'Full platform with premium support',
     features: [
       'Everything in Professional, plus:',
       'Certified Payroll WH-347',
       'Prevailing wage tracking',
       'Complete audit trail',
+      'Role management',
       'Dedicated onboarding call',
       'Priority phone & email support',
     ],
@@ -86,7 +88,7 @@ const PLANS = [
 const PLAN_COLORS = {
   starter: '#6b7280',
   professional: '#C9A227',
-  contractor: '#1e3a5f',
+  enterprise: '#1e3a5f',
 };
 
 function BillingPage() {
@@ -95,21 +97,65 @@ function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [billingCycle, setBillingCycle] = useState('yearly');
-  const [workerCount, setWorkerCount] = useState(10);
+  
+  const [workerCounts, setWorkerCounts] = useState({
+    hourly: 0,
+    salaried: 0,
+    contractors: 0,
+    volunteers: 0,
+    total: 0,
+  });
 
   const success = searchParams.get('success');
   const canceled = searchParams.get('canceled');
 
   useEffect(() => {
-    loadStatus();
+    loadData();
   }, []);
 
-  const loadStatus = async () => {
+  const loadData = async () => {
     try {
-      const response = await billingApi.getStatus();
-      setStatus(response.data);
-      if (response.data.workerCount) {
-        setWorkerCount(Math.max(response.data.workerCount, 5));
+      const statusRes = await billingApi.getStatus();
+      setStatus(statusRes.data);
+      
+      // Load real worker counts
+      try {
+        const workersRes = await usersApi.getAll();
+        const users = workersRes.data || [];
+        
+        // Debug log
+        console.log('All users from API:', users);
+        
+        const counts = {
+          hourly: 0,
+          salaried: 0,
+          contractors: 0,
+          volunteers: 0,
+          total: 0,
+        };
+        
+        // Count all users that have workerTypes (these are workers)
+        users.forEach(user => {
+          const types = user.workerTypes || [];
+          
+          // If user has any workerTypes, they're a worker
+          if (types.length > 0) {
+            counts.total++;
+            
+            types.forEach(type => {
+              const typeLower = type.toLowerCase();
+              if (typeLower === 'hourly') counts.hourly++;
+              else if (typeLower === 'salaried') counts.salaried++;
+              else if (typeLower === 'contractor') counts.contractors++;
+              else if (typeLower === 'volunteer') counts.volunteers++;
+            });
+          }
+        });
+        
+        console.log('Worker counts:', counts);
+        setWorkerCounts(counts);
+      } catch (err) {
+        console.error('Failed to load worker counts:', err);
       }
     } catch (err) {
       console.error('Failed to load billing status:', err);
@@ -121,7 +167,7 @@ function BillingPage() {
   const handleSelectPlan = async (planId) => {
     setActionLoading(true);
     try {
-      const response = await billingApi.createCheckoutSession(planId, billingCycle, workerCount);
+      const response = await billingApi.createCheckoutSession(planId, billingCycle, workerCounts.total);
       window.location.href = response.data.url;
     } catch (err) {
       console.error('Failed to create checkout session:', err);
@@ -145,21 +191,40 @@ function BillingPage() {
   };
 
   const getMonthlyPrice = (plan) => {
-    const pricePerUser = billingCycle === 'monthly' ? plan.pricePerUser : plan.yearlyPricePerUser;
-    const effectiveUsers = Math.max(workerCount, plan.minimumUsers);
-    const calculatedPrice = pricePerUser * effectiveUsers;
+    const regularPrice = billingCycle === 'monthly' ? plan.pricePerUser : plan.yearlyPricePerUser;
+    const volunteerPrice = billingCycle === 'monthly' ? plan.volunteerPricePerUser : plan.yearlyVolunteerPricePerUser;
+    
+    const regularWorkers = workerCounts.hourly + workerCounts.salaried + workerCounts.contractors;
+    const volunteerWorkers = workerCounts.volunteers;
+    
+    const effectiveRegular = Math.max(regularWorkers, plan.minimumUsers);
+    const calculatedPrice = (regularPrice * effectiveRegular) + (volunteerPrice * volunteerWorkers);
+    
     return Math.max(calculatedPrice, plan.minimumMonthly);
   };
 
   const getAnnualSavings = (plan) => {
-    const effectiveUsers = Math.max(workerCount, plan.minimumUsers);
-    const monthlyTotal = plan.pricePerUser * effectiveUsers * 12;
-    const yearlyTotal = plan.yearlyPricePerUser * effectiveUsers * 12;
+    const regularWorkers = workerCounts.hourly + workerCounts.salaried + workerCounts.contractors;
+    const effectiveRegular = Math.max(regularWorkers, plan.minimumUsers);
+    
+    const monthlyTotal = (plan.pricePerUser * effectiveRegular * 12) + (plan.volunteerPricePerUser * workerCounts.volunteers * 12);
+    const yearlyTotal = (plan.yearlyPricePerUser * effectiveRegular * 12) + (plan.yearlyVolunteerPricePerUser * workerCounts.volunteers * 12);
+    
     return monthlyTotal - yearlyTotal + plan.setupFee;
   };
 
   const getSavingsPercent = (plan) => {
     return Math.round((1 - plan.yearlyPricePerUser / plan.pricePerUser) * 100);
+  };
+
+  // Calculate days remaining in trial
+  const getTrialDaysRemaining = () => {
+    if (!status?.trialEndsAt) return null;
+    const now = new Date();
+    const trialEnd = new Date(status.trialEndsAt);
+    const diffTime = trialEnd.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
   };
 
   if (loading) {
@@ -170,9 +235,11 @@ function BillingPage() {
     );
   }
 
-  const currentTier = status?.tier || 'trial';
-  const isCurrentPlan = (planId) => currentTier.toLowerCase() === planId.toLowerCase();
-  const isPaidUser = ['starter', 'professional', 'contractor'].includes(currentTier.toLowerCase());
+const currentTier = status?.tier || 'trial';
+const subscriptionStatus = status?.status || 'trial';
+const isCurrentPlan = (planId) => currentTier.toLowerCase() === planId.toLowerCase();
+const isPaidUser = ['starter', 'professional', 'enterprise'].includes(currentTier.toLowerCase()) && subscriptionStatus !== 'trial';
+const isOnTrial = subscriptionStatus === 'trial';
 
   return (
     <div className="billing-page">
@@ -192,14 +259,23 @@ function BillingPage() {
           </div>
         )}
 
-        {status?.tier === 'trial' && (
+        {isOnTrial && (
           <div className="current-plan-banner trial">
             <span>🎁 14-Day Free Trial</span>
-            {status?.trialEndsAt && (
-              <span className="trial-ends">
-                Ends {new Date(status.trialEndsAt).toLocaleDateString()}
-              </span>
-            )}
+            <span className="trial-ends">
+              {trialDaysRemaining !== null && trialDaysRemaining > 0 ? (
+                <>
+                  <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining</strong>
+                  {status?.trialEndsAt && (
+                    <span className="trial-end-date"> (ends {new Date(status.trialEndsAt).toLocaleDateString()})</span>
+                  )}
+                </>
+              ) : trialDaysRemaining === 0 ? (
+                <strong className="trial-ending-today">Trial ends today!</strong>
+              ) : (
+                status?.trialEndsAt && `Ends ${new Date(status.trialEndsAt).toLocaleDateString()}`
+              )}
+            </span>
           </div>
         )}
 
@@ -213,37 +289,56 @@ function BillingPage() {
         )}
       </div>
 
+      {/* Worker Count Summary */}
+      <div className="worker-count-summary">
+        <h3>Your Team</h3>
+        <div className="worker-counts">
+          {workerCounts.hourly > 0 && (
+            <div className="count-item">
+              <span className="count-icon">⏰</span>
+              <span className="count-number">{workerCounts.hourly}</span>
+              <span className="count-label">Hourly</span>
+            </div>
+          )}
+          {workerCounts.salaried > 0 && (
+            <div className="count-item">
+              <span className="count-icon">💼</span>
+              <span className="count-number">{workerCounts.salaried}</span>
+              <span className="count-label">Salaried</span>
+            </div>
+          )}
+          {workerCounts.contractors > 0 && (
+            <div className="count-item">
+              <span className="count-icon">📋</span>
+              <span className="count-number">{workerCounts.contractors}</span>
+              <span className="count-label">Contractors</span>
+            </div>
+          )}
+          {workerCounts.volunteers > 0 && (
+            <div className="count-item volunteer">
+              <span className="count-icon">🤝</span>
+              <span className="count-number">{workerCounts.volunteers}</span>
+              <span className="count-label">Volunteers</span>
+              <span className="discount-badge">Discounted</span>
+            </div>
+          )}
+          <div className="count-item total">
+            <span className="count-number">{workerCounts.total}</span>
+            <span className="count-label">Total Workers</span>
+          </div>
+        </div>
+        <p className="count-note">Pricing is calculated automatically based on your active workers</p>
+      </div>
+
       <div className="pricing-controls">
         <div className="billing-toggle">
-          <button
-            className={billingCycle === 'monthly' ? 'active' : ''}
-            onClick={() => setBillingCycle('monthly')}
-          >
+          <button className={billingCycle === 'monthly' ? 'active' : ''} onClick={() => setBillingCycle('monthly')}>
             Monthly
           </button>
-          <button
-            className={billingCycle === 'yearly' ? 'active' : ''}
-            onClick={() => setBillingCycle('yearly')}
-          >
+          <button className={billingCycle === 'yearly' ? 'active' : ''} onClick={() => setBillingCycle('yearly')}>
             Annual
             <span className="save-badge">Save up to 25% + No Setup Fee</span>
           </button>
-        </div>
-
-        <div className="worker-slider">
-          <label>Team size: <strong>{workerCount} workers</strong></label>
-          <input
-            type="range"
-            min="5"
-            max="100"
-            value={workerCount}
-            onChange={(e) => setWorkerCount(parseInt(e.target.value))}
-          />
-          <div className="slider-labels">
-            <span>5</span>
-            <span>50</span>
-            <span>100+</span>
-          </div>
         </div>
       </div>
 
@@ -264,9 +359,7 @@ function BillingPage() {
 
             <div className="plan-price">
               <span className="currency">$</span>
-              <span className="amount">
-                {billingCycle === 'monthly' ? plan.pricePerUser : plan.yearlyPricePerUser}
-              </span>
+              <span className="amount">{billingCycle === 'monthly' ? plan.pricePerUser : plan.yearlyPricePerUser}</span>
               <span className="period">/user/mo</span>
             </div>
 
@@ -277,7 +370,24 @@ function BillingPage() {
               </div>
             )}
 
+            <div className="volunteer-pricing-note">
+              <span>🤝 Volunteers: ${billingCycle === 'monthly' ? plan.volunteerPricePerUser : plan.yearlyVolunteerPricePerUser}/user/mo</span>
+            </div>
+
             <div className="price-estimate">
+              {(workerCounts.hourly + workerCounts.salaried + workerCounts.contractors) > 0 && (
+                <div className="estimate-row">
+                  <span>{workerCounts.hourly + workerCounts.salaried + workerCounts.contractors} regular workers</span>
+                  <span>${(billingCycle === 'monthly' ? plan.pricePerUser : plan.yearlyPricePerUser) * Math.max(workerCounts.hourly + workerCounts.salaried + workerCounts.contractors, plan.minimumUsers)}</span>
+                </div>
+              )}
+              {workerCounts.volunteers > 0 && (
+                <div className="estimate-row volunteer-row">
+                  <span>{workerCounts.volunteers} volunteers</span>
+                  <span>${(billingCycle === 'monthly' ? plan.volunteerPricePerUser : plan.yearlyVolunteerPricePerUser) * workerCounts.volunteers}</span>
+                </div>
+              )}
+              
               <div className="estimate-row total">
                 <span>Your monthly cost:</span>
                 <strong>${getMonthlyPrice(plan)}/mo</strong>
@@ -313,7 +423,7 @@ function BillingPage() {
               {actionLoading ? 'Loading...' : 
                 isCurrentPlan(plan.id) ? 'Manage Plan' :
                 isPaidUser ? 'Switch Plan' : 
-                status?.tier === 'trial' ? 'Start Plan' : 'Start 14-Day Free Trial'}
+                isOnTrial ? 'Select Plan' : 'Start 14-Day Free Trial'}
             </button>
 
             <ul className="plan-features">
@@ -335,7 +445,7 @@ function BillingPage() {
       </div>
 
       <div className="value-props">
-        <h2>Why construction companies choose Punch'd</h2>
+        <h2>Why staffing agencies choose Punch'd</h2>
         <div className="value-grid">
           <div className="value-item">
             <div className="value-icon">
@@ -370,15 +480,14 @@ function BillingPage() {
           <div className="value-item">
             <div className="value-icon">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </div>
-            <h4>Government Ready</h4>
-            <p>Generate certified payroll WH-347 in minutes, not hours. Win more government contracts.</p>
+            <h4>Multi-Site Management</h4>
+            <p>Manage workers across multiple client sites. Track time by location automatically.</p>
           </div>
         </div>
       </div>
@@ -389,6 +498,14 @@ function BillingPage() {
           <div className="faq-item">
             <h4>What's included in the free trial?</h4>
             <p>Full access to Professional features for 14 days. No credit card required to start.</p>
+          </div>
+          <div className="faq-item">
+            <h4>How is billing calculated?</h4>
+            <p>We automatically count your active workers each billing cycle. Your bill adjusts as your team grows or shrinks.</p>
+          </div>
+          <div className="faq-item">
+            <h4>Why are volunteers cheaper?</h4>
+            <p>Volunteer organizations have different needs. We offer reduced rates to support community service.</p>
           </div>
           <div className="faq-item">
             <h4>Can I change plans later?</h4>
@@ -402,29 +519,36 @@ function BillingPage() {
             <h4>Do you offer refunds?</h4>
             <p>Yes, 30-day money back guarantee if you're not satisfied. No questions asked.</p>
           </div>
-          <div className="faq-item">
-            <h4>How does face verification work?</h4>
-            <p>Workers take a selfie when clocking in. Our AI matches it to their profile photo instantly.</p>
-          </div>
-          <div className="faq-item">
-            <h4>What if I have more than 100 workers?</h4>
-            <p>Contact us for custom enterprise pricing with volume discounts.</p>
-          </div>
         </div>
       </div>
 
-      <div className="cta-section">
-        <h2>Ready to stop losing money to time theft?</h2>
-        <p>Join construction companies saving thousands per month with Punch'd.</p>
-        <button 
-          className="cta-button"
-          onClick={() => handleSelectPlan('professional')}
-          disabled={actionLoading}
-        >
-          Start Your Free Trial
-        </button>
-        <span className="cta-note">No credit card required • Setup in 5 minutes</span>
-      </div>
+      {/* Only show CTA if NOT on trial and NOT a paid user */}
+      {!isOnTrial && !isPaidUser && (
+        <div className="cta-section">
+          <h2>Ready to stop losing money to time theft?</h2>
+          <p>Join staffing agencies saving thousands per month with Punch'd.</p>
+          <button className="cta-button" onClick={() => handleSelectPlan('professional')} disabled={actionLoading}>
+            Start Your Free Trial
+          </button>
+          <span className="cta-note">No credit card required • Setup in 5 minutes</span>
+        </div>
+      )}
+
+      {/* Show different CTA for trial users */}
+      {isOnTrial && (
+        <div className="cta-section trial-cta">
+          <h2>Enjoying your trial?</h2>
+          <p>
+            {trialDaysRemaining !== null && trialDaysRemaining > 0
+              ? `You have ${trialDaysRemaining} day${trialDaysRemaining !== 1 ? 's' : ''} left to explore all features.`
+              : 'Your trial ends today. Select a plan to continue using Punch\'d.'}
+          </p>
+          <button className="cta-button" onClick={() => handleSelectPlan('professional')} disabled={actionLoading}>
+            {trialDaysRemaining !== null && trialDaysRemaining <= 3 ? 'Select a Plan Now' : 'Select a Plan'}
+          </button>
+          <span className="cta-note">Keep all your data • Seamless transition</span>
+        </div>
+      )}
     </div>
   );
 }
