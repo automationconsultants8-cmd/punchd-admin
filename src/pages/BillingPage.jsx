@@ -262,19 +262,25 @@ function BillingPage() {
 
         {isOnTrial && (
           <div className="current-plan-banner trial">
-            <span>🎁 14-Day Free Trial</span>
-            <span className="trial-ends">
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              14-Day Free Trial
+            </span>
+            <span className="trial-ends" style={{ color: '#1a1a1a', fontWeight: '600' }}>
               {trialDaysRemaining !== null && trialDaysRemaining > 0 ? (
                 <>
-                  <strong>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining</strong>
+                  <strong style={{ color: '#1a1a1a' }}>{trialDaysRemaining} day{trialDaysRemaining !== 1 ? 's' : ''} remaining</strong>
                   {status?.trialEndsAt && (
-                    <span className="trial-end-date"> (ends {new Date(status.trialEndsAt).toLocaleDateString()})</span>
+                    <span className="trial-end-date" style={{ color: '#333' }}> (ends {new Date(status.trialEndsAt).toLocaleDateString()})</span>
                   )}
                 </>
               ) : trialDaysRemaining === 0 ? (
-                <strong className="trial-ending-today">Trial ends today!</strong>
+                <strong className="trial-ending-today" style={{ color: '#1a1a1a' }}>Trial ends today!</strong>
               ) : (
-                status?.trialEndsAt && `Ends ${new Date(status.trialEndsAt).toLocaleDateString()}`
+                status?.trialEndsAt && <span style={{ color: '#1a1a1a' }}>Ends {new Date(status.trialEndsAt).toLocaleDateString()}</span>
               )}
             </span>
           </div>
