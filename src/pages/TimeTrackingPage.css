@@ -1001,6 +1001,239 @@
 }
 
 /* ============================================
+   EDIT MODAL - Entry ID and Worker Info
+   ============================================ */
+
+.edit-entry-id {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.edit-entry-id span {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.edit-entry-id strong {
+  font-size: 14px;
+  color: #C9A227;
+  font-family: monospace;
+}
+
+.edit-worker-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.edit-worker-info .avatar {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #C9A227, #E8D48A);
+}
+
+.edit-worker-info strong {
+  display: block;
+  color: #fff;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.edit-worker-info span {
+  color: #888;
+  font-size: 13px;
+}
+
+.edit-warning {
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  margin-top: 16px;
+  color: #f59e0b;
+  font-size: 13px;
+}
+
+/* ============================================
+   COPY MODAL STYLES
+   ============================================ */
+
+.btn-copy {
+  color: #6366f1;
+}
+
+.btn-copy:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.btn-copy svg,
+.btn-archive svg {
+  width: 16px;
+  height: 16px;
+}
+
+.copy-source-info {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.copy-source-info strong {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.copy-source-details {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.copy-source-details span {
+  font-size: 14px;
+  color: #fff;
+}
+
+.copy-mode-options {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.2s;
+  color: #fff;
+}
+
+.radio-option:has(input:checked) {
+  border-color: #C9A227;
+  background: rgba(201, 162, 39, 0.1);
+}
+
+.radio-option input {
+  accent-color: #C9A227;
+}
+
+/* ============================================
+   ARCHIVE MODAL STYLES
+   ============================================ */
+
+.archive-entry-summary {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+  color: #fff;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  border: none;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+}
+
+/* ============================================
+   VIEW MODAL - Entry Detail Grid
+   ============================================ */
+
+.entry-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.detail-section {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+}
+
+.detail-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #C9A227;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row span {
+  font-size: 13px;
+  color: #888;
+}
+
+.detail-row strong {
+  font-size: 14px;
+  color: #fff;
+}
+
+.detail-row.total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detail-row.total strong {
+  color: #22c55e;
+  font-size: 16px;
+}
+
+.detail-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-section.rejection-section {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.detail-section.rejection-section h4 {
+  color: #ef4444;
+}
+
+.detail-section.rejection-section p {
+  color: #fff;
+  margin: 0;
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 
@@ -1015,10 +1248,12 @@
   
   .page-actions {
     width: 100%;
+    flex-wrap: wrap;
   }
   
   .page-actions .btn {
     flex: 1;
+    min-width: 100px;
   }
   
   .pay-period-bar {
@@ -1057,15 +1292,17 @@
   .approval-details {
     grid-template-columns: repeat(2, 1fr);
   }
+  
+  .entry-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
-/* ==========================================
-   ADD THIS TO THE END OF theme-override.css
-   TIME TRACKING PAGE FIXES
-   ========================================== */
 
 /* ==========================================
-   GHOST BUTTON
+   THEME OVERRIDE STYLES
    ========================================== */
+
+/* Ghost button override */
 .btn-ghost {
   background: transparent !important;
   border: 2px solid #D4D0C8 !important;
@@ -1078,22 +1315,12 @@
   color: #1A1A1A !important;
 }
 
-/* ==========================================
-   PAY PERIOD BAR - Complete Restructure
-   ========================================== */
+/* Pay Period Bar override */
 .pay-period-bar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 24px !important;
-  padding: 16px 20px !important;
   background: #FFFFFF !important;
   border: 2px solid #D4D0C8 !important;
-  border-radius: 12px !important;
-  margin-bottom: 16px !important;
 }
 
-/* Left side - selector and date */
 .pay-period-left {
   display: flex !important;
   align-items: center !important;
@@ -1116,14 +1343,9 @@
 }
 
 .pay-period-select {
-  min-width: 160px !important;
   background: #FFFFFF !important;
   border: 2px solid #D4D0C8 !important;
-  border-radius: 8px !important;
   color: #1A1A1A !important;
-  padding: 10px 14px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
 }
 
 .pay-period-select:hover {
@@ -1133,7 +1355,6 @@
 .pay-period-select:focus {
   border-color: #C9A227 !important;
   box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
-  outline: none !important;
 }
 
 .pay-period-select option {
@@ -1141,19 +1362,10 @@
   color: #1A1A1A !important;
 }
 
-/* Settings Button */
 .pay-period-settings-btn {
-  width: 40px !important;
-  height: 40px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
   background: #FFFFFF !important;
   border: 2px solid #D4D0C8 !important;
-  border-radius: 8px !important;
   color: #5C5C5C !important;
-  cursor: pointer !important;
-  transition: all 0.2s ease !important;
 }
 
 .pay-period-settings-btn:hover {
@@ -1162,34 +1374,18 @@
   color: #1A1A1A !important;
 }
 
-.pay-period-settings-btn svg {
-  width: 18px !important;
-  height: 18px !important;
-  color: inherit !important;
-}
-
-/* Date Display Chip */
 .pay-period-date-display {
-  display: inline-flex !important;
-  align-items: center !important;
-  padding: 8px 16px !important;
   background: #F5F0E6 !important;
   border: 1px solid #E8D48A !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
   color: #8B7021 !important;
-  white-space: nowrap !important;
 }
 
-/* Right side - stats and actions */
 .pay-period-right {
   display: flex !important;
   align-items: center !important;
   gap: 20px !important;
 }
 
-/* Stats Group */
 .pay-period-stats-group {
   display: flex !important;
   align-items: center !important;
@@ -1209,7 +1405,6 @@
   font-size: 18px !important;
   font-weight: 700 !important;
   color: #1A1A1A !important;
-  line-height: 1.2 !important;
 }
 
 .pay-period-stat-item .stat-label {
@@ -1217,34 +1412,17 @@
   font-weight: 500 !important;
   color: #8A8A8A !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.3px !important;
 }
 
-.pay-period-stat-item.pending .stat-value {
-  color: #B54B4B !important;
-}
-
+.pay-period-stat-item.pending .stat-value,
 .pay-period-stat-item.pending .stat-label {
   color: #B54B4B !important;
 }
 
-/* Actions Group */
 .pay-period-actions {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-}
-
-/* Status Badges */
-.pay-period-badge {
-  display: inline-flex !important;
-  align-items: center !important;
-  padding: 6px 14px !important;
-  border-radius: 6px !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
 }
 
 .pay-period-badge.open {
@@ -1265,169 +1443,74 @@
   border: 1px solid rgba(75, 123, 181, 0.3) !important;
 }
 
-/* ==========================================
-   PENDING APPROVALS SECTION
-   ========================================== */
+/* Filters Bar override */
+.filters-bar {
+  background: #FFFFFF !important;
+  border: 2px solid #D4D0C8 !important;
+}
 
-/* Bulk Actions Bar */
+/* Modal body text colors */
+.modal-body {
+  color: #1A1A1A !important;
+}
+
+.modal-body p {
+  color: #5C5C5C !important;
+}
+
+/* Bulk Actions Bar override */
 .bulk-actions-bar {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 14px 20px !important;
   background: #F5F0E6 !important;
   border: 2px solid #E8D48A !important;
-  border-radius: 10px !important;
-  margin-bottom: 20px !important;
 }
 
 .checkbox-label {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
   color: #1A1A1A !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: 18px !important;
-  height: 18px !important;
-  cursor: pointer !important;
-  accent-color: #C9A227 !important;
-}
-
-/* Approvals Grid */
-.approvals-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
-  gap: 20px !important;
-}
-
-/* Approval Card */
+/* Approval Card overrides */
 .approval-card {
   background: #FFFFFF !important;
   border: 2px solid #D4D0C8 !important;
-  border-radius: 12px !important;
-  padding: 20px !important;
-  position: relative !important;
-  transition: all 0.2s ease !important;
 }
 
 .approval-card:hover {
   border-color: #C9A227 !important;
-  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.1) !important;
 }
 
 .approval-card.selected {
   border-color: #C9A227 !important;
   background: #FDFBF5 !important;
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15) !important;
-}
-
-.approval-checkbox {
-  position: absolute !important;
-  top: 16px !important;
-  right: 16px !important;
-}
-
-.approval-checkbox input {
-  width: 20px !important;
-  height: 20px !important;
-  cursor: pointer !important;
-  accent-color: #C9A227 !important;
-}
-
-/* Approval Header */
-.approval-header {
-  display: flex !important;
-  align-items: center !important;
-  gap: 14px !important;
-  margin-bottom: 16px !important;
-  padding-right: 40px !important;
 }
 
 .approval-header .avatar {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 10px !important;
   background: linear-gradient(135deg, #C9A227, #E8D48A) !important;
-  color: white !important;
-  font-weight: 700 !important;
-  font-size: 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 
 .approval-name {
-  font-weight: 600 !important;
   color: #1A1A1A !important;
-  font-size: 15px !important;
-  margin-bottom: 2px !important;
 }
 
 .approval-job {
-  font-size: 13px !important;
   color: #5C5C5C !important;
 }
 
-/* Approval Details Grid */
 .approval-details {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 8px !important;
-  padding: 14px !important;
   background: #F8F7F4 !important;
   border: 1px solid #E8E6E1 !important;
-  border-radius: 10px !important;
-  margin-bottom: 14px !important;
-}
-
-.approval-details > div {
-  text-align: center !important;
 }
 
 .approval-details span {
-  display: block !important;
-  font-size: 10px !important;
-  font-weight: 600 !important;
   color: #8A8A8A !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  margin-bottom: 4px !important;
 }
 
 .approval-details strong {
   color: #1A1A1A !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
 }
 
-/* Cost Row */
 .approval-cost-row {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 12px 14px !important;
   background: rgba(61, 139, 95, 0.06) !important;
   border: 1px solid rgba(61, 139, 95, 0.15) !important;
-  border-radius: 8px !important;
-  margin-bottom: 14px !important;
-}
-
-.cost-breakdown {
-  display: flex !important;
-  gap: 8px !important;
-  flex-wrap: wrap !important;
-}
-
-.cost-item {
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  padding: 4px 10px !important;
-  border-radius: 4px !important;
 }
 
 .cost-item.regular {
@@ -1446,119 +1529,38 @@
 }
 
 .cost-total {
-  font-size: 18px !important;
-  font-weight: 700 !important;
   color: #2D7A4A !important;
 }
 
-/* Flag Reason */
 .flag-reason {
-  padding: 12px 14px !important;
   background: rgba(201, 162, 39, 0.08) !important;
   border: 1px solid rgba(201, 162, 39, 0.25) !important;
-  border-radius: 8px !important;
-  margin-bottom: 14px !important;
-  font-size: 13px !important;
   color: #8B7021 !important;
-  font-weight: 500 !important;
 }
 
-/* Approval Actions */
-.approval-actions {
-  display: flex !important;
-  gap: 10px !important;
-  margin-top: 4px !important;
-}
-
-.approval-actions .btn {
-  flex: 1 !important;
-  padding: 10px 16px !important;
-  font-weight: 600 !important;
-  border-radius: 8px !important;
-}
-
-/* ==========================================
-   MODAL FIXES
-   ========================================== */
-.modal-body {
-  color: #1A1A1A !important;
-}
-
-.modal-body p {
-  color: #5C5C5C !important;
-}
-
-/* Detail Grid (View Modal) */
-.detail-grid {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 16px !important;
-}
-
-.detail-item {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-}
-
-.detail-item.full-width {
-  grid-column: 1 / -1 !important;
-}
-
+/* Detail item overrides */
 .detail-item span {
-  font-size: 11px !important;
   color: #8B7021 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
-  font-weight: 600 !important;
 }
 
 .detail-item strong {
-  font-size: 15px !important;
   color: #1A1A1A !important;
-  font-weight: 500 !important;
 }
 
 .cost-highlight {
   color: #2D7A4A !important;
-  font-size: 20px !important;
-  font-weight: 700 !important;
 }
 
-.rejection-text {
-  color: #B54B4B !important;
-}
-
-/* ==========================================
-   FILTERS BAR
-   ========================================== */
-.filters-bar {
-  background: #FFFFFF !important;
-  border: 2px solid #D4D0C8 !important;
-  border-radius: 12px !important;
-  padding: 16px !important;
-}
-
-/* ==========================================
-   RESPONSIVE
-   ========================================== */
 @media (max-width: 900px) {
   .pay-period-bar {
     flex-direction: column !important;
     align-items: stretch !important;
-    gap: 16px !important;
   }
   
-  .pay-period-left {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-  
+  .pay-period-left,
   .pay-period-right {
     flex-direction: column !important;
     align-items: stretch !important;
-    gap: 12px !important;
   }
   
   .pay-period-stats-group {
@@ -1571,9 +1573,5 @@
   
   .pay-period-actions {
     justify-content: center !important;
-  }
-  
-  .approvals-grid {
-    grid-template-columns: 1fr !important;
   }
 }

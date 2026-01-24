@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import { timeEntriesApi, usersApi, jobsApi, payPeriodsApi } from '../services/api';
 import './TimeTrackingPage.css';
 
+// SVG Icons
+const Icons = {
+  copy: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>),
+  archive: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>),
+  trash: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>),
+  excel: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>),
+  pdf: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>),
+  csv: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>),
+  plus: (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>),
+};
+
 function TimeTrackingPage() {
   const [activeTab, setActiveTab] = useState('entries');
   const [timeEntries, setTimeEntries] = useState([]);
@@ -50,6 +61,7 @@ function TimeTrackingPage() {
     clockOutDate: '',
     clockOutTime: '',
     breakMinutes: 0,
+    restBreaksTaken: 0,
     jobId: '',
     notes: ''
   });
@@ -670,6 +682,7 @@ const handleDeletePayPeriod = async () => {
       clockOutDate: clockOut ? clockOut.toISOString().split('T')[0] : '',
       clockOutTime: clockOut ? clockOut.toTimeString().slice(0, 5) : '',
       breakMinutes: entry.breakMinutes || 0,
+      restBreaksTaken: entry.restBreaksTaken || 0,
       jobId: entry.jobId || '',
       notes: entry.notes || '',
     });
@@ -685,6 +698,7 @@ const handleDeletePayPeriod = async () => {
       const updateData = {
         clockInTime: new Date(`${editModal.clockInDate}T${editModal.clockInTime}:00${tzOffset}`).toISOString(),
         breakMinutes: parseInt(editModal.breakMinutes) || 0,
+        restBreaksTaken: parseInt(editModal.restBreaksTaken) || 0,
         jobId: editModal.jobId || null,
         notes: editModal.notes,
       };
@@ -765,15 +779,15 @@ const handleDeletePayPeriod = async () => {
           <p className="page-subtitle">View, approve, and manage time entries</p>
         </div>
         <div className="page-actions">
-          <button className="btn btn-secondary" onClick={() => setManualEntryModal({ open: true })}>+ Manual Entry</button>
+          <button className="btn btn-primary" onClick={() => setManualEntryModal({ open: true })}>{Icons.plus} Manual Entry</button>
           <button className="btn btn-secondary" onClick={() => handleExport('excel')} disabled={exportLoading === 'excel'}>
-            {exportLoading === 'excel' ? '...' : '📊'} Excel
+            {exportLoading === 'excel' ? '...' : Icons.excel} Excel
           </button>
           <button className="btn btn-secondary" onClick={() => handleExport('pdf')} disabled={exportLoading === 'pdf'}>
-            {exportLoading === 'pdf' ? '...' : '📄'} PDF
+            {exportLoading === 'pdf' ? '...' : Icons.pdf} PDF
           </button>
           <button className="btn btn-secondary" onClick={() => handleExport('csv')} disabled={exportLoading === 'csv'}>
-            {exportLoading === 'csv' ? '...' : '📋'} CSV
+            {exportLoading === 'csv' ? '...' : Icons.csv} CSV
           </button>
           <div className="export-dropdown">
             <button className="btn btn-primary" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
@@ -782,16 +796,16 @@ const handleDeletePayPeriod = async () => {
             {exportMenuOpen && (
               <div className="export-dropdown-menu">
                 <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
-                  {exportLoading === 'quickbooks' ? '...' : '🔗'} QuickBooks
+                  {exportLoading === 'quickbooks' ? '...' : ''} QuickBooks
                 </button>
                 <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
-                  {exportLoading === 'adp' ? '...' : '📘'} ADP
+                  {exportLoading === 'adp' ? '...' : ''} ADP
                 </button>
                 <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
-                  {exportLoading === 'gusto' ? '...' : '📙'} Gusto
+                  {exportLoading === 'gusto' ? '...' : ''} Gusto
                 </button>
                 <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
-                  {exportLoading === 'paychex' ? '...' : '📕'} Paychex
+                  {exportLoading === 'paychex' ? '...' : ''} Paychex
                 </button>
               </div>
             )}
@@ -923,7 +937,7 @@ const handleDeletePayPeriod = async () => {
                       title="Delete pay period"
                       style={{ marginLeft: '8px', background: '#dc3545', color: 'white' }}
                     >
-                      🗑️
+                      {Icons.trash}
                     </button>
                   )}
                 </div>
@@ -1042,7 +1056,7 @@ const handleDeletePayPeriod = async () => {
                                 onClick={() => openCopyModal(entry)}
                                 title="Copy entry to other days"
                               >
-                                📋
+                                {Icons.copy}
                               </button>
                               <button 
                                 className="btn btn-ghost btn-sm btn-archive" 
@@ -1050,7 +1064,7 @@ const handleDeletePayPeriod = async () => {
                                 disabled={entry.isLocked}
                                 title="Archive entry"
                               >
-                                🗃️
+                                {Icons.archive}
                               </button>
                             </div>
                           </td>
@@ -1232,7 +1246,7 @@ const handleDeletePayPeriod = async () => {
         <div className="modal-overlay" onClick={() => setArchiveModal({ open: false, entry: null, reason: '' })}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>🗃️ Archive Time Entry</h3>
+              <h3>Archive Time Entry</h3>
               <button className="modal-close" onClick={() => setArchiveModal({ open: false, entry: null, reason: '' })}>×</button>
             </div>
             <div className="modal-body">
@@ -1490,27 +1504,43 @@ const handleDeletePayPeriod = async () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Break (minutes)</label>
+                    <label className="form-label">Meal Break (minutes)</label>
                     <input 
                       type="number" 
                       className="form-input"
                       min="0"
-                      max="480"
+                      max="120"
                       value={editModal.breakMinutes}
                       onChange={(e) => setEditModal(prev => ({ ...prev, breakMinutes: e.target.value }))}
                     />
+                    <small style={{ color: '#888', fontSize: '12px' }}>30 min required for 5+ hour shifts</small>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Location</label>
-                    <select 
+                    <label className="form-label">Rest Breaks Taken</label>
+                    <select
                       className="form-select"
-                      value={editModal.jobId}
-                      onChange={(e) => setEditModal(prev => ({ ...prev, jobId: e.target.value }))}
+                      value={editModal.restBreaksTaken}
+                      onChange={(e) => setEditModal(prev => ({ ...prev, restBreaksTaken: parseInt(e.target.value) }))}
                     >
-                      <option value="">Unassigned</option>
-                      {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+                      <option value={0}>0 rest breaks</option>
+                      <option value={1}>1 rest break (10 min)</option>
+                      <option value={2}>2 rest breaks (20 min)</option>
+                      <option value={3}>3 rest breaks (30 min)</option>
                     </select>
+                    <small style={{ color: '#888', fontSize: '12px' }}>10 min per 4 hours worked</small>
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Location</label>
+                  <select 
+                    className="form-select"
+                    value={editModal.jobId}
+                    onChange={(e) => setEditModal(prev => ({ ...prev, jobId: e.target.value }))}
+                  >
+                    <option value="">Unassigned</option>
+                    {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -1530,15 +1560,31 @@ const handleDeletePayPeriod = async () => {
                   </div>
                 )}
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-ghost" onClick={() => setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, jobId: '', notes: '' })}>Cancel</button>
+              <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
                 <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={actionLoading === editModal.entry.id}
+                  type="button" 
+                  className="btn btn-danger"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this time entry? This cannot be undone.')) {
+                      setArchiveModal({ open: true, entry: editModal.entry, reason: 'Deleted via edit modal' });
+                      setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, restBreaksTaken: 0, jobId: '', notes: '' });
+                    }
+                  }}
+                  disabled={editModal.entry.isLocked || actionLoading === editModal.entry.id}
+                  style={{ marginRight: 'auto' }}
                 >
-                  {actionLoading === editModal.entry.id ? 'Saving...' : 'Save Changes'}
+                  {Icons.trash} Delete
                 </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setEditModal({ open: false, entry: null, clockInDate: '', clockInTime: '', clockOutDate: '', clockOutTime: '', breakMinutes: 0, restBreaksTaken: 0, jobId: '', notes: '' })}>Cancel</button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    disabled={actionLoading === editModal.entry.id}
+                  >
+                    {actionLoading === editModal.entry.id ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1565,7 +1611,7 @@ const handleDeletePayPeriod = async () => {
         <div className="modal-overlay" onClick={() => setCopyModal({ open: false, entry: null, copyMode: 'single', targetDate: '', targetDates: [], targetPayPeriod: '', copyToNextWeek: false, weekdaysOnly: true, numberOfWeeks: 1 })}>
           <div className="modal modal-md" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📋 Copy Time Entry</h3>
+              <h3>Copy Time Entry</h3>
               <button className="modal-close" onClick={() => setCopyModal({ open: false, entry: null, copyMode: 'single', targetDate: '', targetDates: [], targetPayPeriod: '', copyToNextWeek: false, weekdaysOnly: true, numberOfWeeks: 1 })}>×</button>
             </div>
             <div className="modal-body">
