@@ -831,8 +831,39 @@
 }
 
 /* ==========================================
-   MARK ALL READ BUTTON
+   MARK ALL READ BUTTON & CLEAR BUTTON
    ========================================== */
+.notifications-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clear-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #8A8A8A;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clear-all-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.clear-all-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
 .mark-all-read-btn {
   display: flex;
   align-items: center;
