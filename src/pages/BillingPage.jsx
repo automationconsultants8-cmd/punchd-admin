@@ -235,11 +235,12 @@ function BillingPage() {
     );
   }
 
-const currentTier = status?.tier || 'trial';
-const subscriptionStatus = status?.status || 'trial';
-const isCurrentPlan = (planId) => currentTier.toLowerCase() === planId.toLowerCase();
-const isPaidUser = ['starter', 'professional', 'enterprise'].includes(currentTier.toLowerCase()) && subscriptionStatus !== 'trial';
-const isOnTrial = subscriptionStatus === 'trial';
+  const currentTier = status?.tier || 'trial';
+  const subscriptionStatus = status?.status || 'trial';
+  const isCurrentPlan = (planId) => currentTier.toLowerCase() === planId.toLowerCase();
+  const isPaidUser = ['starter', 'professional', 'enterprise'].includes(currentTier.toLowerCase()) && subscriptionStatus !== 'trial';
+  const isOnTrial = subscriptionStatus === 'trial';
+  const trialDaysRemaining = getTrialDaysRemaining(); // <-- THIS WAS MISSING
 
   return (
     <div className="billing-page">
