@@ -26,6 +26,7 @@ const Icons = {
   star: (<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>),
   check: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>),
   checkCircle: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>),
+  phone: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>),
 };
 
 function Header({ user, pageTitle, onLogout }) {
@@ -275,7 +276,7 @@ function Header({ user, pageTitle, onLogout }) {
               )}
             </div>
 
-            <button className="header-icon-btn" onClick={() => setShowHelpModal(true)} title="Help & Support">{Icons.help}</button>
+            <button className="header-icon-btn help-btn" onClick={() => setShowHelpModal(true)} title="Help & Support">{Icons.help}</button>
             <button className="founder-hub-btn" onClick={() => setShowFounderModal(true)} title="Founding Partner Hub">{Icons.star}<span>Founder</span></button>
           </div>
 
@@ -310,6 +311,7 @@ function Header({ user, pageTitle, onLogout }) {
         </div>
       </header>
 
+      {/* Help & Support Modal */}
       {showHelpModal && (
         <div className="modal-overlay" onClick={() => setShowHelpModal(false)}>
           <div className="help-modal" onClick={e => e.stopPropagation()}>
@@ -319,11 +321,32 @@ function Header({ user, pageTitle, onLogout }) {
             </div>
             <div className="help-modal-body">
               <div className="help-section">
-                <h3>Quick Links</h3>
+                <h3>Contact Us</h3>
                 <div className="help-links">
-                  <a href="https://docs.gopunchd.com" target="_blank" rel="noopener noreferrer" className="help-link">{Icons.book}<div><span>Documentation</span><p>Learn how to use Punch'd</p></div>{Icons.externalLink}</a>
-                  <a href="https://gopunchd.com/faq" target="_blank" rel="noopener noreferrer" className="help-link">{Icons.help}<div><span>FAQ</span><p>Frequently asked questions</p></div>{Icons.externalLink}</a>
-                  <a href="mailto:support@gopunchd.com" className="help-link">{Icons.mail}<div><span>Email Support</span><p>support@gopunchd.com</p></div>{Icons.externalLink}</a>
+                  <a href="mailto:support@gopunchd.com" className="help-link">
+                    {Icons.mail}
+                    <div>
+                      <span>Email Support</span>
+                      <p>support@gopunchd.com</p>
+                    </div>
+                    {Icons.externalLink}
+                  </a>
+                  <a href="https://calendly.com/automationconsultants8/new-meeting" target="_blank" rel="noopener noreferrer" className="help-link">
+                    {Icons.clock}
+                    <div>
+                      <span>Schedule a Call</span>
+                      <p>15-min support call</p>
+                    </div>
+                    {Icons.externalLink}
+                  </a>
+                  <a href="tel:+16692336663" className="help-link">
+                    {Icons.phone}
+                    <div>
+                      <span>Call Us</span>
+                      <p>+1 (669) 233-6663</p>
+                    </div>
+                    {Icons.externalLink}
+                  </a>
                 </div>
               </div>
               <div className="help-section">
@@ -343,6 +366,7 @@ function Header({ user, pageTitle, onLogout }) {
         </div>
       )}
 
+      {/* Founding Partner Modal */}
       {showFounderModal && (
         <div className="modal-overlay" onClick={() => setShowFounderModal(false)}>
           <div className="founder-modal" onClick={e => e.stopPropagation()}>
@@ -366,9 +390,27 @@ function Header({ user, pageTitle, onLogout }) {
                 </div>
               </div>
               <div className="founder-actions">
-                <a href="mailto:krynovo@gmail.com?subject=[Founding Partner] Feature Request" className="founder-action-btn primary">{Icons.messageCircle}<div><span>Submit Feedback</span><p>Feature requests, bugs, ideas</p></div></a>
-                <a href="mailto:krynovo@gmail.com?subject=[Founding Partner] Direct Support" className="founder-action-btn">{Icons.mail}<div><span>Contact Founder</span><p>Direct line to Jude</p></div></a>
-                <a href="https://calendly.com/krynovo/punchd" target="_blank" rel="noopener noreferrer" className="founder-action-btn">{Icons.clock}<div><span>Schedule a Call</span><p>15-min check-in or demo</p></div></a>
+                <a href="mailto:krynovo@gmail.com?subject=[Founding Partner] Feature Request" className="founder-action-btn primary">
+                  {Icons.messageCircle}
+                  <div>
+                    <span>Submit Feedback</span>
+                    <p>Feature requests, bugs, ideas</p>
+                  </div>
+                </a>
+                <a href="mailto:krynovo@gmail.com?subject=[Founding Partner] Direct Support" className="founder-action-btn">
+                  {Icons.mail}
+                  <div>
+                    <span>Contact Founder</span>
+                    <p>Direct line to Jude</p>
+                  </div>
+                </a>
+                <a href="https://calendly.com/automationconsultants8/new-meeting" target="_blank" rel="noopener noreferrer" className="founder-action-btn">
+                  {Icons.clock}
+                  <div>
+                    <span>Schedule a Call</span>
+                    <p>15-min check-in or demo</p>
+                  </div>
+                </a>
               </div>
               <div className="founder-note">
                 <p>🚀 This exclusive access will be removed after the pilot program. Enjoy it while it lasts!</p>
