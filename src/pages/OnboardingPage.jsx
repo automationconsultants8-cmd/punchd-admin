@@ -5,11 +5,20 @@ import './OnboardingPage.css';
 
 const TOTAL_STEPS = 7;
 
+// Phone formatting helper
+const formatPhoneNumber = (value) => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+};
+
 function OnboardingPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [data, setData] = useState({
     // Step 1: Address
@@ -17,7 +26,7 @@ function OnboardingPage() {
     city: '',
     state: '',
     zip: '',
-    // Step 2: Worker Types (NEW)
+    // Step 2: Worker Types
     workerTypes: {
       hourly: true,
       salaried: false,
@@ -42,6 +51,10 @@ function OnboardingPage() {
   const updateData = (field, value) => {
     setData(prev => ({ ...prev, [field]: value }));
     setError('');
+  };
+
+  const handlePhoneChange = (value) => {
+    updateData('firstWorkerPhone', formatPhoneNumber(value));
   };
 
   const toggleWorkerType = (type) => {
@@ -79,12 +92,16 @@ function OnboardingPage() {
     }
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep(currentStep + 1);
+      setError('');
+      setSuccessMessage('');
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      setError('');
+      setSuccessMessage('');
     }
   };
 
@@ -101,13 +118,14 @@ function OnboardingPage() {
       const gpsGeofencing = data.verificationMode === 'relaxed' ? 'off' : data.verificationMode === 'balanced' ? 'soft' : 'strict';
       const isCA = data.state.toUpperCase() === 'CA';
 
-      // Build enabled worker types array
+      // Build enabled worker types array - UPPERCASE for backend
       const enabledWorkerTypes = [];
-      if (data.workerTypes.hourly) enabledWorkerTypes.push('hourly');
-      if (data.workerTypes.salaried) enabledWorkerTypes.push('salaried');
-      if (data.workerTypes.contractors) enabledWorkerTypes.push('contractors');
-      if (data.workerTypes.volunteers) enabledWorkerTypes.push('volunteers');
+      if (data.workerTypes.hourly) enabledWorkerTypes.push('HOURLY');
+      if (data.workerTypes.salaried) enabledWorkerTypes.push('SALARIED');
+      if (data.workerTypes.contractors) enabledWorkerTypes.push('CONTRACTOR');
+      if (data.workerTypes.volunteers) enabledWorkerTypes.push('VOLUNTEER');
 
+      // Update company settings
       await companyApi.update({
         address: data.address,
         city: data.city,
@@ -145,37 +163,54 @@ function OnboardingPage() {
         },
       });
 
-      if (data.jobBasedTracking && data.firstJobName) {
+      // Create first job site if provided
+      if (data.firstJobName && data.firstJobName.trim()) {
         try {
+          const jobAddress = data.firstJobAddress?.trim() || `${data.address}, ${data.city}, ${data.state} ${data.zip}`;
+          
           await jobsApi.create({
-            name: data.firstJobName,
-            address: data.firstJobAddress || data.address,
-            geofenceCenter: '37.3382,-121.8863',
+            name: data.firstJobName.trim(),
+            address: jobAddress,
+            city: data.city || '',
+            state: data.state || '',
+            zip: data.zip || '',
             geofenceRadiusMeters: 100,
+            isActive: true,
           });
+          console.log('Job site created successfully:', data.firstJobName);
         } catch (e) {
           console.error('Failed to create first job:', e);
+          // Don't block onboarding completion if job creation fails
         }
       }
 
-      if (data.firstWorkerName && data.firstWorkerPhone) {
+      // Create first worker if provided (only when not using job-based tracking)
+      if (!data.jobBasedTracking && data.firstWorkerName && data.firstWorkerPhone) {
         try {
-          await usersApi.create({
-            name: data.firstWorkerName,
-            phone: data.firstWorkerPhone,
-            role: 'WORKER',
-          });
+          const cleanPhone = data.firstWorkerPhone.replace(/\D/g, '');
+          if (cleanPhone.length >= 10) {
+            await usersApi.create({
+              name: data.firstWorkerName.trim(),
+              phone: cleanPhone,
+              role: 'WORKER',
+              workerTypes: ['HOURLY'],
+              hourlyRate: data.defaultHourlyRate ? parseFloat(data.defaultHourlyRate) : undefined,
+            });
+            console.log('Worker created successfully:', data.firstWorkerName);
+          }
         } catch (e) {
           console.error('Failed to create first worker:', e);
+          // Don't block onboarding completion if worker creation fails
         }
       }
 
+      // Redirect to dashboard
       window.location.href = '/dashboard';
     } catch (err) {
       console.error('Onboarding error:', err);
       setError(err.response?.data?.message || 'Failed to save. Please try again.');
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleSkipOnboarding = async () => {
@@ -183,7 +218,7 @@ function OnboardingPage() {
       await companyApi.update({
         settings: {
           onboardingSkippedAt: new Date().toISOString(),
-          enabledWorkerTypes: ['hourly'], // Default to hourly if skipped
+          enabledWorkerTypes: ['HOURLY'],
         },
       });
       window.location.href = '/dashboard';
@@ -199,6 +234,21 @@ function OnboardingPage() {
       if (selectedTypes.length === 1 && selectedTypes[0] === 'volunteers') return false;
     }
     return true;
+  };
+
+  // Check if we can finish (last step validation)
+  const canFinish = () => {
+    if (data.jobBasedTracking) {
+      // Job name is optional, but if provided, it should be valid
+      return true;
+    } else {
+      // If adding a worker, phone should be valid
+      if (data.firstWorkerName && data.firstWorkerPhone) {
+        const digits = data.firstWorkerPhone.replace(/\D/g, '');
+        return digits.length >= 10;
+      }
+      return true;
+    }
   };
 
   return (
@@ -242,6 +292,16 @@ function OnboardingPage() {
             </div>
           )}
 
+          {successMessage && (
+            <div className="onboarding-success">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
+                <path d="M9 12L11 14L15 10" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {successMessage}
+            </div>
+          )}
+
           {/* Step 1: Address */}
           {currentStep === 1 && (
             <div className="step-content">
@@ -252,7 +312,7 @@ function OnboardingPage() {
                 </svg>
               </div>
               <h1>Welcome to Punch'd!</h1>
-              <p>Let's get your account set up. First, where are you located? This helps us apply the right labor laws.</p>
+              <p>Let's get your account set up. First, where is your business located? This helps us apply the right labor laws.</p>
               
               <div className="form-field">
                 <label>Street Address</label>
@@ -303,13 +363,13 @@ function OnboardingPage() {
                     <circle cx="12" cy="12" r="10" stroke="#C9A227" strokeWidth="2"/>
                     <path d="M12 16V12M12 8H12.01" stroke="#C9A227" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
-                  <span>California detected! We'll automatically enable CA-specific overtime and break rules.</span>
+                  <span>California detected! We'll automatically enable CA-specific overtime and break compliance rules.</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 2: Worker Types (NEW) */}
+          {/* Step 2: Worker Types */}
           {currentStep === 2 && (
             <div className="step-content">
               <div className="step-icon">
@@ -321,7 +381,7 @@ function OnboardingPage() {
                 </svg>
               </div>
               <h1>What types of workers do you have?</h1>
-              <p>Select all that apply. You can add more types later in Settings.</p>
+              <p>Select all that apply. You can change this later in Settings.</p>
               
               <div className="worker-type-grid">
                 <label className={`worker-type-card ${data.workerTypes.hourly ? 'selected' : ''}`}>
@@ -361,7 +421,7 @@ function OnboardingPage() {
                   </div>
                   <div className="worker-type-text">
                     <strong>Salaried Workers</strong>
-                    <span>Fixed salary with time tracking for records</span>
+                    <span>Fixed salary, time tracking for records</span>
                   </div>
                   <div className="worker-type-check">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -386,7 +446,7 @@ function OnboardingPage() {
                   </div>
                   <div className="worker-type-text">
                     <strong>Contractors</strong>
-                    <span>1099 contractors with separate billing</span>
+                    <span>1099 contractors with separate portal</span>
                   </div>
                   <div className="worker-type-check">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -423,7 +483,7 @@ function OnboardingPage() {
                   <circle cx="12" cy="12" r="10" stroke="#C9A227" strokeWidth="2"/>
                   <path d="M12 16V12M12 8H12.01" stroke="#C9A227" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
-                <span>Volunteers require at least one other worker type to be selected.</span>
+                <span>Each worker type has different features. Volunteers require at least one other type.</span>
               </div>
             </div>
           )}
@@ -480,6 +540,16 @@ function OnboardingPage() {
                   </div>
                 </label>
               </div>
+
+              {data.jobBasedTracking && (
+                <div className="info-callout success">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
+                    <path d="M9 12L11 14L15 10" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Great choice! Job-based tracking helps you see labor costs per project and prevents buddy punching.</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -533,7 +603,7 @@ function OnboardingPage() {
                   </div>
                   <div className="option-text">
                     <strong>No, workers clock in freely</strong>
-                    <span>No schedule restrictions</span>
+                    <span>No schedule restrictions, flexible hours</span>
                   </div>
                 </label>
               </div>
@@ -615,7 +685,7 @@ function OnboardingPage() {
                 </svg>
               </div>
               <h1>What's your default pay rate?</h1>
-              <p>You can set different rates per worker or job later.</p>
+              <p>This will be applied to new workers. You can set different rates per worker later.</p>
               
               <div className="form-field">
                 <label>Default Hourly Rate</label>
@@ -632,6 +702,16 @@ function OnboardingPage() {
                 </div>
                 <small>Leave blank to set per-worker rates only</small>
               </div>
+
+              {data.state.toUpperCase() === 'CA' && (
+                <div className="info-callout">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="#C9A227" strokeWidth="2"/>
+                    <path d="M12 16V12M12 8H12.01" stroke="#C9A227" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <span>California minimum wage is $16.00/hr as of 2024. Fast food workers: $20.00/hr.</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -645,17 +725,17 @@ function OnboardingPage() {
                 </svg>
               </div>
               <h1>Almost done! Add your first {data.jobBasedTracking ? 'job site' : 'worker'}</h1>
-              <p>You can skip this and add {data.jobBasedTracking ? 'jobs' : 'workers'} later from the dashboard.</p>
+              <p>You can skip this and add {data.jobBasedTracking ? 'job sites' : 'workers'} later from the dashboard.</p>
               
               {data.jobBasedTracking ? (
                 <>
                   <div className="form-field">
-                    <label>Job Site Name</label>
+                    <label>Job Site Name *</label>
                     <input
                       type="text"
                       value={data.firstJobName}
                       onChange={(e) => updateData('firstJobName', e.target.value)}
-                      placeholder="Downtown Office Building"
+                      placeholder="e.g., Downtown Office Building"
                     />
                   </div>
                   <div className="form-field">
@@ -664,15 +744,25 @@ function OnboardingPage() {
                       type="text"
                       value={data.firstJobAddress}
                       onChange={(e) => updateData('firstJobAddress', e.target.value)}
-                      placeholder="456 Work Street, San Jose, CA"
+                      placeholder={`${data.address || '456 Work Street'}, ${data.city || 'San Jose'}, ${data.state || 'CA'}`}
                     />
-                    <small>Used for GPS verification when workers clock in</small>
+                    <small>Used for GPS verification. Leave blank to use your business address.</small>
                   </div>
+
+                  {data.firstJobName && (
+                    <div className="info-callout success">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="#22c55e" strokeWidth="2"/>
+                        <path d="M9 12L11 14L15 10" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span>"{data.firstJobName}" will be created when you finish setup.</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   <div className="form-field">
-                    <label>Worker Name</label>
+                    <label>Worker Name *</label>
                     <input
                       type="text"
                       value={data.firstWorkerName}
@@ -681,14 +771,18 @@ function OnboardingPage() {
                     />
                   </div>
                   <div className="form-field">
-                    <label>Phone Number</label>
+                    <label>Phone Number *</label>
                     <input
                       type="tel"
                       value={data.firstWorkerPhone}
-                      onChange={(e) => updateData('firstWorkerPhone', e.target.value)}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
                       placeholder="(555) 123-4567"
+                      maxLength={14}
                     />
-                    <small>Workers use their phone number to log in</small>
+                    <small>Workers use their phone number to log into the mobile app</small>
+                    {data.firstWorkerPhone && data.firstWorkerPhone.replace(/\D/g, '').length < 10 && (
+                      <span className="field-error">Phone must be at least 10 digits</span>
+                    )}
                   </div>
                 </>
               )}
@@ -729,7 +823,7 @@ function OnboardingPage() {
               <button 
                 className="btn-finish" 
                 onClick={handleComplete}
-                disabled={saving}
+                disabled={saving || !canFinish()}
               >
                 {saving ? 'Setting up...' : 'Finish Setup'}
                 {!saving && (
