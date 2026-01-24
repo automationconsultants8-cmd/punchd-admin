@@ -48,8 +48,10 @@ function TimeTrackingPage() {
     clockIn: '08:00',
     clockOut: '17:00',
     breakMinutes: 30,
+    restBreaksTaken: 0,
     notes: '',
   });
+  const [showManualEntry, setShowManualEntry] = useState(false);
 
   const [rejectModal, setRejectModal] = useState({ open: false, entryId: null, reason: '' });
   const [viewModal, setViewModal] = useState({ open: false, entry: null });
@@ -452,6 +454,7 @@ const handleDeletePayPeriod = async () => {
         clockIn: manualEntry.clockIn,
         clockOut: manualEntry.clockOut,
         breakMinutes: parseInt(manualEntry.breakMinutes) || 0,
+        restBreaksTaken: parseInt(manualEntry.restBreaksTaken) || 0,
         notes: manualEntry.notes,
         timezone: 'America/Los_Angeles',
       });
@@ -463,9 +466,10 @@ const handleDeletePayPeriod = async () => {
         clockIn: '08:00',
         clockOut: '17:00',
         breakMinutes: 30,
+        restBreaksTaken: 0,
         notes: '',
       });
-      setManualEntryModal({ open: false });
+      setShowManualEntry(false);
       loadData();
     } catch (err) {
       console.error('Failed to create manual entry:', err);
@@ -779,7 +783,6 @@ const handleDeletePayPeriod = async () => {
           <p className="page-subtitle">View, approve, and manage time entries</p>
         </div>
         <div className="page-actions">
-          <button className="btn btn-primary" onClick={() => setManualEntryModal({ open: true })}>{Icons.plus} Manual Entry</button>
           <button className="btn btn-secondary" onClick={() => handleExport('excel')} disabled={exportLoading === 'excel'}>
             {exportLoading === 'excel' ? '...' : Icons.excel} Excel
           </button>
@@ -796,16 +799,16 @@ const handleDeletePayPeriod = async () => {
             {exportMenuOpen && (
               <div className="export-dropdown-menu">
                 <button onClick={() => handleExport('quickbooks')} disabled={exportLoading === 'quickbooks'}>
-                  {exportLoading === 'quickbooks' ? '...' : ''} QuickBooks
+                  QuickBooks
                 </button>
                 <button onClick={() => handleExport('adp')} disabled={exportLoading === 'adp'}>
-                  {exportLoading === 'adp' ? '...' : ''} ADP
+                  ADP
                 </button>
                 <button onClick={() => handleExport('gusto')} disabled={exportLoading === 'gusto'}>
-                  {exportLoading === 'gusto' ? '...' : ''} Gusto
+                  Gusto
                 </button>
                 <button onClick={() => handleExport('paychex')} disabled={exportLoading === 'paychex'}>
-                  {exportLoading === 'paychex' ? '...' : ''} Paychex
+                  Paychex
                 </button>
               </div>
             )}
@@ -946,16 +949,6 @@ const handleDeletePayPeriod = async () => {
           </div>
 
           <div className="filters-bar">
-            {!selectedPayPeriod && (
-              <div className="filter-group">
-                <label>Date Range</label>
-                <div className="date-range">
-                  <input type="date" value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} className="form-input" />
-                  <span>to</span>
-                  <input type="date" value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} className="form-input" />
-                </div>
-              </div>
-            )}
             <div className="filter-group">
               <label>Worker</label>
               <select value={filters.worker} onChange={(e) => setFilters(prev => ({ ...prev, worker: e.target.value }))} className="form-select">
@@ -980,7 +973,122 @@ const handleDeletePayPeriod = async () => {
               </select>
             </div>
             <button className="btn btn-ghost" onClick={() => setFilters({ worker: '', job: '', status: '', approvalStatus: '' })}>Clear</button>
+            <div style={{ marginLeft: 'auto' }}>
+              <button className="btn btn-primary" onClick={() => setShowManualEntry(!showManualEntry)}>
+                {Icons.plus} {showManualEntry ? 'Hide' : 'Add Entry'}
+              </button>
+            </div>
           </div>
+
+          {/* Inline Manual Entry Form */}
+          {showManualEntry && (
+            <div className="manual-entry-inline" style={{ 
+              background: '#FFFFFF', 
+              border: '2px solid #C9A227', 
+              borderRadius: '12px', 
+              padding: '20px', 
+              marginBottom: '16px' 
+            }}>
+              <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Worker *</label>
+                    <select 
+                      value={manualEntry.workerId} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value }))} 
+                      className="form-select" 
+                      required
+                    >
+                      <option value="">Select...</option>
+                      {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Location</label>
+                    <select 
+                      value={manualEntry.jobId} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, jobId: e.target.value }))} 
+                      className="form-select"
+                    >
+                      <option value="">Select...</option>
+                      {jobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Date *</label>
+                    <input 
+                      type="date" 
+                      value={manualEntry.date} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, date: e.target.value }))} 
+                      className="form-input" 
+                      required 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Clock In *</label>
+                    <input 
+                      type="time" 
+                      value={manualEntry.clockIn} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, clockIn: e.target.value }))} 
+                      className="form-input" 
+                      required 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Clock Out *</label>
+                    <input 
+                      type="time" 
+                      value={manualEntry.clockOut} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, clockOut: e.target.value }))} 
+                      className="form-input" 
+                      required 
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Meal Break (min)</label>
+                    <input 
+                      type="number" 
+                      value={manualEntry.breakMinutes} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} 
+                      className="form-input"
+                      min="0"
+                      max="120"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Rest Breaks</label>
+                    <select
+                      value={manualEntry.restBreaksTaken}
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, restBreaksTaken: parseInt(e.target.value) }))}
+                      className="form-select"
+                    >
+                      <option value={0}>0 breaks</option>
+                      <option value={1}>1 break</option>
+                      <option value={2}>2 breaks</option>
+                      <option value={3}>3 breaks</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <input 
+                      type="text" 
+                      value={manualEntry.notes} 
+                      onChange={(e) => setManualEntry(prev => ({ ...prev, notes: e.target.value }))} 
+                      className="form-input"
+                      placeholder="Notes (optional)"
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'manual'}>
+                    {actionLoading === 'manual' ? 'Creating...' : 'Create Entry'}
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowManualEntry(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </>
       )}
 
