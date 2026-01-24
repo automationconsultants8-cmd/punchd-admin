@@ -273,13 +273,17 @@ function RoleManagementPage() {
     }
   };
 
-  const openPromoteModal = (user) => {
+  const openPromoteModal = (user, targetRole = 'MANAGER') => {
     setSelectedUser(user);
+    // Check if user already has email (managers/admins have it, workers might not)
+    const needsEmail = !user.email;
+    const needsPassword = targetRole !== user.role; // Only need password if actually changing role
+    
     setPromoteForm({
       userId: user.id,
       email: user.email || '',
       password: '',
-      newRole: 'MANAGER',
+      newRole: targetRole,
     });
     setShowPromoteModal(true);
   };
@@ -314,8 +318,20 @@ function RoleManagementPage() {
                 {showActions && roleKey !== 'OWNER' && (
                   <div className="user-actions">
                     {roleKey === 'MANAGER' && (
-                      <button className="btn-icon" onClick={() => openEditModal(user)} title="Edit permissions">
-                        {Icons.edit}
+                      <>
+                        <button className="btn-icon" onClick={() => openEditModal(user)} title="Edit permissions">
+                          {Icons.edit}
+                        </button>
+                        {isOwner && (
+                          <button className="btn-icon btn-success" onClick={() => openPromoteModal(user, 'ADMIN')} title="Promote to Admin">
+                            {Icons.arrowUp}
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {roleKey === 'ADMIN' && isOwner && (
+                      <button className="btn-icon btn-success" onClick={() => openPromoteModal(user, 'OWNER')} title="Promote to Owner">
+                        {Icons.arrowUp}
                       </button>
                     )}
                     {roleKey !== 'WORKER' && (
@@ -324,7 +340,7 @@ function RoleManagementPage() {
                       </button>
                     )}
                     {roleKey === 'WORKER' && (
-                      <button className="btn-icon btn-success" onClick={() => openPromoteModal(user)} title="Promote">
+                      <button className="btn-icon btn-success" onClick={() => openPromoteModal(user, 'MANAGER')} title="Promote">
                         {Icons.arrowUp}
                       </button>
                     )}
@@ -466,7 +482,7 @@ function RoleManagementPage() {
             
             <form onSubmit={handlePromote}>
               <div className="promote-info">
-                <p>Promoting <strong>{selectedUser.name}</strong> will give them dashboard access.</p>
+                <p>Promoting <strong>{selectedUser.name}</strong> to <strong>{promoteForm.newRole}</strong>.</p>
               </div>
               
               <div className="form-group">
@@ -477,38 +493,51 @@ function RoleManagementPage() {
                 >
                   <option value="MANAGER">Manager</option>
                   {isOwner && <option value="ADMIN">Admin</option>}
+                  {isOwner && <option value="OWNER">Owner</option>}
                 </select>
               </div>
               
-              <div className="form-group">
-                <label>Email (for dashboard login)</label>
-                <input
-                  type="email"
-                  value={promoteForm.email}
-                  onChange={e => setPromoteForm({ ...promoteForm, email: e.target.value })}
-                  placeholder="john@company.com"
-                  required
-                />
-              </div>
+              {!selectedUser.email && (
+                <div className="form-group">
+                  <label>Email (for dashboard login)</label>
+                  <input
+                    type="email"
+                    value={promoteForm.email}
+                    onChange={e => setPromoteForm({ ...promoteForm, email: e.target.value })}
+                    placeholder="john@company.com"
+                    required
+                  />
+                </div>
+              )}
               
-              <div className="form-group">
-                <label>Set Password</label>
-                <input
-                  type="password"
-                  value={promoteForm.password}
-                  onChange={e => setPromoteForm({ ...promoteForm, password: e.target.value })}
-                  placeholder="Minimum 8 characters"
-                  minLength={8}
-                  required
-                />
-              </div>
+              {!selectedUser.email && (
+                <div className="form-group">
+                  <label>Set Password</label>
+                  <input
+                    type="password"
+                    value={promoteForm.password}
+                    onChange={e => setPromoteForm({ ...promoteForm, password: e.target.value })}
+                    placeholder="Minimum 8 characters"
+                    minLength={8}
+                    required
+                  />
+                </div>
+              )}
+
+              {selectedUser.email && (
+                <div className="promote-info" style={{ marginTop: '12px', background: '#f0fdf4', borderColor: '#22c55e' }}>
+                  <p style={{ color: '#15803d', margin: 0 }}>
+                    {selectedUser.name} already has dashboard access. Their role will be updated to {promoteForm.newRole}.
+                  </p>
+                </div>
+              )}
               
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowPromoteModal(false)}>
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? 'Promoting...' : 'Promote User'}
+                  {saving ? 'Promoting...' : `Promote to ${promoteForm.newRole}`}
                 </button>
               </div>
             </form>
