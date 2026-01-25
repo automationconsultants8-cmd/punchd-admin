@@ -3,6 +3,14 @@ import { timeEntriesApi, usersApi, jobsApi, payPeriodsApi } from '../services/ap
 import './TimeTrackingPage.css';
 
 function TimeTrackingPage() {
+  // SVG Icons
+  const Icons = {
+    copy: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+    archive: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>,
+    trash: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+    restore: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+  };
+
   const [activeTab, setActiveTab] = useState('entries');
   const [timeEntries, setTimeEntries] = useState([]);
   const [pendingApprovals, setPendingApprovals] = useState([]);
@@ -333,6 +341,8 @@ const handleDeletePayPeriod = async () => {
       if (filters.status === 'completed' && !entry.clockOutTime) return false;
       if (filters.approvalStatus && entry.approvalStatus !== filters.approvalStatus) return false;
       if (entry.isArchived) return false;
+      // Hide rejected entries from main list unless explicitly filtered
+      if (!filters.approvalStatus && entry.approvalStatus === 'REJECTED') return false;
       return true;
     });
   };
@@ -758,7 +768,11 @@ const handleDeletePayPeriod = async () => {
   const getSelectedWorkerTypes = () => {
     if (!manualEntry.workerId) return [];
     const worker = workers.find(w => w.id === manualEntry.workerId);
-    return worker?.workerTypes || ['HOURLY'];
+    // Return worker's types, or default to HOURLY if none defined
+    const types = worker?.workerTypes || [];
+    // If worker has no types defined, default to standard options
+    if (types.length === 0) return ['HOURLY'];
+    return types;
   };
 
   // Filter archived entries by worker
@@ -770,16 +784,28 @@ const handleDeletePayPeriod = async () => {
   // Manual Entry Form Component
   const ManualEntryForm = ({ inModal = false }) => {
     const workerTypes = getSelectedWorkerTypes();
-    const showWorkerTypeSelector = workerTypes.length > 1;
+    // Show selector if worker has more than one type
+    const showWorkerTypeSelector = manualEntry.workerId && workerTypes.length > 1;
     
     return (
     <form onSubmit={handleManualSubmit} className="manual-form">
       <div className="form-row">
         <div className="form-group">
           <label className="form-label">Worker *</label>
-          <select value={manualEntry.workerId} onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value, workerType: '' }))} className="form-select" required>
+          <select value={manualEntry.workerId} onChange={(e) => {
+            const workerId = e.target.value;
+            const worker = workers.find(w => w.id === workerId);
+            const types = worker?.workerTypes || [];
+            // Auto-select type if only one
+            const autoType = types.length === 1 ? types[0] : '';
+            setManualEntry(prev => ({ ...prev, workerId, workerType: autoType }));
+          }} className="form-select" required>
             <option value="">Select...</option>
-            {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            {workers.map(w => {
+              const types = w.workerTypes || [];
+              const typeLabel = types.length > 1 ? ` (${types.length} roles)` : types.length === 1 ? ` - ${types[0]}` : '';
+              return <option key={w.id} value={w.id}>{w.name}{typeLabel}</option>;
+            })}
           </select>
         </div>
         {showWorkerTypeSelector && (
@@ -996,9 +1022,9 @@ const handleDeletePayPeriod = async () => {
                       onClick={() => setDeletePayPeriodModal({ open: true, period: selectedPayPeriod })}
                       disabled={payPeriodLoading}
                       title="Delete pay period"
-                      style={{ marginLeft: '8px', background: '#dc3545', color: 'white' }}
+                      style={{ marginLeft: '8px', background: '#dc3545', color: 'white', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                      🗑️
+                      {Icons.trash}
                     </button>
                   )}
                 </div>
@@ -1232,16 +1258,18 @@ const handleDeletePayPeriod = async () => {
                                 className="btn btn-ghost btn-sm btn-copy" 
                                 onClick={() => openCopyModal(entry)}
                                 title="Copy entry to other days"
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                📋
+                                {Icons.copy}
                               </button>
                               <button 
                                 className="btn btn-ghost btn-sm btn-archive" 
                                 onClick={() => setArchiveModal({ open: true, entry, reason: '' })}
                                 disabled={entry.isLocked}
                                 title="Archive entry"
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                🗃️
+                                {Icons.archive}
                               </button>
                             </div>
                           </td>
