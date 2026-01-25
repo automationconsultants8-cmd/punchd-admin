@@ -88,6 +88,8 @@ export const timeEntriesApi = {
   exportPaychex: (params) => api.get('/time-entries/export/paychex', { params, responseType: 'blob' }),
   update: (id, data) => api.patch(`/time-entries/${id}`, data),
   archive: (id, reason) => api.patch(`/time-entries/${id}/archive`, { reason }),
+  getArchived: (filters) => api.get('/time-entries/archived', { params: filters }),
+  restore: (id) => api.post(`/time-entries/${id}/restore`),
 };
 
 // Shifts endpoints

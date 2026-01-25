@@ -38,9 +38,11 @@ function TimeTrackingPage() {
     clockOut: '17:00',
     breakMinutes: 30,
     restBreaksTaken: 0,
+    workerType: '',
     notes: '',
   });
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [archivedEntries, setArchivedEntries] = useState([]);
 
   const [rejectModal, setRejectModal] = useState({ open: false, entryId: null, reason: '' });
   const [viewModal, setViewModal] = useState({ open: false, entry: null });
@@ -295,13 +297,13 @@ const handleDeletePayPeriod = async () => {
   const formatDate = (dateStr) => {
     if (!dateStr) return '--';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   };
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '--';
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' });
   };
 
   const formatDuration = (minutes) => {
@@ -444,6 +446,7 @@ const handleDeletePayPeriod = async () => {
         clockOut: manualEntry.clockOut,
         breakMinutes: parseInt(manualEntry.breakMinutes) || 0,
         restBreaksTaken: parseInt(manualEntry.restBreaksTaken) || 0,
+        workerType: manualEntry.workerType || undefined,
         notes: manualEntry.notes,
         timezone: 'America/Los_Angeles',
       });
@@ -456,6 +459,7 @@ const handleDeletePayPeriod = async () => {
         clockOut: '17:00',
         breakMinutes: 30,
         restBreaksTaken: 0,
+        workerType: '',
         notes: '',
       });
       setShowManualEntry(false);
@@ -726,17 +730,60 @@ const handleDeletePayPeriod = async () => {
     setActionLoading(null);
   };
 
+  const loadArchivedEntries = async () => {
+    try {
+      const res = await timeEntriesApi.getArchived({ startDate: dateRange.start, endDate: dateRange.end });
+      setArchivedEntries(res.data || []);
+    } catch (err) {
+      console.error('Failed to load archived entries:', err);
+      setArchivedEntries([]);
+    }
+  };
+
+  const handleRestore = async (entryId) => {
+    setActionLoading(entryId);
+    try {
+      await timeEntriesApi.restore(entryId);
+      setArchivedEntries(prev => prev.filter(e => e.id !== entryId));
+      loadData();
+    } catch (err) {
+      console.error('Failed to restore entry:', err);
+      alert(err.response?.data?.message || 'Failed to restore entry. Please try again.');
+    }
+    setActionLoading(null);
+  };
+
+  // Get selected worker's types for the worker type dropdown
+  const getSelectedWorkerTypes = () => {
+    if (!manualEntry.workerId) return [];
+    const worker = workers.find(w => w.id === manualEntry.workerId);
+    return worker?.workerTypes || ['HOURLY'];
+  };
+
   // Manual Entry Form Component
-  const ManualEntryForm = ({ inModal = false }) => (
+  const ManualEntryForm = ({ inModal = false }) => {
+    const workerTypes = getSelectedWorkerTypes();
+    const showWorkerTypeSelector = workerTypes.length > 1;
+    
+    return (
     <form onSubmit={handleManualSubmit} className="manual-form">
       <div className="form-row">
         <div className="form-group">
           <label className="form-label">Worker *</label>
-          <select value={manualEntry.workerId} onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value }))} className="form-select" required>
+          <select value={manualEntry.workerId} onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value, workerType: '' }))} className="form-select" required>
             <option value="">Select...</option>
             {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
         </div>
+        {showWorkerTypeSelector && (
+          <div className="form-group">
+            <label className="form-label">Worker Type *</label>
+            <select value={manualEntry.workerType} onChange={(e) => setManualEntry(prev => ({ ...prev, workerType: e.target.value }))} className="form-select" required>
+              <option value="">Select role...</option>
+              {workerTypes.map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>)}
+            </select>
+          </div>
+        )}
         <div className="form-group">
           <label className="form-label">Location</label>
           <select value={manualEntry.jobId} onChange={(e) => setManualEntry(prev => ({ ...prev, jobId: e.target.value }))} className="form-select">
@@ -749,7 +796,18 @@ const handleDeletePayPeriod = async () => {
         <div className="form-group"><label className="form-label">Date *</label><input type="date" value={manualEntry.date} onChange={(e) => setManualEntry(prev => ({ ...prev, date: e.target.value }))} className="form-input" required /></div>
         <div className="form-group"><label className="form-label">Clock In *</label><input type="time" value={manualEntry.clockIn} onChange={(e) => setManualEntry(prev => ({ ...prev, clockIn: e.target.value }))} className="form-input" required /></div>
         <div className="form-group"><label className="form-label">Clock Out *</label><input type="time" value={manualEntry.clockOut} onChange={(e) => setManualEntry(prev => ({ ...prev, clockOut: e.target.value }))} className="form-input" required /></div>
-        <div className="form-group"><label className="form-label">Break (min)</label><input type="number" value={manualEntry.breakMinutes} onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} className="form-input" /></div>
+      </div>
+      <div className="form-row">
+        <div className="form-group"><label className="form-label">Meal Break (min)</label><input type="number" value={manualEntry.breakMinutes} onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} className="form-input" min="0" /></div>
+        <div className="form-group">
+          <label className="form-label">Rest Breaks</label>
+          <select value={manualEntry.restBreaksTaken} onChange={(e) => setManualEntry(prev => ({ ...prev, restBreaksTaken: parseInt(e.target.value) }))} className="form-select">
+            <option value={0}>0 rest breaks</option>
+            <option value={1}>1 rest break (10 min)</option>
+            <option value={2}>2 rest breaks (20 min)</option>
+            <option value={3}>3 rest breaks (30 min)</option>
+          </select>
+        </div>
       </div>
       <div className="form-hint" style={{ marginBottom: '16px', color: '#666', fontSize: '0.85rem' }}>
         ⏰ Times are in Pacific Time (PT)
@@ -763,6 +821,7 @@ const handleDeletePayPeriod = async () => {
       </div>
     </form>
   );
+  };
 
   return (
     <div className="time-tracking-page">
@@ -842,6 +901,9 @@ const handleDeletePayPeriod = async () => {
         <button className={`tab ${activeTab === 'entries' ? 'active' : ''}`} onClick={() => setActiveTab('entries')}>All Entries</button>
         <button className={`tab ${activeTab === 'approvals' ? 'active' : ''}`} onClick={() => setActiveTab('approvals')}>
           Pending Approvals {pendingApprovals.length > 0 && <span className="tab-badge">{pendingApprovals.length}</span>}
+        </button>
+        <button className={`tab ${activeTab === 'archived' ? 'active' : ''}`} onClick={() => { setActiveTab('archived'); loadArchivedEntries(); }}>
+          Archived
         </button>
       </div>
 
@@ -1260,6 +1322,71 @@ const handleDeletePayPeriod = async () => {
                 )}
               </div>
             </>
+          )}
+
+          {activeTab === 'archived' && (
+            <div className="card">
+              <div className="card-header" style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Archived Entries</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
+                  These entries have been archived and are excluded from reports and calculations.
+                </p>
+              </div>
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Worker</th>
+                      <th>Date</th>
+                      <th>Time</th>
+                      <th>Duration</th>
+                      <th>Location</th>
+                      <th>Archived</th>
+                      <th>Reason</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {archivedEntries.length === 0 ? (
+                      <tr><td colSpan="8" className="empty-cell">
+                        <div className="empty-state">
+                          <span className="empty-icon">📁</span>
+                          <p>No archived entries found.</p>
+                        </div>
+                      </td></tr>
+                    ) : (
+                      archivedEntries.map(entry => (
+                        <tr key={entry.id} className="archived-row">
+                          <td>
+                            <div className="worker-cell">
+                              <div className="avatar avatar-sm">{entry.user?.name?.split(' ').map(n => n[0]).join('')}</div>
+                              <span>{entry.user?.name}</span>
+                            </div>
+                          </td>
+                          <td>{formatDate(entry.clockInTime)}</td>
+                          <td>{formatTime(entry.clockInTime)} - {entry.clockOutTime ? formatTime(entry.clockOutTime) : 'Active'}</td>
+                          <td>{formatDuration(entry.durationMinutes)}</td>
+                          <td>{entry.job?.name || 'Unassigned'}</td>
+                          <td>{entry.archivedAt ? formatDate(entry.archivedAt) : '--'}</td>
+                          <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry.archiveReason || '--'}
+                          </td>
+                          <td>
+                            <button 
+                              className="btn btn-primary btn-sm"
+                              onClick={() => handleRestore(entry.id)}
+                              disabled={actionLoading === entry.id}
+                            >
+                              {actionLoading === entry.id ? '...' : '↩ Restore'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </>
       )}
