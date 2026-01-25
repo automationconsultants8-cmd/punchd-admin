@@ -343,6 +343,7 @@ function WorkersPage() {
         name: formData.name,
         email: formData.email || undefined,
         phone: cleanPhone || undefined,
+        password: formData.password || undefined,
         role: formData.role?.toUpperCase() || 'WORKER',
         workerTypes: formData.workerTypes?.length ? formData.workerTypes : ['HOURLY'],
         hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
