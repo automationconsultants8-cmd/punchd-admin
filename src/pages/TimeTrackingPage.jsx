@@ -1086,14 +1086,45 @@ const handleDeletePayPeriod = async () => {
                     <label className="form-label">Worker *</label>
                     <select 
                       value={manualEntry.workerId} 
-                      onChange={(e) => setManualEntry(prev => ({ ...prev, workerId: e.target.value }))} 
+                      onChange={(e) => {
+                        const workerId = e.target.value;
+                        const worker = workers.find(w => w.id === workerId);
+                        const types = worker?.workerTypes || [];
+                        const autoType = types.length === 1 ? types[0] : '';
+                        setManualEntry(prev => ({ ...prev, workerId, workerType: autoType }));
+                      }} 
                       className="form-select" 
                       required
                     >
                       <option value="">Select...</option>
-                      {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                      {workers.map(w => {
+                        const types = w.workerTypes || [];
+                        const typeLabel = types.length > 1 ? ` (${types.length} roles)` : types.length === 1 ? ` - ${types[0]}` : '';
+                        return <option key={w.id} value={w.id}>{w.name}{typeLabel}</option>;
+                      })}
                     </select>
                   </div>
+                  {(() => {
+                    const worker = workers.find(w => w.id === manualEntry.workerId);
+                    const types = worker?.workerTypes || [];
+                    if (manualEntry.workerId && types.length > 1) {
+                      return (
+                        <div className="form-group">
+                          <label className="form-label">Worker Type *</label>
+                          <select 
+                            value={manualEntry.workerType} 
+                            onChange={(e) => setManualEntry(prev => ({ ...prev, workerType: e.target.value }))} 
+                            className="form-select"
+                            required
+                          >
+                            <option value="">Select role...</option>
+                            {types.map(t => <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>)}
+                          </select>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div className="form-group">
                     <label className="form-label">Location</label>
                     <select 
