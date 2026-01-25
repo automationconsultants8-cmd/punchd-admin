@@ -211,7 +211,12 @@ const ALL_WORKER_TYPES = ['HOURLY', 'SALARIED', 'CONTRACTOR', 'VOLUNTEER'];
 // Phone formatting helper
 const formatPhoneNumber = (value) => {
   // Remove all non-digits
-  const digits = value.replace(/\D/g, '');
+  let digits = value.replace(/\D/g, '');
+  
+  // Strip leading 1 (country code) if 11 digits
+  if (digits.length === 11 && digits.startsWith('1')) {
+    digits = digits.slice(1);
+  }
   
   // Format as (XXX) XXX-XXXX
   if (digits.length <= 3) {
@@ -221,13 +226,6 @@ const formatPhoneNumber = (value) => {
   } else {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   }
-};
-
-// Validate phone has at least 10 digits
-const isValidPhone = (value) => {
-  if (!value) return true; // Phone is optional
-  const digits = value.replace(/\D/g, '');
-  return digits.length >= 10;
 };
 
 // Smart column name mapping
@@ -300,7 +298,19 @@ function WorkersPage() {
       // Get enabled worker types from company settings
       const settings = companyRes.data?.settings || {};
       if (settings.enabledWorkerTypes?.length) {
-        setEnabledWorkerTypes(settings.enabledWorkerTypes);
+        // Normalize to uppercase singular form
+        const typeMap = {
+          'hourly': 'HOURLY',
+          'salaried': 'SALARIED',
+          'contractors': 'CONTRACTOR',
+          'contractor': 'CONTRACTOR',
+          'volunteers': 'VOLUNTEER',
+          'volunteer': 'VOLUNTEER',
+        };
+        const normalized = settings.enabledWorkerTypes.map(t => 
+          typeMap[t.toLowerCase()] || t.toUpperCase()
+        );
+        setEnabledWorkerTypes(normalized);
       }
     } catch (error) {
       console.error('Error loading data:', error);
