@@ -170,10 +170,14 @@ function App() {
         const response = await companyApi.get();
         const settings = response.data.settings || {};
         
-        // Needs onboarding if never completed AND never skipped
-        const needsIt = !settings.onboardingCompletedAt && !settings.onboardingSkippedAt;
+       const needsIt = !settings.onboardingCompletedAt && !settings.onboardingSkippedAt;
         setNeedsOnboarding(needsIt);
         
+        // Store company timezone for display utilities
+        if (response.data.timezone) {
+          localStorage.setItem('companyTimezone', response.data.timezone);
+        }
+
         // Add inviteCode to user object if available
         if (response.data.inviteCode) {
           setUser(prev => ({ ...prev, inviteCode: response.data.inviteCode }));
