@@ -1243,7 +1243,26 @@ const handleDeletePayPeriod = async () => {
                     ) : (
                       getFilteredEntries().map(entry => (
                         <tr key={entry.id} className={`${entry.approvalStatus === 'REJECTED' ? 'row-rejected' : ''} ${entry.amendedAfterExport ? 'row-amended' : ''}`}>
-                          <td><div className="worker-cell"><div className="avatar avatar-sm">{entry.user?.name?.split(' ').map(n => n[0]).join('') || '??'}</div><span>{entry.user?.name || 'Unknown'}</span></div></td>
+                          <td>
+                            <div className="worker-cell">
+                              <div className="avatar avatar-sm">{entry.user?.name?.split(' ').map(n => n[0]).join('') || '??'}</div>
+                              <div>
+                                <span>{entry.user?.name || 'Unknown'}</span>
+                                {entry.workerType && entry.workerType !== 'HOURLY' && (
+                                  <span style={{ 
+                                    display: 'block',
+                                    fontSize: '11px', 
+                                    color: entry.workerType === 'CONTRACTOR' ? '#8b5cf6' : 
+                                           entry.workerType === 'VOLUNTEER' ? '#10b981' : 
+                                           entry.workerType === 'SALARIED' ? '#3b82f6' : '#666',
+                                    fontWeight: '500'
+                                  }}>
+                                    {entry.workerType.charAt(0) + entry.workerType.slice(1).toLowerCase()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
                           <td>{entry.job?.name || 'Unassigned'}</td>
                           <td>{formatDate(entry.clockInTime)}</td>
                           <td>{formatTime(entry.clockInTime)}</td>
