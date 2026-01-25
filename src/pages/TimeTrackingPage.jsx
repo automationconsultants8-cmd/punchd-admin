@@ -43,6 +43,7 @@ function TimeTrackingPage() {
   });
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [archivedEntries, setArchivedEntries] = useState([]);
+  const [archivedFilter, setArchivedFilter] = useState({ worker: '' });
 
   const [rejectModal, setRejectModal] = useState({ open: false, entryId: null, reason: '' });
   const [viewModal, setViewModal] = useState({ open: false, entry: null });
@@ -760,6 +761,12 @@ const handleDeletePayPeriod = async () => {
     return worker?.workerTypes || ['HOURLY'];
   };
 
+  // Filter archived entries by worker
+  const getFilteredArchivedEntries = () => {
+    if (!archivedFilter.worker) return archivedEntries;
+    return archivedEntries.filter(e => e.userId === archivedFilter.worker);
+  };
+
   // Manual Entry Form Component
   const ManualEntryForm = ({ inModal = false }) => {
     const workerTypes = getSelectedWorkerTypes();
@@ -1326,66 +1333,159 @@ const handleDeletePayPeriod = async () => {
 
           {activeTab === 'archived' && (
             <div className="card">
-              <div className="card-header" style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Archived Entries</h3>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
-                  These entries have been archived and are excluded from reports and calculations.
-                </p>
+              {/* Header with title and count */}
+              <div style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111' }}>Archived Entries</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
+                      Excluded from reports and OT calculations
+                    </p>
+                  </div>
+                  <span style={{ 
+                    fontSize: '13px', 
+                    color: '#666', 
+                    background: '#f3f4f6', 
+                    padding: '6px 14px', 
+                    borderRadius: '20px',
+                    fontWeight: '500'
+                  }}>
+                    {getFilteredArchivedEntries().length} {getFilteredArchivedEntries().length === 1 ? 'entry' : 'entries'}
+                  </span>
+                </div>
+                
+                {/* Filter row */}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ flex: '0 0 250px' }}>
+                    <select 
+                      value={archivedFilter.worker} 
+                      onChange={(e) => setArchivedFilter(prev => ({ ...prev, worker: e.target.value }))}
+                      className="form-select"
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '14px' }}
+                    >
+                      <option value="">All Workers</option>
+                      {workers.map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {archivedFilter.worker && (
+                    <button 
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setArchivedFilter({ worker: '' })}
+                      style={{ fontSize: '13px' }}
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="table-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Worker</th>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Duration</th>
-                      <th>Location</th>
-                      <th>Archived</th>
-                      <th>Reason</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {archivedEntries.length === 0 ? (
-                      <tr><td colSpan="8" className="empty-cell">
-                        <div className="empty-state">
-                          <span className="empty-icon">📁</span>
-                          <p>No archived entries found.</p>
-                        </div>
-                      </td></tr>
-                    ) : (
-                      archivedEntries.map(entry => (
-                        <tr key={entry.id} className="archived-row">
-                          <td>
-                            <div className="worker-cell">
-                              <div className="avatar avatar-sm">{entry.user?.name?.split(' ').map(n => n[0]).join('')}</div>
-                              <span>{entry.user?.name}</span>
+              
+              {/* Content */}
+              {getFilteredArchivedEntries().length === 0 ? (
+                <div style={{ padding: '60px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.4 }}>🗃️</div>
+                  <p style={{ color: '#666', fontSize: '15px', margin: 0 }}>No archived entries found</p>
+                  <p style={{ color: '#999', fontSize: '13px', marginTop: '6px' }}>
+                    {archivedFilter.worker ? 'Try selecting a different worker' : 'Archived entries will appear here'}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="data-table" style={{ width: '100%', minWidth: '900px' }}>
+                    <thead>
+                      <tr style={{ background: '#f9fafb' }}>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '180px' }}>Worker</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '110px' }}>Date</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '150px' }}>Time</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '90px' }}>Duration</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '140px' }}>Location</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '110px' }}>Archived On</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280' }}>Reason</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '600', fontSize: '12px', textTransform: 'uppercase', color: '#6b7280', width: '100px' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getFilteredArchivedEntries().map((entry, idx) => (
+                        <tr key={entry.id} style={{ 
+                          borderBottom: '1px solid #f3f4f6',
+                          background: idx % 2 === 0 ? '#fff' : '#fafafa'
+                        }}>
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ 
+                                width: '32px', 
+                                height: '32px', 
+                                borderRadius: '50%', 
+                                background: '#e5e7eb', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                color: '#6b7280'
+                              }}>
+                                {entry.user?.name?.split(' ').map(n => n[0]).join('') || '?'}
+                              </div>
+                              <span style={{ fontWeight: '500', color: '#111' }}>{entry.user?.name || 'Unknown'}</span>
                             </div>
                           </td>
-                          <td>{formatDate(entry.clockInTime)}</td>
-                          <td>{formatTime(entry.clockInTime)} - {entry.clockOutTime ? formatTime(entry.clockOutTime) : 'Active'}</td>
-                          <td>{formatDuration(entry.durationMinutes)}</td>
-                          <td>{entry.job?.name || 'Unassigned'}</td>
-                          <td>{entry.archivedAt ? formatDate(entry.archivedAt) : '--'}</td>
-                          <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {entry.archiveReason || '--'}
+                          <td style={{ padding: '14px 16px', color: '#374151', fontSize: '14px' }}>
+                            {formatDate(entry.clockInTime)}
                           </td>
-                          <td>
+                          <td style={{ padding: '14px 16px', color: '#374151', fontSize: '14px' }}>
+                            <span style={{ fontFamily: 'monospace' }}>
+                              {formatTime(entry.clockInTime)} – {entry.clockOutTime ? formatTime(entry.clockOutTime) : 'Active'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <span style={{ 
+                              background: '#f3f4f6', 
+                              padding: '4px 10px', 
+                              borderRadius: '4px', 
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              color: '#374151'
+                            }}>
+                              {formatDuration(entry.durationMinutes)}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '14px' }}>
+                            {entry.job?.name || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Unassigned</span>}
+                          </td>
+                          <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px' }}>
+                            {entry.archivedAt ? formatDate(entry.archivedAt) : '—'}
+                          </td>
+                          <td style={{ padding: '14px 16px', color: '#6b7280', fontSize: '13px', maxWidth: '200px' }}>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.archiveReason || ''}>
+                              {entry.archiveReason || <span style={{ color: '#9ca3af' }}>—</span>}
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                             <button 
-                              className="btn btn-primary btn-sm"
                               onClick={() => handleRestore(entry.id)}
                               disabled={actionLoading === entry.id}
+                              style={{
+                                padding: '6px 14px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                color: '#fff',
+                                background: actionLoading === entry.id ? '#9ca3af' : '#3b82f6',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: actionLoading === entry.id ? 'not-allowed' : 'pointer',
+                                transition: 'background 0.15s'
+                              }}
                             >
                               {actionLoading === entry.id ? '...' : '↩ Restore'}
                             </button>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </>
