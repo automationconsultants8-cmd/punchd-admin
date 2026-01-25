@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { timeEntriesApi, usersApi, jobsApi, payPeriodsApi } from '../services/api';
 import './TimeTrackingPage.css';
+import { formatDateTime } from '../utils/timezone';
 
 function TimeTrackingPage() {
   // SVG Icons
@@ -303,16 +304,12 @@ const handleDeletePayPeriod = async () => {
     </svg>
   );
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '--';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+ const formatDate = (dateStr) => {
+    return formatDateTime(dateStr, 'date');
   };
 
   const formatTime = (dateStr) => {
-    if (!dateStr) return '--';
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' });
+    return formatDateTime(dateStr, 'time');
   };
 
   const formatDuration = (minutes) => {
