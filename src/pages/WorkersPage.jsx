@@ -213,13 +213,6 @@ const formatPhoneNumber = (value) => {
   // Remove all non-digits
   let digits = value.replace(/\D/g, '');
   
-// Validate phone has at least 10 digits
-const isValidPhone = (value) => {
-  if (!value) return true; // Phone is optional
-  const digits = value.replace(/\D/g, '');
-  return digits.length >= 10;
-};
-
   // Strip leading 1 (country code) if 11 digits
   if (digits.length === 11 && digits.startsWith('1')) {
     digits = digits.slice(1);
@@ -233,6 +226,13 @@ const isValidPhone = (value) => {
   } else {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   }
+};
+
+// Validate phone has at least 10 digits
+const isValidPhone = (value) => {
+  if (!value) return true; // Phone is optional
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 10;
 };
 
 // Smart column name mapping
