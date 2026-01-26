@@ -37,6 +37,7 @@ function TimeTrackingPage() {
     job: '',
     status: '',
     approvalStatus: '',
+    workerType: 'HOURLY_SALARIED', // Default to hourly/salaried
   });
 
   const [manualEntry, setManualEntry] = useState({
@@ -47,7 +48,7 @@ function TimeTrackingPage() {
     clockOut: '17:00',
     breakMinutes: 30,
     restBreaksTaken: 0,
-    workerType: '',
+    workerType: 'HOURLY',
     notes: '',
   });
   const [showManualEntry, setShowManualEntry] = useState(false);
@@ -331,6 +332,15 @@ const handleDeletePayPeriod = async () => {
 
   const getFilteredEntries = () => {
     return timeEntries.filter(entry => {
+      // Worker type filter
+      if (filters.workerType === 'HOURLY_SALARIED') {
+        if (entry.workerType && entry.workerType !== 'HOURLY' && entry.workerType !== 'SALARIED') return false;
+      } else if (filters.workerType === 'CONTRACTOR') {
+        if (entry.workerType !== 'CONTRACTOR') return false;
+      } else if (filters.workerType === 'VOLUNTEER') {
+        if (entry.workerType !== 'VOLUNTEER') return false;
+      }
+      // Other filters
       if (filters.worker && entry.userId !== filters.worker) return false;
       if (filters.job && entry.jobId !== filters.job) return false;
       if (filters.status === 'flagged' && !entry.isFlagged) return false;
@@ -340,6 +350,20 @@ const handleDeletePayPeriod = async () => {
       if (entry.isArchived) return false;
       // Hide rejected entries from main list unless explicitly filtered
       if (!filters.approvalStatus && entry.approvalStatus === 'REJECTED') return false;
+      return true;
+    });
+  };
+
+  const getFilteredPendingApprovals = () => {
+    return pendingApprovals.filter(entry => {
+      // Worker type filter
+      if (filters.workerType === 'HOURLY_SALARIED') {
+        if (entry.workerType && entry.workerType !== 'HOURLY' && entry.workerType !== 'SALARIED') return false;
+      } else if (filters.workerType === 'CONTRACTOR') {
+        if (entry.workerType !== 'CONTRACTOR') return false;
+      } else if (filters.workerType === 'VOLUNTEER') {
+        if (entry.workerType !== 'VOLUNTEER') return false;
+      }
       return true;
     });
   };
@@ -405,10 +429,11 @@ const handleDeletePayPeriod = async () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedEntries.length === pendingApprovals.length) {
+    const filtered = getFilteredPendingApprovals();
+    if (selectedEntries.length === filtered.length) {
       setSelectedEntries([]);
     } else {
-      setSelectedEntries(pendingApprovals.map(e => e.id));
+      setSelectedEntries(filtered.map(e => e.id));
     }
   };
 
@@ -853,6 +878,9 @@ const handleDeletePayPeriod = async () => {
   );
   };
 
+  // Computed filtered pending approvals
+  const filteredPending = getFilteredPendingApprovals();
+
   return (
     <div className="time-tracking-page">
       <div className="page-header">
@@ -930,7 +958,7 @@ const handleDeletePayPeriod = async () => {
       <div className="tabs">
         <button className={`tab ${activeTab === 'entries' ? 'active' : ''}`} onClick={() => setActiveTab('entries')}>All Entries</button>
         <button className={`tab ${activeTab === 'approvals' ? 'active' : ''}`} onClick={() => setActiveTab('approvals')}>
-          Pending Approvals {pendingApprovals.length > 0 && <span className="tab-badge">{pendingApprovals.length}</span>}
+          Pending Approvals {filteredPending.length > 0 && <span className="tab-badge">{filteredPending.length}</span>}
         </button>
         <button className={`tab ${activeTab === 'archived' ? 'active' : ''}`} onClick={() => { setActiveTab('archived'); loadArchivedEntries(); }}>
           Archived
@@ -1041,6 +1069,15 @@ const handleDeletePayPeriod = async () => {
               </div>
             )}
             <div className="filter-group">
+              <label>Worker Type</label>
+              <select value={filters.workerType} onChange={(e) => setFilters(prev => ({ ...prev, workerType: e.target.value }))} className="form-select">
+                <option value="HOURLY_SALARIED">Hourly/Salaried</option>
+                <option value="CONTRACTOR">Contractor</option>
+                <option value="VOLUNTEER">Volunteer</option>
+                <option value="">All Types</option>
+              </select>
+            </div>
+            <div className="filter-group">
               <label>Worker</label>
               <select value={filters.worker} onChange={(e) => setFilters(prev => ({ ...prev, worker: e.target.value }))} className="form-select">
                 <option value="">All Workers</option>
@@ -1063,7 +1100,7 @@ const handleDeletePayPeriod = async () => {
                 <option value="REJECTED">Rejected</option>
               </select>
             </div>
-            <button className="btn btn-ghost" onClick={() => setFilters({ worker: '', job: '', status: '', approvalStatus: '' })}>Clear</button>
+            <button className="btn btn-ghost" onClick={() => setFilters({ worker: '', job: '', status: '', approvalStatus: '', workerType: 'HOURLY_SALARIED' })}>Clear</button>
             <div style={{ marginLeft: 'auto' }}>
               <button className="btn btn-primary" onClick={() => setShowManualEntry(!showManualEntry)}>
                 {showManualEntry ? '− Hide' : '+ Add Entry'}
@@ -1166,31 +1203,35 @@ const handleDeletePayPeriod = async () => {
                       required 
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Meal Break</label>
-                    <input 
-                      type="number" 
-                      value={manualEntry.breakMinutes} 
-                      onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} 
-                      className="form-input"
-                      min="0"
-                      max="120"
-                      placeholder="min"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Rest Breaks</label>
-                    <select
-                      value={manualEntry.restBreaksTaken}
-                      onChange={(e) => setManualEntry(prev => ({ ...prev, restBreaksTaken: parseInt(e.target.value) }))}
-                      className="form-select"
-                    >
-                      <option value={0}>0</option>
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
-                    </select>
-                  </div>
+                  {(!manualEntry.workerType || manualEntry.workerType === 'HOURLY' || manualEntry.workerType === 'SALARIED') && (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Meal Break</label>
+                        <input 
+                          type="number" 
+                          value={manualEntry.breakMinutes} 
+                          onChange={(e) => setManualEntry(prev => ({ ...prev, breakMinutes: e.target.value }))} 
+                          className="form-input"
+                          min="0"
+                          max="120"
+                          placeholder="min"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Rest Breaks</label>
+                        <select
+                          value={manualEntry.restBreaksTaken}
+                          onChange={(e) => setManualEntry(prev => ({ ...prev, restBreaksTaken: parseInt(e.target.value) }))}
+                          className="form-select"
+                        >
+                          <option value={0}>0</option>
+                          <option value={1}>1</option>
+                          <option value={2}>2</option>
+                          <option value={3}>3</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -1331,12 +1372,12 @@ const handleDeletePayPeriod = async () => {
 
           {activeTab === 'approvals' && (
             <>
-              {pendingApprovals.length > 0 && (
+              {filteredPending.length > 0 && (
                 <div className="bulk-actions-bar">
                   <label className="checkbox-label">
                     <input 
                       type="checkbox" 
-                      checked={selectedEntries.length === pendingApprovals.length && pendingApprovals.length > 0}
+                      checked={selectedEntries.length === filteredPending.length && filteredPending.length > 0}
                       onChange={toggleSelectAll}
                     />
                     Select All ({selectedEntries.length} selected)
@@ -1352,10 +1393,10 @@ const handleDeletePayPeriod = async () => {
               )}
               
               <div className="approvals-grid">
-                {pendingApprovals.length === 0 ? (
+                {filteredPending.length === 0 ? (
                   <div className="card"><div className="empty-state"><span className="empty-icon">✓</span><p>All caught up! No pending approvals.</p></div></div>
                 ) : (
-                  pendingApprovals.map(entry => (
+                  filteredPending.map(entry => (
                     <div key={entry.id} className={`card approval-card ${selectedEntries.includes(entry.id) ? 'selected' : ''}`}>
                       <div className="approval-checkbox">
                         <input 

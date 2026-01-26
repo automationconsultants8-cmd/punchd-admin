@@ -25,6 +25,7 @@ const Icons = {
   calendar: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   alert: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
   seven: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4h10l-6 16"/></svg>,
+  palette: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="13" r="2.5"/><circle cx="16" cy="19" r="2.5"/><circle cx="9" cy="19" r="2.5"/><circle cx="5" cy="13" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.5-.67 1.5-1.5 0-.38-.12-.74-.38-1.04-.23-.27-.38-.62-.38-1.04 0-.93.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.5-9-10-9z"/></svg>,
 };
 
 const IconWrapper = ({ children }) => (
@@ -60,6 +61,17 @@ const COMPLIANCE_MODES = [
   { id: 'custom', name: 'Custom', description: 'Configure your own overtime rules', settings: null },
 ];
 
+const FONT_OPTIONS = [
+  { id: 'Inter', name: 'Inter', preview: 'Modern & Clean' },
+  { id: 'Roboto', name: 'Roboto', preview: 'Classic & Readable' },
+  { id: 'Open Sans', name: 'Open Sans', preview: 'Friendly & Open' },
+  { id: 'Lato', name: 'Lato', preview: 'Professional' },
+  { id: 'Poppins', name: 'Poppins', preview: 'Geometric & Bold' },
+  { id: 'Nunito', name: 'Nunito', preview: 'Rounded & Soft' },
+  { id: 'Source Sans Pro', name: 'Source Sans Pro', preview: 'Adobe Classic' },
+  { id: 'Montserrat', name: 'Montserrat', preview: 'Elegant' },
+];
+
 function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,6 +96,12 @@ function SettingsPage() {
   });
   const [overtimeSettings, setOvertimeSettings] = useState({ dailyOtThreshold: 8, dailyDtThreshold: 12, weeklyOtThreshold: 40, otMultiplier: 1.5, dtMultiplier: 2.0 });
   const [breakSettings, setBreakSettings] = useState({ state: 'CA', mealBreakThreshold: 5, mealBreakDuration: 30, penaltyRate: 1 });
+  const [brandingData, setBrandingData] = useState({
+    logoUrl: '',
+    primaryColor: '#1a1a2e',
+    accentColor: '#c9a227',
+    fontFamily: 'Inter',
+  });
 
   useEffect(() => { loadCompanyData(); loadWorkerCounts(); }, []);
 
@@ -132,6 +150,13 @@ function SettingsPage() {
         const bc = res.data.breakComplianceSettings;
         setBreakSettings({ state: bc.state ?? 'CA', mealBreakThreshold: (bc.mealBreakThreshold ?? 300) / 60, mealBreakDuration: bc.mealBreakDuration ?? 30, penaltyRate: bc.penaltyRate ?? 1 });
       }
+      // Load branding data
+      setBrandingData({
+        logoUrl: res.data.logoUrl || '',
+        primaryColor: res.data.primaryColor || '#1a1a2e',
+        accentColor: res.data.accentColor || '#c9a227',
+        fontFamily: res.data.fontFamily || 'Inter',
+      });
     } catch (err) { console.error('Failed to load company data:', err); }
     setLoading(false);
   };
@@ -204,6 +229,11 @@ function SettingsPage() {
         },
         overtimeSettings: { dailyOtThreshold: parseFloat(overtimeSettings.dailyOtThreshold) * 60, dailyDtThreshold: parseFloat(overtimeSettings.dailyDtThreshold) * 60, weeklyOtThreshold: parseFloat(overtimeSettings.weeklyOtThreshold) * 60, otMultiplier: parseFloat(overtimeSettings.otMultiplier), dtMultiplier: parseFloat(overtimeSettings.dtMultiplier) },
         breakComplianceSettings: { enabled: toggles.breakTracking, state: breakSettings.state, mealBreakThreshold: parseFloat(breakSettings.mealBreakThreshold) * 60, mealBreakDuration: parseInt(breakSettings.mealBreakDuration), penaltyRate: parseFloat(breakSettings.penaltyRate) },
+        // Branding fields
+        logoUrl: brandingData.logoUrl,
+        primaryColor: brandingData.primaryColor,
+        accentColor: brandingData.accentColor,
+        fontFamily: brandingData.fontFamily,
       };
       await companyApi.update(dataToSave);
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
@@ -223,35 +253,14 @@ function SettingsPage() {
   const showVolunteerPortal = enabledWorkerTypes.includes('volunteers');
   const showPortalsSection = showContractorPortal || showVolunteerPortal;
 
-  // Styled pill for active rules
   const RulePill = ({ enabled, label }) => (
-    <span style={{ 
-      display: 'inline-flex', 
-      alignItems: 'center', 
-      gap: '6px', 
-      padding: '6px 12px', 
-      borderRadius: '20px', 
-      fontSize: '13px', 
-      fontWeight: '500', 
-      background: enabled ? '#e8f5e9' : '#ffebee', 
-      color: enabled ? '#2e7d32' : '#c62828', 
-      border: enabled ? '1px solid #a5d6a7' : '1px solid #ef9a9a' 
-    }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '500', background: enabled ? '#e8f5e9' : '#ffebee', color: enabled ? '#2e7d32' : '#c62828', border: enabled ? '1px solid #a5d6a7' : '1px solid #ef9a9a' }}>
       {enabled ? '✓' : '✗'} {label}
     </span>
   );
 
-  // Toggle card for custom mode
   const CustomRuleToggle = ({ icon, label, sublabel, enabled, onChange }) => (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'space-between', 
-      padding: '12px 16px', 
-      background: enabled ? '#e8f5e9' : '#f5f5f5', 
-      borderRadius: '8px', 
-      border: enabled ? '1px solid #4caf50' : '1px solid #e0e0e0' 
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: enabled ? '#e8f5e9' : '#f5f5f5', borderRadius: '8px', border: enabled ? '1px solid #4caf50' : '1px solid #e0e0e0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <IconWrapper>{icon}</IconWrapper>
         <div>
@@ -259,10 +268,7 @@ function SettingsPage() {
           <div style={{ fontSize: '11px', color: '#666' }}>{sublabel}</div>
         </div>
       </div>
-      <label className="switch small">
-        <input type="checkbox" checked={enabled} onChange={onChange} />
-        <span className="slider"></span>
-      </label>
+      <label className="switch small"><input type="checkbox" checked={enabled} onChange={onChange} /><span className="slider"></span></label>
     </div>
   );
 
@@ -307,50 +313,10 @@ function SettingsPage() {
       <div className="settings-card">
         <div className="card-header"><span className="card-icon"><IconWrapper>{Icons.check}</IconWrapper></span><div><h2>Auto-Approve Settings</h2><p>Configure which worker types get automatic time entry approval</p></div></div>
         <div className="worker-types-grid">
-          <div className={`worker-type-card ${autoApproveSettings.hourly ? 'enabled' : 'disabled'}`}>
-            <div className="worker-type-header">
-              <span className="worker-type-icon"><IconWrapper>{Icons.clock}</IconWrapper></span>
-              <label className="switch small">
-                <input type="checkbox" checked={autoApproveSettings.hourly} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, hourly: e.target.checked }))} />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <h4>Hourly Workers</h4>
-            <p>{autoApproveSettings.hourly ? 'Auto-approved' : 'Requires approval'}</p>
-          </div>
-          <div className={`worker-type-card ${autoApproveSettings.salaried ? 'enabled' : 'disabled'}`}>
-            <div className="worker-type-header">
-              <span className="worker-type-icon"><IconWrapper>{Icons.briefcase}</IconWrapper></span>
-              <label className="switch small">
-                <input type="checkbox" checked={autoApproveSettings.salaried} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, salaried: e.target.checked }))} />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <h4>Salaried Workers</h4>
-            <p>{autoApproveSettings.salaried ? 'Auto-approved' : 'Requires approval'}</p>
-          </div>
-          <div className={`worker-type-card ${autoApproveSettings.contractor ? 'enabled' : 'disabled'}`}>
-            <div className="worker-type-header">
-              <span className="worker-type-icon"><IconWrapper>{Icons.clipboard}</IconWrapper></span>
-              <label className="switch small">
-                <input type="checkbox" checked={autoApproveSettings.contractor} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, contractor: e.target.checked }))} />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <h4>Contractors</h4>
-            <p>{autoApproveSettings.contractor ? 'Auto-approved' : 'Requires approval'}</p>
-          </div>
-          <div className={`worker-type-card ${autoApproveSettings.volunteer ? 'enabled' : 'disabled'}`}>
-            <div className="worker-type-header">
-              <span className="worker-type-icon"><IconWrapper>{Icons.heart}</IconWrapper></span>
-              <label className="switch small">
-                <input type="checkbox" checked={autoApproveSettings.volunteer} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, volunteer: e.target.checked }))} />
-                <span className="slider"></span>
-              </label>
-            </div>
-            <h4>Volunteers</h4>
-            <p>{autoApproveSettings.volunteer ? 'Auto-approved' : 'Requires approval'}</p>
-          </div>
+          <div className={`worker-type-card ${autoApproveSettings.hourly ? 'enabled' : 'disabled'}`}><div className="worker-type-header"><span className="worker-type-icon"><IconWrapper>{Icons.clock}</IconWrapper></span><label className="switch small"><input type="checkbox" checked={autoApproveSettings.hourly} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, hourly: e.target.checked }))} /><span className="slider"></span></label></div><h4>Hourly Workers</h4><p>{autoApproveSettings.hourly ? 'Auto-approved' : 'Requires approval'}</p></div>
+          <div className={`worker-type-card ${autoApproveSettings.salaried ? 'enabled' : 'disabled'}`}><div className="worker-type-header"><span className="worker-type-icon"><IconWrapper>{Icons.briefcase}</IconWrapper></span><label className="switch small"><input type="checkbox" checked={autoApproveSettings.salaried} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, salaried: e.target.checked }))} /><span className="slider"></span></label></div><h4>Salaried Workers</h4><p>{autoApproveSettings.salaried ? 'Auto-approved' : 'Requires approval'}</p></div>
+          <div className={`worker-type-card ${autoApproveSettings.contractor ? 'enabled' : 'disabled'}`}><div className="worker-type-header"><span className="worker-type-icon"><IconWrapper>{Icons.clipboard}</IconWrapper></span><label className="switch small"><input type="checkbox" checked={autoApproveSettings.contractor} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, contractor: e.target.checked }))} /><span className="slider"></span></label></div><h4>Contractors</h4><p>{autoApproveSettings.contractor ? 'Auto-approved' : 'Requires approval'}</p></div>
+          <div className={`worker-type-card ${autoApproveSettings.volunteer ? 'enabled' : 'disabled'}`}><div className="worker-type-header"><span className="worker-type-icon"><IconWrapper>{Icons.heart}</IconWrapper></span><label className="switch small"><input type="checkbox" checked={autoApproveSettings.volunteer} onChange={(e) => setAutoApproveSettings(prev => ({ ...prev, volunteer: e.target.checked }))} /><span className="slider"></span></label></div><h4>Volunteers</h4><p>{autoApproveSettings.volunteer ? 'Auto-approved' : 'Requires approval'}</p></div>
         </div>
         <div className="info-box"><strong>Tip:</strong> Contractors and volunteers typically require approval for compliance and audit purposes.</div>
       </div>
@@ -360,39 +326,14 @@ function SettingsPage() {
         <div className="compliance-options">
           {COMPLIANCE_MODES.map((mode) => (<label key={mode.id} className={`compliance-option ${complianceMode === mode.id ? 'selected' : ''}`}><input type="radio" name="complianceMode" value={mode.id} checked={complianceMode === mode.id} onChange={() => handleComplianceModeChange(mode.id)} /><div className="option-content"><strong>{mode.name}</strong><span>{mode.description}</span></div></label>))}
         </div>
-        
         {complianceMode === 'custom' ? (
           <div style={{ marginTop: '20px', padding: '16px', background: '#f8f9fa', borderRadius: '8px' }}>
             <h4 style={{ margin: '0 0 12px', color: '#333', fontSize: '14px', fontWeight: '600' }}>Configure Your Rules:</h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-              <CustomRuleToggle 
-                icon={Icons.clock} 
-                label="Daily OT" 
-                sublabel={`After ${overtimeSettings.dailyOtThreshold} hours`}
-                enabled={toggles.dailyOtEnabled} 
-                onChange={(e) => setToggles(prev => ({ ...prev, dailyOtEnabled: e.target.checked }))} 
-              />
-              <CustomRuleToggle 
-                icon={Icons.timer} 
-                label="Daily Double Time" 
-                sublabel={`After ${overtimeSettings.dailyDtThreshold} hours`}
-                enabled={toggles.dailyDtEnabled} 
-                onChange={(e) => setToggles(prev => ({ ...prev, dailyDtEnabled: e.target.checked }))} 
-              />
-              <CustomRuleToggle 
-                icon={Icons.calendar} 
-                label="Weekly OT" 
-                sublabel={`After ${overtimeSettings.weeklyOtThreshold} hours`}
-                enabled={toggles.weeklyOtEnabled} 
-                onChange={(e) => setToggles(prev => ({ ...prev, weeklyOtEnabled: e.target.checked }))} 
-              />
-              <CustomRuleToggle 
-                icon={Icons.seven} 
-                label="7th Day OT" 
-                sublabel="Consecutive day rule"
-                enabled={toggles.seventhDayOtRule} 
-                onChange={(e) => setToggles(prev => ({ ...prev, seventhDayOtRule: e.target.checked }))} 
-              />
+              <CustomRuleToggle icon={Icons.clock} label="Daily OT" sublabel={`After ${overtimeSettings.dailyOtThreshold} hours`} enabled={toggles.dailyOtEnabled} onChange={(e) => setToggles(prev => ({ ...prev, dailyOtEnabled: e.target.checked }))} />
+              <CustomRuleToggle icon={Icons.timer} label="Daily Double Time" sublabel={`After ${overtimeSettings.dailyDtThreshold} hours`} enabled={toggles.dailyDtEnabled} onChange={(e) => setToggles(prev => ({ ...prev, dailyDtEnabled: e.target.checked }))} />
+              <CustomRuleToggle icon={Icons.calendar} label="Weekly OT" sublabel={`After ${overtimeSettings.weeklyOtThreshold} hours`} enabled={toggles.weeklyOtEnabled} onChange={(e) => setToggles(prev => ({ ...prev, weeklyOtEnabled: e.target.checked }))} />
+              <CustomRuleToggle icon={Icons.seven} label="7th Day OT" sublabel="Consecutive day rule" enabled={toggles.seventhDayOtRule} onChange={(e) => setToggles(prev => ({ ...prev, seventhDayOtRule: e.target.checked }))} />
             </div>
           </div>
         ) : (
@@ -447,6 +388,62 @@ function SettingsPage() {
           <div className="form-group"><label>ZIP Code</label><input type="text" value={companyData.zip} onChange={(e) => handleChange('zip', e.target.value)} placeholder="95123" maxLength="10" /></div>
           <div className="form-group"><label>Timezone</label><select value={companyData.timezone} onChange={(e) => handleChange('timezone', e.target.value)}>{US_TIMEZONES.map(tz => (<option key={tz.id} value={tz.id}>{tz.name} ({tz.offset})</option>))}</select><small>All time entries will be displayed in this timezone</small></div>
         </div>
+      </div>
+
+      {/* BRANDING & APPEARANCE CARD */}
+      <div className="settings-card">
+        <div className="card-header"><span className="card-icon"><IconWrapper>{Icons.palette}</IconWrapper></span><div><h2>Branding & Appearance</h2><p>Customize colors and fonts for your dashboard, portals, and certificates</p></div></div>
+        <div className="form-grid">
+          <div className="form-group full-width">
+            <label>Logo URL</label>
+            <input type="url" value={brandingData.logoUrl} onChange={(e) => setBrandingData(prev => ({ ...prev, logoUrl: e.target.value }))} placeholder="https://example.com/logo.png" />
+            <small>Enter a URL to your company logo (PNG or SVG recommended, max 200x60px)</small>
+          </div>
+          {brandingData.logoUrl && (
+            <div className="form-group full-width">
+              <label>Logo Preview</label>
+              <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <img src={brandingData.logoUrl} alt="Logo preview" style={{ maxHeight: '60px', maxWidth: '200px', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                <span style={{ color: '#6b7280', fontSize: '13px' }}>This will appear on certificates and portals</span>
+              </div>
+            </div>
+          )}
+          <div className="form-group">
+            <label>Primary Color</label>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <input type="color" value={brandingData.primaryColor} onChange={(e) => setBrandingData(prev => ({ ...prev, primaryColor: e.target.value }))} style={{ width: '50px', height: '40px', padding: '0', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }} />
+              <input type="text" value={brandingData.primaryColor} onChange={(e) => setBrandingData(prev => ({ ...prev, primaryColor: e.target.value }))} style={{ flex: 1, fontFamily: 'monospace' }} placeholder="#1a1a2e" />
+            </div>
+            <small>Main brand color for headers, buttons, and text</small>
+          </div>
+          <div className="form-group">
+            <label>Accent Color</label>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <input type="color" value={brandingData.accentColor} onChange={(e) => setBrandingData(prev => ({ ...prev, accentColor: e.target.value }))} style={{ width: '50px', height: '40px', padding: '0', border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer' }} />
+              <input type="text" value={brandingData.accentColor} onChange={(e) => setBrandingData(prev => ({ ...prev, accentColor: e.target.value }))} style={{ flex: 1, fontFamily: 'monospace' }} placeholder="#c9a227" />
+            </div>
+            <small>Highlight color for badges, borders, and emphasis</small>
+          </div>
+          <div className="form-group full-width">
+            <label>Font Family</label>
+            <select value={brandingData.fontFamily} onChange={(e) => setBrandingData(prev => ({ ...prev, fontFamily: e.target.value }))}>
+              {FONT_OPTIONS.map(font => (<option key={font.id} value={font.id}>{font.name} - {font.preview}</option>))}
+            </select>
+            <small>Font used throughout dashboards and portals</small>
+          </div>
+          <div className="form-group full-width">
+            <label>Preview</label>
+            <div style={{ padding: '24px', background: 'white', borderRadius: '12px', border: `2px solid ${brandingData.accentColor}`, fontFamily: brandingData.fontFamily + ', sans-serif' }}>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: brandingData.primaryColor, marginBottom: '8px' }}>{companyData.name || 'Your Company Name'}</div>
+              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>This is how your branding will look on certificates and portals</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ padding: '6px 12px', background: brandingData.primaryColor, color: 'white', borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>Primary Button</span>
+                <span style={{ padding: '6px 12px', background: brandingData.accentColor, color: 'white', borderRadius: '6px', fontSize: '13px', fontWeight: '500' }}>Accent Button</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="info-box"><strong>Note:</strong> These colors will be used on volunteer certificates, contractor/volunteer portals. Full dashboard theming coming soon!</div>
       </div>
 
       <div className="settings-card">

@@ -33,6 +33,19 @@ const Icons = {
       <line x1="3" y1="10" x2="21" y2="10"/>
     </svg>
   ),
+  edit: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+    </svg>
+  ),
+  archive: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8"/>
+      <rect x="1" y="3" width="22" height="5"/>
+      <line x1="10" y1="12" x2="14" y2="12"/>
+    </svg>
+  ),
 };
 
 function MyTimePage() {
@@ -46,6 +59,16 @@ function MyTimePage() {
     date: new Date().toISOString().split('T')[0],
     startTime: '09:00',
     endTime: '17:00',
+    notes: '',
+  });
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editForm, setEditForm] = useState({
+    date: '',
+    clockIn: '',
+    clockOut: '',
     notes: '',
   });
 
@@ -85,8 +108,10 @@ function MyTimePage() {
   const loadEntries = async () => {
     try {
       const res = await timeEntriesApi.getMine();
-      setEntries(res.data || []);
-      calculateStats(res.data || []);
+      // Filter out archived entries
+      const activeEntries = (res.data || []).filter(e => !e.isArchived);
+      setEntries(activeEntries);
+      calculateStats(activeEntries);
     } catch (err) {
       console.error('Failed to load entries:', err);
     }
@@ -133,16 +158,16 @@ function MyTimePage() {
   };
 
   const stopTracking = async () => {
-  if (!trackingStart) return;
+    if (!trackingStart) return;
 
-  const endTime = new Date();
-  const durationMs = endTime.getTime() - trackingStart.getTime();
-  
-  // Must track at least 1 minute
-  if (durationMs < 60000) {
-    alert('Please track for at least 1 minute before stopping.');
-    return;
-  }
+    const endTime = new Date();
+    const durationMs = endTime.getTime() - trackingStart.getTime();
+    
+    // Must track at least 1 minute
+    if (durationMs < 60000) {
+      alert('Please track for at least 1 minute before stopping.');
+      return;
+    }
     const userId = getCurrentUserId();
     
     if (!userId) {
@@ -215,6 +240,61 @@ function MyTimePage() {
     }
   };
 
+  // Edit entry functions
+  const openEditModal = (entry) => {
+    const clockInDate = new Date(entry.clockInTime);
+    const clockOutDate = entry.clockOutTime ? new Date(entry.clockOutTime) : null;
+    
+    setEditingEntry(entry);
+    setEditForm({
+      date: clockInDate.toISOString().split('T')[0],
+      clockIn: clockInDate.toTimeString().slice(0, 5),
+      clockOut: clockOutDate ? clockOutDate.toTimeString().slice(0, 5) : '',
+      notes: entry.notes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!editingEntry) return;
+
+    if (editForm.clockOut && editForm.clockOut <= editForm.clockIn) {
+      alert('End time must be after start time');
+      return;
+    }
+
+    try {
+      await timeEntriesApi.update(editingEntry.id, {
+        date: editForm.date,
+        clockIn: editForm.clockIn,
+        clockOut: editForm.clockOut || undefined,
+        notes: editForm.notes || undefined,
+      });
+      
+      setShowEditModal(false);
+      setEditingEntry(null);
+      loadEntries();
+    } catch (err) {
+      console.error('Failed to update entry:', err);
+      alert('Failed to update entry: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Archive entry
+  const handleArchive = async (entry) => {
+    if (!confirm('Archive this entry? It will be hidden from your time history.')) return;
+    
+    try {
+      await timeEntriesApi.archive(entry.id);
+      loadEntries();
+    } catch (err) {
+      console.error('Failed to archive entry:', err);
+      alert('Failed to archive entry: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -230,6 +310,13 @@ function MyTimePage() {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
+  };
+
+  const getStatusBadge = (entry) => {
+    if (!entry.clockOutTime) return <span className="status-badge in-progress">In Progress</span>;
+    if (entry.approvalStatus === 'APPROVED') return <span className="status-badge approved">Approved</span>;
+    if (entry.approvalStatus === 'REJECTED') return <span className="status-badge rejected">Rejected</span>;
+    return <span className="status-badge pending">Pending</span>;
   };
 
   if (loading) {
@@ -325,7 +412,24 @@ function MyTimePage() {
                   <span>{entry.clockOutTime ? formatTime(entry.clockOutTime) : 'In progress'}</span>
                 </div>
                 <div className="entry-duration">{formatDuration(entry.durationMinutes)}</div>
+                <div className="entry-status">{getStatusBadge(entry)}</div>
                 <div className="entry-notes">{entry.notes || '-'}</div>
+                <div className="entry-actions">
+                  <button 
+                    className="btn-icon" 
+                    title="Edit"
+                    onClick={() => openEditModal(entry)}
+                  >
+                    {Icons.edit}
+                  </button>
+                  <button 
+                    className="btn-icon" 
+                    title="Archive"
+                    onClick={() => handleArchive(entry)}
+                  >
+                    {Icons.archive}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -387,6 +491,67 @@ function MyTimePage() {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Save Entry
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Entry Modal */}
+      {showEditModal && editingEntry && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Edit Time Entry</h2>
+              <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={e => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Clock In</label>
+                    <input
+                      type="time"
+                      value={editForm.clockIn}
+                      onChange={e => setEditForm(prev => ({ ...prev, clockIn: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Clock Out</label>
+                    <input
+                      type="time"
+                      value={editForm.clockOut}
+                      onChange={e => setEditForm(prev => ({ ...prev, clockOut: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Notes (optional)</label>
+                  <textarea
+                    value={editForm.notes}
+                    onChange={e => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="What did you work on?"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
                 </button>
               </div>
             </form>
