@@ -313,10 +313,11 @@ function MyTimePage() {
   };
 
   const getStatusBadge = (entry) => {
-    if (!entry.clockOutTime) return <span className="status-badge in-progress">In Progress</span>;
-    if (entry.approvalStatus === 'APPROVED') return <span className="status-badge approved">Approved</span>;
-    if (entry.approvalStatus === 'REJECTED') return <span className="status-badge rejected">Rejected</span>;
-    return <span className="status-badge pending">Pending</span>;
+    const baseStyle = { padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '500' };
+    if (!entry.clockOutTime) return <span style={{ ...baseStyle, background: '#fef3c7', color: '#92400e' }}>In Progress</span>;
+    if (entry.approvalStatus === 'APPROVED') return <span style={{ ...baseStyle, background: '#d1fae5', color: '#065f46' }}>Approved</span>;
+    if (entry.approvalStatus === 'REJECTED') return <span style={{ ...baseStyle, background: '#fee2e2', color: '#991b1b' }}>Rejected</span>;
+    return <span style={{ ...baseStyle, background: '#e5e7eb', color: '#374151' }}>Pending</span>;
   };
 
   if (loading) {
@@ -402,37 +403,51 @@ function MyTimePage() {
             <p>No time entries yet. Start the timer or add a manual entry.</p>
           </div>
         ) : (
-          <div className="entries-list">
-            {entries.slice(0, 20).map(entry => (
-              <div key={entry.id} className="entry-row">
-                <div className="entry-date">{formatDate(entry.clockInTime)}</div>
-                <div className="entry-times">
-                  <span>{formatTime(entry.clockInTime)}</span>
-                  <span className="time-separator">→</span>
-                  <span>{entry.clockOutTime ? formatTime(entry.clockOutTime) : 'In progress'}</span>
-                </div>
-                <div className="entry-duration">{formatDuration(entry.durationMinutes)}</div>
-                <div className="entry-status">{getStatusBadge(entry)}</div>
-                <div className="entry-notes">{entry.notes || '-'}</div>
-                <div className="entry-actions">
-                  <button 
-                    className="btn-icon" 
-                    title="Edit"
-                    onClick={() => openEditModal(entry)}
-                  >
-                    {Icons.edit}
-                  </button>
-                  <button 
-                    className="btn-icon" 
-                    title="Archive"
-                    onClick={() => handleArchive(entry)}
-                  >
-                    {Icons.archive}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <table className="entries-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
+                <th style={{ padding: '12px 8px', fontWeight: '600', color: '#374151' }}>Date</th>
+                <th style={{ padding: '12px 8px', fontWeight: '600', color: '#374151' }}>Time</th>
+                <th style={{ padding: '12px 8px', fontWeight: '600', color: '#374151' }}>Duration</th>
+                <th style={{ padding: '12px 8px', fontWeight: '600', color: '#374151' }}>Status</th>
+                <th style={{ padding: '12px 8px', fontWeight: '600', color: '#374151' }}>Notes</th>
+                <th style={{ padding: '12px 8px', fontWeight: '600', color: '#374151', width: '80px' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.slice(0, 20).map(entry => (
+                <tr key={entry.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '12px 8px', color: '#111827' }}>{formatDate(entry.clockInTime)}</td>
+                  <td style={{ padding: '12px 8px', color: '#6b7280' }}>
+                    {formatTime(entry.clockInTime)} → {entry.clockOutTime ? formatTime(entry.clockOutTime) : 'Now'}
+                  </td>
+                  <td style={{ padding: '12px 8px', color: '#111827', fontWeight: '500' }}>{formatDuration(entry.durationMinutes)}</td>
+                  <td style={{ padding: '12px 8px' }}>{getStatusBadge(entry)}</td>
+                  <td style={{ padding: '12px 8px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#6b7280' }}>
+                    {entry.notes || '-'}
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button 
+                        style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Edit"
+                        onClick={() => openEditModal(entry)}
+                      >
+                        <span style={{ width: '16px', height: '16px' }}>{Icons.edit}</span>
+                      </button>
+                      <button 
+                        style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        title="Archive"
+                        onClick={() => handleArchive(entry)}
+                      >
+                        <span style={{ width: '16px', height: '16px' }}>{Icons.archive}</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
