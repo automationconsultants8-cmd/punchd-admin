@@ -297,12 +297,23 @@ function MyTimePage() {
 
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const timezone = localStorage.getItem('companyTimezone') || 'America/Los_Angeles';
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric',
+      timeZone: timezone 
+    });
   };
 
   const formatTime = (dateStr) => {
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const timezone = localStorage.getItem('companyTimezone') || 'America/Los_Angeles';
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: timezone 
+    });
   };
 
   const formatDuration = (minutes) => {
@@ -366,7 +377,11 @@ function MyTimePage() {
           )}
         </div>
         {isTracking && (
-          <p className="timer-hint">Timer running since {trackingStart?.toLocaleTimeString()}</p>
+          <p className="timer-hint">Timer running since {trackingStart?.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: localStorage.getItem('companyTimezone') || 'America/Los_Angeles'
+          })}</p>
         )}
       </div>
 
